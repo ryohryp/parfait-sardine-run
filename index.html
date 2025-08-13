@@ -114,84 +114,576 @@
   </div>
 
 
-  <script>
-// ====== ランタイムデバッグ ======
-(function(){
-  // 画面にエラー帯を出す
-  function showErr(msg){
-    let bar = document.getElementById('errbar');
-    if(!bar){
-      bar = document.createElement('div');
-      bar.id = 'errbar';
-      bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#b91c1c;color:#fff;padding:8px 12px;font-size:12px;font-family:monospace;white-space:pre-wrap';
-      document.body.appendChild(bar);
-    }
-    bar.textContent = '[ERROR] ' + msg;
+<script>
+(()=>{
+// ====== 基本 ======
+const cv = document.getElementById('cv');
+const c = cv.getContext('2d');
+const hud = document.getElementById('hud');
+const btnStart = document.getElementById('start');
+const btnRestart = document.getElementById('restart');
+const btnHow = document.getElementById('howto');
+const btnUlt = document.getElementById('ultBtn');
+const btnGacha = document.getElementById('gachaOpen');
+const btnGacha10 = document.getElementById('gacha10');
+const btnCollection = document.getElementById('collection');
+const charInfo = document.getElementById('charInfo');
+
+// ガチャUI
+const ov = document.getElementById('gachaOverlay');
+const resWrap = document.getElementById('gachaResults');
+document.getElementById('gachaClose').onclick = ()=> ov.style.display='none';
+document.getElementById('pull1').onclick = ()=> doGacha(1);
+document.getElementById('pull10').onclick = ()=> doGacha(10);
+
+// コレクションUI
+const colOv = document.getElementById('colOverlay');
+const colGrid = document.getElementById('colGrid');
+const colClose = document.getElementById('colClose');
+const colEquip = document.getElementById('colEquip');
+let colSelectedKey = null;
+colClose.onclick = ()=>{ colOv.style.display='none'; colSelectedKey=null; colEquip.disabled=true; };
+colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); colOv.style.display='none'; } };
+
+// 物理 & ゲーム基本
+const G = 0.62, BASE_JUMP = -12.2, GROUND = 72;
+const GAME_TIME = 60000;
+
+let gameOn=false, t0=0;
+let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
+let score=0, level=1, lives=3, invUntil=0, hurtUntil=0;
+let ult=0, ultReady=false, ultActiveUntil=0;
+let coins=0; // ガチャ用
+let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
+
+const shootCD=250, powerMillis=6000, enemyBonus=3, itemLv=15;
+const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
+
+let items=[], enemies=[], bullets=[], powers=[];
+
+// ステージ
+const stages = [
+  { name:'草原',  bg1:'#9ed6ee', bg2:'#fff7e6', ground:'#7fb10a', enemyMul:1.00 },
+  { name:'砂漠',  bg1:'#ffd28a', bg2:'#ffe9c7', ground:'#d2a659', enemyMul:1.10 },
+  { name:'雪原',  bg1:'#c8e7ff', bg2:'#f6fbff', ground:'#b9d3e5', enemyMul:1.22 },
+  { name:'宇宙',  bg1:'#0b1833', bg2:'#1b2850', ground:'#0b1833', enemyMul:1.38 },
+];
+function stageForLevel(lv){
+  if (lv>=10) return stages[3];
+  if (lv>=7)  return stages[2];
+  if (lv>=4)  return stages[1];
+  return stages[0];
+}
+
+// ====== キャラ定義 ======
+/*
+  各値は倍率/ミリ秒。
+  special: ['magnet','oneGuard','doubleJump','pierce']
+  ult: 'rainbow' | 'storm' | null
+*/
+const characters = {
+  // Common
+  parfen:   { key:'parfen',   name:'🍓パフェン',    emoji:'🍓', rar:'C', move:1.00, jump:1.00, bullet:1.00, inv:6000, ultRate:1.00, special:[],             ult:null },
+  iwassy:   { key:'iwassy',   name:'🐟イワッシー',  emoji:'🐟', rar:'C', move:1.00, jump:1.10, bullet:1.00, inv:6000, ultRate:1.00, special:['airAttack'], ult:null },
+
+  // Rare
+  choco:    { key:'choco',    name:'🍫チョコパフェン', emoji:'🍫', rar:'R', move:1.00, jump:1.00, bullet:1.15, inv:7000, ultRate:1.00, special:[],           ult:null },
+  missile:  { key:'missile',  name:'🚀ミサイル君',   emoji:'🚀', rar:'R', move:1.10, jump:1.00, bullet:1.00, inv:6000, ultRate:1.05, special:[],           ult:null },
+
+  // Epic
+  ice:      { key:'ice',      name:'❄️アイス皇帝',  emoji:'❄️', rar:'E', move:1.00, jump:1.20, bullet:1.00, inv:6000, ultRate:1.00, special:['slowEnemy'], ult:null },
+
+  // Legendary
+  king:     { key:'king',     name:'👑キングパフェ', emoji:'👑', rar:'L', move:1.15, jump:1.10, bullet:1.10, inv:7000, ultRate:1.20, special:[], ult:'rainbow' },
+
+  // Mythic
+  aurora:   { key:'aurora',   name:'🌈オーロラパフェ', emoji:'🌈', rar:'M', move:1.18, jump:1.12, bullet:1.15, inv:8000, ultRate:1.35, special:['magnet','oneGuard'], ult:'rainbow' },
+  iwashiK:  { key:'iwashiK',  name:'🌀トルネード鰯王', emoji:'🌀', rar:'M', move:1.15, jump:1.20, bullet:1.10, inv:7000, ultRate:1.30, special:['doubleJump','pierce'], ult:'storm' },
+};
+
+// レア→カラー/順序
+const rarOrder = ['C','R','E','L','M'];
+function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==='R'?'rar-r':'rar-c'; }
+
+// 所持データ（localStorage）
+const STORE_KEY = 'psrun_char_collection_v1';
+let collection = loadCollection();
+let currentCharKey = collection.current || 'parfen';
+if(!collection.owned[currentCharKey]) {
+  // 初回はパフェン付与
+  collection.owned.parfen = { owned:true, dup:0, limit:0 };
+  saveCollection();
+  currentCharKey = 'parfen';
+}
+updateCharInfo();
+
+// ====== ガチャ：確率 & 天井 ======
+/*
+  確率：C60/R24/E10/L5/M1
+  天井：30連でL以上保証 / 100連でM保証
+*/
+const pityKey = 'psrun_pity_v1';
+let pity = loadPity(); // {sinceL:0, sinceM:0}
+
+function rollRarity(){
+  const p = Math.random();
+  if (p < 0.01) return 'M';
+  if (p < 0.06) return 'L';
+  if (p < 0.16) return 'E';
+  if (p < 0.40) return 'R';
+  return 'C';
+}
+function rollCharByRar(r){
+  const pool = Object.values(characters).filter(c=>c.rar===r);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function doGacha(n){
+  const cost = n===10?100:10;
+  if (coins<cost) return;
+  coins -= cost;
+
+  // 保障適用のため、結果配列を先にレアだけ決める
+  let rarities = [];
+  for(let i=0;i<n;i++){
+    let r = rollRarity();
+    // 30連L保障（sinceL>=29 で次はL以上保証）
+    if (pity.sinceL >= 29 && i===0) r = (Math.random()<0.167)?'M':'L';
+    rarities.push(r);
   }
-  window.onerror = function(message, source, lineno, colno, error){
-    showErr(`${message} @${lineno}:${colno}`);
-  };
-  window.onunhandledrejection = function(e){
-    showErr('UnhandledRejection: ' + (e.reason && (e.reason.stack || e.reason.message || e.reason)));
-  };
-})();
+  // 100連M保障（sinceM>=99 で最後をMに）
+  if (pity.sinceM >= 99) rarities[rarities.length-1] = 'M';
 
-// ====== アプリ本体を load 後に確実に起動 ======
-window.addEventListener('load', function(){
-  try{
-    // ==== ここから下は、前回お渡ししたゲーム本体と同等です（短縮版） ====
-    const cv = document.getElementById('cv');
-    const c = cv.getContext('2d');
-    const hud = document.getElementById('hud');
-    const btnStart = document.getElementById('start');
-    const btnRestart = document.getElementById('restart');
-    const btnHow = document.getElementById('howto');
-    const btnUlt = document.getElementById('ultBtn');
-    const btnGacha = document.getElementById('gachaOpen');
-    const btnGacha10 = document.getElementById('gacha10');
-    const btnCollection = document.getElementById('collection');
-    const charInfo = document.getElementById('charInfo');
+  // 結果生成
+  const results = rarities.map(r=>{
+    const ch = rollCharByRar(r);
+    addToCollection(ch.key);
+    // pity更新
+    if (r==='M') { pity.sinceM=0; pity.sinceL=0; }
+    else if (r==='L') { pity.sinceL=0; pity.sinceM++; }
+    else { pity.sinceL++; pity.sinceM++; }
+    return ch;
+  });
+  savePity();
+  setHUD(GAME_TIME-(now()-t0));
 
-    // セーフストレージ
-    const safeStorage = (function(){
-      try{
-        const k='__t', s=window.localStorage; s.setItem(k,'1'); s.removeItem(k);
-        return {get:(k)=>s.getItem(k), set:(k,v)=>s.setItem(k,v)};
-      }catch(e){
-        // localStorageが使えない（プライベートモード等）場合でも動作するメモリ代替
-        const mem={};
-        return {get:(k)=>mem[k]||null, set:(k,v)=>{mem[k]=v;}};
-      }
-    })();
+  // 表示
+  resWrap.innerHTML='';
+  resWrap.style.gridTemplateColumns = `repeat(${Math.min(5,results.length)},1fr)`;
+  results.forEach(ch=>{
+    const dv=document.createElement('div');
+    dv.className=`miniCard ${rarClass(ch.rar)}`;
+    const own = collection.owned[ch.key];
+    dv.innerHTML = `<div class="big">${ch.emoji}</div>
+      <div>${ch.name}</div>
+      <div class="small">R:${ch.rar} / LB:${own.limit}</div>`;
+    dv.onclick = ()=>{ setCurrentChar(ch.key); ov.style.display='none'; };
+    resWrap.appendChild(dv);
+  });
+  ov.style.display='flex';
+}
 
-    // 以降のゲーム本体ロジックはそのまま動くはずです
-    // ーーー 略 ーーー
-    // 💡ここで前回の「Character Gacha EX」の <script> 内容をそのまま貼ってください。
-    // 置換のコツ：このコメント行の直後から、前回コードの「(() => { … })();」全体を丸ごと貼る。
-    // （上のデバッグハンドラと window.load だけ残して、中身は前回のゲームコードに差し替え）
-    
-    // ===== サンプル: 最低限の起動だけ（一時確認用） =====
-    // ↓まず「スタート」ボタンが反応するかの一次確認用。動いたら、上の「略」の部分に前回の本体を貼り戻してください。
-    btnStart.onclick = function(){
-      hud.textContent = '起動テストOK：スタートが反応しました。前回の本体コードを貼り戻してください。';
-      btnStart.style.display='none';
-      btnRestart.style.display='inline-block';
-      // とりあえず背景クリア
-      c.clearRect(0,0,cv.width,cv.height);
-      c.fillStyle = '#7fb10a';
-      c.fillRect(0, cv.height-72, cv.width, 72);
+function addToCollection(key){
+  if (!collection.owned[key]) collection.owned[key] = { owned:true, dup:0, limit:0 };
+  else {
+    collection.owned[key].dup++;
+    // 限界突破ルール（被り強化）
+    const rar = characters[key].rar;
+    const inc = rar==='M' ? 0.04 : rar==='L' ? 0.03 : rar==='E' ? 0.025 : rar==='R' ? 0.015 : 0.005;
+    collection.owned[key].limit = +(collection.owned[key].limit + inc).toFixed(3); // 小数で蓄積
+  }
+  saveCollection();
+}
+
+// コレクションUI
+btnCollection.onclick = ()=>{
+  colGrid.innerHTML='';
+  // ソート：レア→所持→名前
+  const list = Object.values(characters).sort((a,b)=>{
+    const ra = rarOrder.indexOf(a.rar), rb = rarOrder.indexOf(b.rar);
+    if (ra!==rb) return ra-rb;
+    const oa = !!collection.owned[a.key], ob = !!collection.owned[b.key];
+    if (oa!==ob) return (ob?1:-1);
+    return a.name.localeCompare(b.name,'ja');
+  });
+  list.forEach(ch=>{
+    const own = collection.owned[ch.key];
+    const dv=document.createElement('div');
+    dv.className=`miniCard ${rarClass(ch.rar)}`;
+    dv.innerHTML = `<div class="big">${ch.emoji}</div>
+      <div>${ch.name}</div>
+      <div class="small">${own?`R:${ch.rar} / LB:${own.limit||0}`:'未所持'}</div>`;
+    dv.onclick = ()=>{
+      colSelectedKey = ch.key;
+      colEquip.disabled = !own;
+      // 軽い選択ハイライト
+      [...colGrid.children].forEach(x=>x.style.outline='none');
+      dv.style.outline='2px solid #fff';
     };
-    btnRestart.onclick = ()=>location.reload();
+    colGrid.appendChild(dv);
+  });
+  colOv.style.display='flex';
+};
 
-    // 初期HUD
-    hud.textContent = '読み込み完了。スタートを押してね（デバッグ版）';
-  }catch(e){
-    // 最初期化で落ちた場合も画面に出す
-    const msg = (e && (e.stack || e.message)) ? (e.stack || e.message) : String(e);
-    const div = document.createElement('div');
-    div.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#b91c1c;color:#fff;padding:8px 12px;font-size:12px;font-family:monospace;white-space:pre-wrap';
-    div.textContent = '[BOOT ERROR] ' + msg;
-    document.body.appendChild(div);
+// ====== HUD / 便利 ======
+function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
+function setHUD(remainMs){
+  const sec = Math.max(0, Math.ceil(remainMs/1000));
+  const inv = now()<invUntil ? '（無敵中）' : '';
+  const st = stageForLevel(level).name;
+  const ch = characters[currentCharKey];
+  const own = collection.owned[currentCharKey];
+  const lb = own?.limit? own.limit : 0;
+  hud.textContent = `ステージ:${st}　スコア:${score}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${Math.floor(ult)}%　コイン:🪙${coins}　残り:${sec}秒 ${inv}`;
+  charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
+  btnUlt.style.display = ultReady ? 'block':'none';
+  btnGacha.disabled = coins < 10;
+  btnGacha10.disabled = coins < 100;
+}
+const now = ()=>performance.now();
+const rand = (a,b)=> a + Math.random()*(b-a);
+const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
+
+// ====== スポーン ======
+function spawnItem(){
+  const isParfait = Math.random()<0.5;
+  items.push({
+    x: cv.width+24,
+    y: cv.height - GROUND - 44 - rand(0, 95),
+    w: 30, h: 30,
+    v: 3.0 + rand(.6,1.8) + (level-1)*.22,
+    char: isParfait ? '🍨' : '🐟',
+    score: isParfait ? 2 : 1
+  });
+}
+function spawnEnemy(){
+  const st = stageForLevel(level);
+  enemies.push({
+    x: cv.width+30,
+    y: cv.height - GROUND - 36,
+    w: 36, h: 36,
+    v: (2.7 + (level-1)*.35) * st.enemyMul
+  });
+}
+function spawnPower(){
+  powers.push({
+    x: cv.width+26,
+    y: cv.height - GROUND - 44 - rand(0, 120),
+    w: 26, h: 26,
+    v: 3.0 + (level-1)*.25
+  });
+}
+
+// ====== 入力 ======
+let canDouble = false, guardReadyTime = 0;
+function jump(){
+  if (!gameOn) return;
+  // 二段ジャンプ判定
+  const hasDouble = characters[currentCharKey].special?.includes('doubleJump');
+  if (player.onGround){
+    player.vy = currentStats.jump; player.onGround=false;
+    canDouble = hasDouble; // 地上離陸時に2段目権利付与
+  } else if (hasDouble && canDouble){
+    player.vy = currentStats.jump * 0.9; // 2段目はやや弱め
+    canDouble = false;
   }
+}
+function shoot(){
+  if (!gameOn) return;
+  const t=now(); if (t-lastShot<shootCD) return; lastShot=t;
+  const pierce = characters[currentCharKey].special?.includes('pierce');
+  const v = 9+level*.6 + (now()<bulletBoostUntil? 4:0);
+  bullets.push({ x:player.x+player.w, y:player.y+player.h/2-3, w:12, h:6, v: v*currentStats.bullet, hitsLeft: pierce? 2 : 1 });
+}
+function tryUlt(){
+  if (!gameOn||!ultReady) return;
+  ultReady=false; ult=0;
+  const type = characters[currentCharKey].ult;
+  if (type==='storm') ultActiveUntil = now()+1600;
+  else ultActiveUntil = now()+2000; // rainbowデフォ
+}
+
+// PCキー
+window.addEventListener('keydown', e=>{
+  if (e.code==='Space' || e.code==='ArrowUp') jump();
+  if (e.key==='z'||e.key==='x'||e.key==='Z'||e.key==='X') shoot();
+  if (e.key==='c' || e.key==='C') tryUlt();
 });
+
+// タッチ（左＝ジャンプ、右＝攻撃 or 長押しで必殺）
+let pressTimer=null, pressedRight=false;
+cv.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const rect=cv.getBoundingClientRect();
+  const x=e.changedTouches[0].clientX - rect.left;
+  const isLeft = x < rect.width/2;
+  if (isLeft){ jump(); pressedRight=false; }
+  else {
+    pressedRight=true;
+    pressTimer=setTimeout(()=>{ if(pressedRight) tryUlt(); }, 350);
+    shoot();
+  }
+},{passive:false});
+cv.addEventListener('touchend', ()=>{ pressedRight=false; clearTimeout(pressTimer); }, {passive:true});
+btnUlt.addEventListener('click', tryUlt);
+
+// ====== キャラ適用 ======
+let currentStats = getEffectiveStats(currentCharKey);
+function getEffectiveStats(key){
+  // 基本
+  const ch = characters[key];
+  const lb = collection.owned[key]?.limit || 0; // 小数の累積
+  // 限界突破ぶんを等倍増加（例：+0.03 なら +3%）
+  return {
+    move:   ch.move   * (1+lb),
+    jump:   BASE_JUMP * ch.jump * (1+lb*0.5), // ジャンプは控えめに反映
+    bullet: ch.bullet * (1+lb),
+    inv:    Math.floor(ch.inv * (1+lb*0.5)),
+    ultRate:ch.ultRate* (1+lb*0.5),
+    special: ch.special,
+    ult: ch.ult,
+  };
+}
+function setCurrentChar(key){
+  currentCharKey = key;
+  collection.current = key;
+  saveCollection();
+  currentStats = getEffectiveStats(key);
+  updateCharInfo();
+}
+function updateCharInfo(){
+  const ch = characters[currentCharKey];
+  const own = collection.owned[currentCharKey];
+  const lb = own?.limit? own.limit : 0;
+  charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
+}
+
+// ====== 更新 ======
+function update(t){
+  if(!gameOn) return;
+  const elapsed=t-t0, remain=GAME_TIME-elapsed;
+  if (remain<=0) return endGame();
+
+  // レベル
+  level = Math.max(1, Math.floor(score/itemLv)+1);
+  const st = stageForLevel(level);
+
+  // 生成間隔
+  const itemIv  = clamp(1200 - (level-1)*100, 480, 1200);
+  const enemyIv = clamp(1650 - (level-1)*130, 600, 1650);
+  const powerIv = 6200;
+
+  if(t-lastItem  > itemIv)  { spawnItem();  lastItem=t; }
+  if(t-lastEnemy > enemyIv) { spawnEnemy(); lastEnemy=t; }
+  if(t-lastPower > powerIv) { spawnPower(); lastPower=t; }
+
+  // 物理
+  player.vy += G; player.y += player.vy;
+  if (player.y+player.h >= cv.height-GROUND){
+    player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true; canDouble = characters[currentCharKey].special?.includes('doubleJump');
+  }
+
+  // オート射撃（ガチャ効果など将来用）
+  if (now()<autoShootUntil && t-lastShot>shootCD*0.6){ shoot(); }
+
+  // 弾
+  bullets = bullets.filter(b=> {
+    b.x += b.v;
+    return (b.x < cv.width+24) && b.hitsLeft>0;
+  });
+
+  // アイテム（Mythic magnet）
+  const hasMagnet = characters[currentCharKey].special?.includes('magnet');
+  items = items.filter(it=>{
+    // 吸引
+    if (hasMagnet){
+      const dx = (player.x - it.x), dy = (player.y - it.y);
+      const dist = Math.hypot(dx,dy);
+      if (dist < 160){
+        it.x += dx*0.18; it.y += dy*0.18;
+      }
+    }
+    it.x -= it.v;
+    if (AABB(player,it)){
+      const mul = now()<scoreMulUntil ? 2 : 1;
+      score += it.score*mul; coins += 1 * mul;
+      ult = clamp(ult + (it.char==='🍨'?10:6) * currentStats.ultRate, 0, 100);
+      return false;
+    }
+    return it.x+it.w>0;
+  });
+
+  // ⭐
+  powers = powers.filter(pw=>{
+    pw.x -= pw.v;
+    if (AABB(player,pw)){ invUntil=now()+Math.max(powerMillis,currentStats.inv); ult=Math.min(100,ult+12*currentStats.ultRate); return false; }
+    return pw.x+pw.w>0;
+  });
+
+  // 必殺準備
+  if (ult>=100) ultReady=true;
+
+  // 敵
+  const hasSlow = characters[currentCharKey].special?.includes('slowEnemy');
+  enemies = enemies.filter(en=>{
+    en.x -= en.v;
+
+    // 必殺
+    if (now()<ultActiveUntil){
+      const type = characters[currentCharKey].ult;
+      if (type==='storm'){
+        // 渦：半径120
+        const cx = player.x+player.w/2, cy = player.y+player.h/2;
+        const ex = en.x+en.w/2, ey = en.y+en.h/2;
+        const hit = Math.hypot(cx-ex, cy-ey) <= 120;
+        if (hit){ score+=enemyBonus; coins+=2; return false; }
+      } else {
+        // rainbow：3レーン
+        const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
+        const hit = lanes.some(y=> en.y-6 <= y && y <= en.y+en.h+6);
+        if (hit){ score+=enemyBonus; coins+=2; return false; }
+      }
+    }
+
+    // 弾ヒット（pierce対応）
+    for (let i=0;i<bullets.length;i++){
+      if (AABB(en,bullets[i])){
+        score+=enemyBonus; coins+=2;
+        bullets[i].hitsLeft--;
+        if (hasSlow) en.v *= 0.6; // 一時的スロー（簡易）
+        if (bullets[i].hitsLeft<=0) bullets.splice(i,1);
+        return false;
+      }
+    }
+
+    // 体当たり
+    if (AABB(player,en)){
+      if (now()<invUntil){ score+=enemyBonus; coins+=2; return false; }
+      // oneGuard（7秒CD）
+      const hasGuard = characters[currentCharKey].special?.includes('oneGuard');
+      if (hasGuard && now() - guardReadyTime > 7000){
+        guardReadyTime = now(); // ノーダメで守る
+        return false;
+      }
+      if (now()>hurtUntil){
+        lives=Math.max(0,lives-1); hurtUntil=now()+900;
+        if (lives===0){ endGame(); return false; }
+      }
+    }
+    return en.x+en.w>0;
+  });
+
+  draw(remain, st);
+  requestAnimationFrame(update);
+}
+
+// ====== 描画 ======
+function draw(remain, st){
+  const g=c.createLinearGradient(0,0,0,cv.height);
+  g.addColorStop(0, st.bg1); g.addColorStop(1, st.bg2);
+  c.fillStyle=g; c.fillRect(0,0,cv.width,cv.height);
+  c.fillStyle=st.ground; c.fillRect(0, cv.height-GROUND, cv.width, GROUND);
+
+  if (now()<invUntil){ c.strokeStyle='#f5c542'; c.lineWidth=4; c.strokeRect(player.x-2,player.y-2,player.w+4,player.h+4); }
+  const blink = now()<hurtUntil && Math.floor(now()/60)%2===0;
+  if (!blink){ c.fillStyle=player.color; c.fillRect(player.x,player.y,player.w,player.h); }
+
+  // 必殺描画
+  if (now()<ultActiveUntil){
+    const type = characters[currentCharKey].ult;
+    if (type==='storm'){
+      const cx = player.x+player.w/2, cy = player.y+player.h/2;
+      c.fillStyle='rgba(80,160,255,.25)'; c.beginPath(); c.arc(cx,cy,120,0,Math.PI*2); c.fill();
+      c.strokeStyle='rgba(200,230,255,.7)'; c.lineWidth=3; c.beginPath(); c.arc(cx,cy,88,0,Math.PI*2); c.stroke();
+    } else {
+      const laneYs = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
+      laneYs.forEach((y,idx)=>{
+        c.fillStyle=`rgba(${180+idx*25},${80+idx*50},255,.65)`; c.fillRect(player.x, y-6, cv.width-player.x, 12);
+        c.fillStyle='rgba(255,255,255,.55)'; c.fillRect(player.x, y-2, cv.width-player.x, 4);
+      });
+    }
+  }
+
+  // 弾
+  c.fillStyle='#333'; bullets.forEach(b=> c.fillRect(b.x,b.y,b.w,b.h));
+
+  // アイテム
+  c.font='28px serif'; c.textBaseline='top';
+  items.forEach(it=> c.fillText(it.char,it.x,it.y));
+
+  // ⭐
+  powers.forEach(pw=>{ c.font='26px serif'; c.fillText('⭐', pw.x, pw.y); });
+
+  // 敵
+  enemies.forEach(en=>{ c.font='32px serif'; c.fillText('👾', en.x, en.y-4); });
+
+  setHUD(remain);
+}
+
+// ====== 開始/終了 ======
+function startGame(){
+  score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
+  coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
+  items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
+  player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+  canDouble = characters[currentCharKey].special?.includes('doubleJump');
+  guardReadyTime = 0;
+  btnStart.style.display='none'; btnRestart.style.display='none';
+  t0=now(); gameOn=true;
+  lastItem=lastEnemy=lastPower=lastShot=t0;
+  currentStats = getEffectiveStats(currentCharKey);
+  setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
+  requestAnimationFrame(update);
+}
+function endGame(){
+  if(!gameOn) return; gameOn=false;
+  const st = stageForLevel(level);
+  draw(0, st);
+  c.fillStyle='rgba(0,0,0,.55)'; c.fillRect(0,0,cv.width,cv.height);
+  c.fillStyle='#fff'; c.textAlign='center';
+  c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
+  c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}　コイン: 🪙${coins}`, cv.width/2, cv.height/2 + 10);
+  c.textAlign='start'; btnRestart.style.display='inline-block';
+}
+
+// ====== ボタン ======
+btnStart.addEventListener('click', startGame);
+btnRestart.addEventListener('click', startGame);
+btnHow.addEventListener('click', ()=>{
+  alert(
+    '操作: 左＝ジャンプ / 右＝攻撃 / 右長押し or 右下の「必殺」＝必殺(ゲージ100%)\n' +
+    'ガチャ: 1回10コイン / 10連100コイン（30連でL保証/100連でM保証）\n' +
+    'コレクション: 所持キャラから選択、重複で限界突破（性能微増）\n' +
+    'Mythic: 🌈オーロラ(吸引+ガード) / 🌀鰯王(二段ジャンプ+貫通) 固有必殺あり'
+  );
+});
+
+// ====== スポーンと攻撃トリガ ======
+function shootIfAuto(t){ /* 予備フック */ }
+
+// ====== ガチャボタン ======
+btnGacha.onclick = ()=> doGacha(1);
+btnGacha10.onclick = ()=> doGacha(10);
+
+// ====== ストレージ ======
+function loadCollection(){
+  try{
+    const s = localStorage.getItem(STORE_KEY);
+    if (s) return JSON.parse(s);
+  }catch{}
+  return { current:'parfen', owned: { parfen:{owned:true,dup:0,limit:0} } };
+}
+function saveCollection(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(collection)); }catch{} }
+function loadPity(){
+  try{ const s = localStorage.getItem(pityKey); if(s) return JSON.parse(s); }catch{}
+  return { sinceL:0, sinceM:0 };
+}
+function savePity(){ try{ localStorage.setItem(pityKey, JSON.stringify(pity)); }catch{} }
+
+// ====== 初期HUD ======
+setHUD(GAME_TIME);
+updateCharInfo();
+})();
 </script>
+</body>
+</html>
