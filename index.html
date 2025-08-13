@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>パフェとイワシ RUN!</title>
+  <style>
+    :root { --maxw: 900px; }
+    body{margin:0;background:#eef3f9;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;color:#222;text-align:center}
+    header{padding:14px 10px 4px}
+    h1{margin:0 0 4px;font-size:clamp(20px,4vw,28px)}
+    #hud{font-size:clamp(14px,3.2vw,18px);margin-bottom:8px}
+    #wrap{max-width:var(--maxw);margin:0 auto;padding:8px}
+    canvas{width:100%;height:auto;max-width:var(--maxw);background:linear-gradient(#9ed6ee,#fff7e6);border:2px solid #333;border-radius:10px;touch-action:none}
+    #btns{margin:10px 0}
+    button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff}
+    button.secondary{background:#3b82f6}
+    .muted{opacity:.7}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>パフェとイワシ RUN!</h1>
+    <div id="hud" class="muted">読み込み中…</div>
+  </header>
+  <div id="wrap">
+    <canvas id="cv" width="900" height="420"></canvas>
+    <div id="btns">
+      <button id="start">スタート</button>
+      <button id="restart" class="secondary" style="display:none">リスタート</button>
+    </div>
+    <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃（PC: Space/↑ でジャンプ、Z/Xで攻撃）</p>
+  </div>
+
+<script>
+(()=>{
+// === 基本 ===
+const cv = document.getElementById('cv');
+const c = cv.getContext('2d');
+const hud = document.getElementById('hud');
+const btnStart = document.getElementById('start');
+const btnRestart = document.getElementById('restart');
+
+const G = 0.6, JUMP = -12, GROUND = 70;
+const GAME_TIME_MS = 60000;
+
+let gameOn=false, t0=0, lastSpawn=0, lastEnemy=0, lastPower=0, lastShot=0;
+let score=0, level=1, lives=3, invUntil=0;
+const shootCD=260; // 攻撃クールダウン ms
+
+const player = { x:110, y:cv.height-GROUND-44, w:44, h:44, vy:0, onGround:true, color:'#ff6347' };
+
+let items=[], enemies=[], bullets=[];
+
+// === 便利関数 ===
+const now = ()=>performance.now();
+const rand = (a,b)=>a+Math.random()*(b-a);
+const AABB = (a,b)=>a.x<a...
+
+(continued)
