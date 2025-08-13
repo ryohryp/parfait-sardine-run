@@ -31,30 +31,285 @@
     </div>
     <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃（PC: Space/↑ でジャンプ、Z/Xで攻撃）</p>
   </div>
-
 <script>
 (()=>{
-// === 基本 ===
-const cv = document.getElementById('cv');
-const c = cv.getContext('2d');
-const hud = document.getElementById('hud');
-const btnStart = document.getElementById('start');
-const btnRestart = document.getElementById('restart');
+  // === 基本 ===
+  const cv = document.getElementById('cv');
+  const c = cv.getContext('2d');
+  const hud = document.getElementById('hud');
+  const btnStart = document.getElementById('start');
+  const btnRestart = document.getElementById('restart');
 
-const G = 0.6, JUMP = -12, GROUND = 70;
-const GAME_TIME_MS = 60000;
+  const G = 0.6, JUMP = -12, GROUND = 70;
+  const GAME_TIME_MS = 60000;
 
-let gameOn=false, t0=0, lastSpawn=0, lastEnemy=0, lastPower=0, lastShot=0;
-let score=0, level=1, lives=3, invUntil=0;
-const shootCD=260; // 攻撃クールダウン ms
+  let gameOn = false, t0 = 0;
+  let lastSpawn = 0, lastEnemy = 0, lastPower = 0, lastShot = 0;
+  let score = 0, level = 1, lives = 3, invUntil = 0, hurtUntil = 0;
 
-const player = { x:110, y:cv.height-GROUND-44, w:44, h:44, vy:0, onGround:true, color:'#ff6347' };
+  const shootCD = 260;               // 攻撃クールダウン(ms)
+  const powerMillis = 6000;          // 無敵時間
+  const enemyHitBonus = 3;           // 敵撃破ボーナス
+  const levelUpStep = 15;            // 15点ごとにレベルアップ
 
-let items=[], enemies=[], bullets=[];
+  const player = { x:110, y:cv.height-GROUND-44, w:44, h:44, vy:0, onGround:true, color:'#ff6347' };
 
-// === 便利関数 ===
-const now = ()=>performance.now();
-const rand = (a,b)=>a+Math.random()*(b-a);
-const AABB = (a,b)=>a.x<a...
+  let items = [];    // 🍨/🐟
+  let enemies = [];  // 👾
+  let bullets = [];  // 弾
+  let powers  = [];  // ⭐
 
-(continued)
+  // === 便利関数 ===
+  const now = ()=>performance.now();
+  const rand = (a,b)=> a + Math.random()*(b-a);
+  const AABB = (a,b)=> a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
+
+  function heartStr(n){
+    const full = '❤️'.repeat(n);
+    const empty = '♡'.repeat(3-n);
+    return full + empty;
+  }
+
+  function setHUD(remainMs){
+    const sec = Math.max(0, Math.ceil(remainMs/1000));
+    const inv = now() < invUntil ? '（無敵中）' : '';
+    hud.textContent = `スコア: ${score}　レベル: ${level}　ライフ: ${heartStr(lives)}　残り: ${sec}秒 ${inv}`;
+  }
+
+  // === スポーン ===
+  function spawnItem(){
+    const isParfait = Math.random() < 0.5;
+    items.push({
+      x: cv.width + 24,
+      y: cv.height - GROUND - 40 - rand(0, 90),
+      w: 30, h: 30,
+      v: 3.2 + rand(0, 1.8) + (level-1)*0.2,
+      char: isParfait ? '🍨' : '🐟',
+      score: isParfait ? 2 : 1
+    });
+  }
+  function spawnEnemy(){
+    enemies.push({
+      x: cv.width + 30,
+      y: cv.height - GROUND - 34,
+      w: 34, h: 34,
+      v: 2.8 + (level-1)*0.35
+    });
+  }
+  function spawnPower(){
+    powers.push({
+      x: cv.width + 26,
+      y: cv.height - GROUND - 40 - rand(0, 120),
+      w: 26, h: 26,
+      v: 3.0 + (level-1)*0.25
+    });
+  }
+
+  // === 入力 ===
+  function jump(){
+    if (!gameOn) return;
+    if (player.onGround){
+      player.vy = JUMP;
+      player.onGround = false;
+    }
+  }
+  function shoot(){
+    if (!gameOn) return;
+    const t = now();
+    if (t - lastShot < shootCD) return;
+    lastShot = t;
+    bullets.push({
+      x: player.x + player.w,
+      y: player.y + player.h/2 - 3,
+      w: 10, h: 6, v: 9 + level*0.6
+    });
+  }
+
+  // キー入力（PC用）
+  window.addEventListener('keydown', e=>{
+    if (e.code==='Space' || e.code==='ArrowUp') jump();
+    if (e.key==='z' || e.key==='x' || e.key==='Z' || e.key==='X') shoot();
+  });
+
+  // タッチ（左半分＝ジャンプ／右半分＝攻撃）
+  cv.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    const rect = cv.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const x = touch.clientX - rect.left;
+    if (x < rect.width/2) jump();
+    else shoot();
+  }, {passive:false});
+
+  // === 更新 ===
+  function update(t){
+    if (!gameOn) return;
+    const elapsed = t - t0;
+    const remain = GAME_TIME_MS - elapsed;
+    if (remain <= 0) return endGame();
+
+    // レベル更新
+    level = Math.max(1, Math.floor(score / levelUpStep) + 1);
+
+    // 生成間隔（レベルで短縮）
+    const itemIv  = clamp(1300 - (level-1)*120, 500, 1300);
+    const enemyIv = clamp(1700 - (level-1)*140, 600, 1700);
+    const powerIv = 6000; // ⭐は固定め
+
+    if (t - lastSpawn > itemIv){ spawnItem(); lastSpawn = t; }
+    if (t - lastEnemy > enemyIv){ spawnEnemy(); lastEnemy = t; }
+    if (t - lastPower > powerIv){ spawnPower(); lastPower = t; }
+
+    // 物理
+    player.vy += G;
+    player.y  += player.vy;
+    if (player.y + player.h >= cv.height - GROUND){
+      player.y = cv.height - GROUND - player.h;
+      player.vy = 0;
+      player.onGround = true;
+    }
+
+    // 弾
+    bullets = bullets.filter(b=>{
+      b.x += b.v;
+      return b.x < cv.width + 20;
+    });
+
+    // アイテム衝突
+    items = items.filter(it=>{
+      it.x -= it.v;
+      if (AABB(player, it)){
+        score += it.score;
+        return false;
+      }
+      return it.x + it.w > 0;
+    });
+
+    // ⭐衝突
+    powers = powers.filter(pw=>{
+      pw.x -= pw.v;
+      if (AABB(player, pw)){
+        invUntil = now() + powerMillis;
+        return false;
+      }
+      return pw.x + pw.w > 0;
+    });
+
+    // 敵・弾の衝突
+    enemies = enemies.filter(en=>{
+      en.x -= en.v;
+      // 弾ヒット
+      for (let i=0;i<bullets.length;i++){
+        if (AABB(en, bullets[i])){
+          score += enemyHitBonus;
+          bullets.splice(i,1);
+          return false;
+        }
+      }
+      // プレイヤー接触
+      if (AABB(player, en)){
+        if (now() < invUntil){
+          score += enemyHitBonus; // 無敵中は倒した扱い
+          return false;
+        }
+        if (now() > hurtUntil){
+          lives = Math.max(0, lives - 1);
+          hurtUntil = now() + 800; // 連続ダメ軽減
+          if (lives === 0) { endGame(); return false; }
+        }
+      }
+      return en.x + en.w > 0;
+    });
+
+    draw(remain);
+    requestAnimationFrame(update);
+  }
+
+  // === 描画 ===
+  function draw(remainMs){
+    c.clearRect(0,0,cv.width,cv.height);
+    // 地面
+    c.fillStyle = '#78ad07';
+    c.fillRect(0, cv.height-GROUND, cv.width, GROUND);
+
+    // プレイヤー
+    if (now() < invUntil){   // 無敵中の縁取り
+      c.strokeStyle = '#f5c542';
+      c.lineWidth = 4;
+      c.strokeRect(player.x-2, player.y-2, player.w+4, player.h+4);
+    }
+    if (now() < hurtUntil){  // ダメージ中チラつき
+      if (Math.floor(now()/60)%2===0) { /* スキップで点滅 */ }
+      else {
+        c.fillStyle = player.color;
+        c.fillRect(player.x, player.y, player.w, player.h);
+      }
+    } else {
+      c.fillStyle = player.color;
+      c.fillRect(player.x, player.y, player.w, player.h);
+    }
+
+    // 弾
+    c.fillStyle = '#333';
+    bullets.forEach(b=> c.fillRect(b.x, b.y, b.w, b.h));
+
+    // アイテム
+    c.font = '28px serif';
+    c.textBaseline = 'top';
+    items.forEach(it=> c.fillText(it.char, it.x, it.y));
+
+    // ⭐
+    powers.forEach(pw=>{
+      c.font = '26px serif';
+      c.fillText('⭐', pw.x, pw.y);
+    });
+
+    // 敵
+    enemies.forEach(en=>{
+      c.font = '32px serif';
+      c.fillText('👾', en.x, en.y-4);
+    });
+
+    setHUD(remainMs);
+  }
+
+  // === ゲーム開始・終了 ===
+  function startGame(){
+    score=0; level=1; lives=3; invUntil=0; hurtUntil=0;
+    items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
+    player.x=110; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+
+    btnStart.style.display='none';
+    btnRestart.style.display='none';
+    t0 = now();
+    gameOn = true;
+    lastSpawn = lastEnemy = lastPower = lastShot = t0;
+    setHUD(GAME_TIME_MS);
+    draw(GAME_TIME_MS);
+    requestAnimationFrame(update);
+  }
+  function endGame(){
+    if (!gameOn) return;
+    gameOn = false;
+    draw(0);
+    // 終了オーバーレイ
+    c.fillStyle = 'rgba(0,0,0,.55)';
+    c.fillRect(0,0,cv.width,cv.height);
+    c.fillStyle = '#fff';
+    c.textAlign='center';
+    c.font = '36px sans-serif';
+    c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
+    c.font = '24px sans-serif';
+    c.fillText(`最終スコア: ${score}　レベル: ${level}`, cv.width/2, cv.height/2 + 10);
+    c.textAlign='start';
+    btnRestart.style.display='inline-block';
+  }
+
+  btnStart.addEventListener('click', startGame);
+  btnRestart.addEventListener('click', startGame);
+
+  // 初期HUD
+  setHUD(GAME_TIME_MS);
+})();
+      </script>
