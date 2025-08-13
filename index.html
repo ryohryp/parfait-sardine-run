@@ -1,315 +1,328 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>パフェとイワシ RUN!</title>
-  <style>
-    :root { --maxw: 900px; }
-    body{margin:0;background:#eef3f9;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;color:#222;text-align:center}
-    header{padding:14px 10px 4px}
-    h1{margin:0 0 4px;font-size:clamp(20px,4vw,28px)}
-    #hud{font-size:clamp(14px,3.2vw,18px);margin-bottom:8px}
-    #wrap{max-width:var(--maxw);margin:0 auto;padding:8px}
-    canvas{width:100%;height:auto;max-width:var(--maxw);background:linear-gradient(#9ed6ee,#fff7e6);border:2px solid #333;border-radius:10px;touch-action:none}
-    #btns{margin:10px 0}
-    button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff}
-    button.secondary{background:#3b82f6}
-    .muted{opacity:.7}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>パフェとイワシ RUN! EX</title>
+<style>
+  :root { --maxw: 920px; }
+  * { box-sizing: border-box; }
+  body{margin:0;background:#eaf1f8;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#222;text-align:center}
+  header{padding:12px 8px 4px}
+  h1{margin:0 0 6px;font-size:clamp(20px,4vw,28px)}
+  #hud{font-size:clamp(13px,3.2vw,18px);margin-bottom:8px}
+  #wrap{max-width:var(--maxw);margin:0 auto;padding:8px}
+  canvas{width:100%;height:auto;max-width:var(--maxw);background:linear-gradient(#9ed6ee,#fff7e6);border:2px solid #333;border-radius:12px;touch-action:none}
+  #btns{display:flex;gap:8px;justify-content:center;margin:10px 0;}
+  button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+  button.secondary{background:#3b82f6}
+  button.ghost{background:#6b7280}
+  .muted{opacity:.75}
+  /* モバイル固定ボタン */
+  #ultBtn{
+    position: fixed; right: 14px; bottom: 18px; z-index: 10;
+    padding:12px 16px; border-radius:14px; background:#ef4444; color:#fff; font-weight:700;
+    box-shadow:0 3px 0 rgba(0,0,0,.25); user-select:none;
+  }
+  @media(hover:hover){ #ultBtn:hover{ filter:brightness(1.05); } }
+</style>
 </head>
 <body>
   <header>
-    <h1>パフェとイワシ RUN!</h1>
+    <h1>パフェとイワシ RUN! EX</h1>
     <div id="hud" class="muted">読み込み中…</div>
   </header>
+
   <div id="wrap">
-    <canvas id="cv" width="900" height="420"></canvas>
+    <canvas id="cv" width="900" height="430"></canvas>
     <div id="btns">
       <button id="start">スタート</button>
       <button id="restart" class="secondary" style="display:none">リスタート</button>
+      <button id="howto" class="ghost">遊び方</button>
     </div>
-    <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃（PC: Space/↑ でジャンプ、Z/Xで攻撃）</p>
+    <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃 / 右長押し or 右下の<strong>必殺</strong>＝必殺技</p>
   </div>
+
+  <button id="ultBtn" style="display:none">必殺</button>
+
 <script>
 (()=>{
-  // === 基本 ===
-  const cv = document.getElementById('cv');
-  const c = cv.getContext('2d');
-  const hud = document.getElementById('hud');
-  const btnStart = document.getElementById('start');
-  const btnRestart = document.getElementById('restart');
+// ====== 基本 ======
+const cv = document.getElementById('cv');
+const c = cv.getContext('2d');
+const hud = document.getElementById('hud');
+const btnStart = document.getElementById('start');
+const btnRestart = document.getElementById('restart');
+const btnHow = document.getElementById('howto');
+const btnUlt = document.getElementById('ultBtn');
 
-  const G = 0.6, JUMP = -12, GROUND = 70;
-  const GAME_TIME_MS = 60000;
+const G = 0.62, JUMP = -12.2, GROUND = 72;
+const GAME_TIME = 60000;
 
-  let gameOn = false, t0 = 0;
-  let lastSpawn = 0, lastEnemy = 0, lastPower = 0, lastShot = 0;
-  let score = 0, level = 1, lives = 3, invUntil = 0, hurtUntil = 0;
+let gameOn=false, t0=0;
+let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
+let score=0, level=1, lives=3, invUntil=0, hurtUntil=0;
+let ult=0, ultReady=false, ultActiveUntil=0;
 
-  const shootCD = 260;               // 攻撃クールダウン(ms)
-  const powerMillis = 6000;          // 無敵時間
-  const enemyHitBonus = 3;           // 敵撃破ボーナス
-  const levelUpStep = 15;            // 15点ごとにレベルアップ
+const shootCD=250, powerMillis=6000, enemyBonus=3, itemLv=15;
+const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
-  const player = { x:110, y:cv.height-GROUND-44, w:44, h:44, vy:0, onGround:true, color:'#ff6347' };
+let items=[], enemies=[], bullets=[], powers=[];
 
-  let items = [];    // 🍨/🐟
-  let enemies = [];  // 👾
-  let bullets = [];  // 弾
-  let powers  = [];  // ⭐
+// ステージ（背景と難易度ブースト）
+const stages = [
+  { name:'草原',  bg1:'#9ed6ee', bg2:'#fff7e6', ground:'#7fb10a', enemyMul:1.00 },
+  { name:'砂漠',  bg1:'#ffd28a', bg2:'#ffe9c7', ground:'#d2a659', enemyMul:1.10 },
+  { name:'雪原',  bg1:'#c8e7ff', bg2:'#f6fbff', ground:'#b9d3e5', enemyMul:1.22 },
+  { name:'宇宙',  bg1:'#0b1833', bg2:'#1b2850', ground:'#0b1833', enemyMul:1.38 },
+];
+function stageForLevel(lv){
+  if (lv>=10) return stages[3];
+  if (lv>=7)  return stages[2];
+  if (lv>=4)  return stages[1];
+  return stages[0];
+}
 
-  // === 便利関数 ===
-  const now = ()=>performance.now();
-  const rand = (a,b)=> a + Math.random()*(b-a);
-  const AABB = (a,b)=> a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-  const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
+// HUD
+function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
+function setHUD(remainMs){
+  const sec = Math.max(0, Math.ceil(remainMs/1000));
+  const inv = now()<invUntil ? '（無敵中）' : '';
+  const st = stageForLevel(level).name;
+  hud.textContent = `ステージ:${st}　スコア:${score}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${ult}%　残り:${sec}秒 ${inv}`;
+  btnUlt.style.display = ultReady ? 'block':'none';
+}
 
-  function heartStr(n){
-    const full = '❤️'.repeat(n);
-    const empty = '♡'.repeat(3-n);
-    return full + empty;
+// 便利
+const now = ()=>performance.now();
+const rand = (a,b)=> a + Math.random()*(b-a);
+const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
+
+// スポーン
+function spawnItem(){
+  const isParfait = Math.random()<0.5;
+  items.push({
+    x: cv.width+24,
+    y: cv.height - GROUND - 44 - rand(0, 95),
+    w: 30, h: 30,
+    v: 3.0 + rand(.6,1.8) + (level-1)*.22,
+    char: isParfait ? '🍨' : '🐟',
+    score: isParfait ? 2 : 1
+  });
+}
+function spawnEnemy(){
+  const st = stageForLevel(level);
+  enemies.push({
+    x: cv.width+30,
+    y: cv.height - GROUND - 36,
+    w: 36, h: 36,
+    v: (2.7 + (level-1)*.35) * st.enemyMul
+  });
+}
+function spawnPower(){
+  powers.push({
+    x: cv.width+26,
+    y: cv.height - GROUND - 44 - rand(0, 120),
+    w: 26, h: 26,
+    v: 3.0 + (level-1)*.25
+  });
+}
+
+// 入力
+function jump(){
+  if (!gameOn) return;
+  if (player.onGround){ player.vy=JUMP; player.onGround=false; }
+}
+function shoot(){
+  if (!gameOn) return;
+  const t=now(); if (t-lastShot<shootCD) return;
+  lastShot=t;
+  bullets.push({ x:player.x+player.w, y:player.y+player.h/2-3, w:12, h:6, v:9+level*.6 });
+}
+function tryUlt(){
+  if (!gameOn||!ultReady) return;
+  ultReady=false; ult=0;
+  ultActiveUntil = now()+1200; // 1.2秒ビーム
+}
+
+// PCキー
+window.addEventListener('keydown', e=>{
+  if (e.code==='Space' || e.code==='ArrowUp') jump();
+  if (e.key==='z'||e.key==='x'||e.key==='Z'||e.key==='X') shoot();
+  if (e.key==='c' || e.key==='C') tryUlt();
+});
+
+// タッチ（左＝ジャンプ、右＝攻撃 or 長押しで必殺）
+let pressTimer=null, pressedRight=false;
+cv.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const rect=cv.getBoundingClientRect();
+  const x=e.changedTouches[0].clientX - rect.left;
+  const isLeft = x < rect.width/2;
+  if (isLeft){ jump(); pressedRight=false; }
+  else {
+    pressedRight=true;
+    pressTimer=setTimeout(()=>{ if(pressedRight) tryUlt(); }, 350); // 0.35秒で必殺
+    shoot();
+  }
+},{passive:false});
+cv.addEventListener('touchend', ()=>{ pressedRight=false; clearTimeout(pressTimer); }, {passive:true});
+btnUlt.addEventListener('click', tryUlt);
+
+// 更新
+function update(t){
+  if(!gameOn) return;
+  const elapsed=t-t0, remain=GAME_TIME-elapsed;
+  if (remain<=0) return endGame();
+
+  // レベル
+  level = Math.max(1, Math.floor(score/itemLv)+1);
+  const st = stageForLevel(level);
+
+  // 生成間隔（レベルで短縮）
+  const itemIv  = clamp(1200 - (level-1)*100, 480, 1200);
+  const enemyIv = clamp(1650 - (level-1)*130, 600, 1650);
+  const powerIv = 6200;
+
+  if(t-lastItem  > itemIv)  { spawnItem();  lastItem=t; }
+  if(t-lastEnemy > enemyIv) { spawnEnemy(); lastEnemy=t; }
+  if(t-lastPower > powerIv) { spawnPower(); lastPower=t; }
+
+  // 物理
+  player.vy += G; player.y += player.vy;
+  if (player.y+player.h >= cv.height-GROUND){
+    player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
   }
 
-  function setHUD(remainMs){
-    const sec = Math.max(0, Math.ceil(remainMs/1000));
-    const inv = now() < invUntil ? '（無敵中）' : '';
-    hud.textContent = `スコア: ${score}　レベル: ${level}　ライフ: ${heartStr(lives)}　残り: ${sec}秒 ${inv}`;
-  }
+  // 弾
+  bullets = bullets.filter(b=> (b.x+=b.v) < cv.width+24 );
 
-  // === スポーン ===
-  function spawnItem(){
-    const isParfait = Math.random() < 0.5;
-    items.push({
-      x: cv.width + 24,
-      y: cv.height - GROUND - 40 - rand(0, 90),
-      w: 30, h: 30,
-      v: 3.2 + rand(0, 1.8) + (level-1)*0.2,
-      char: isParfait ? '🍨' : '🐟',
-      score: isParfait ? 2 : 1
-    });
-  }
-  function spawnEnemy(){
-    enemies.push({
-      x: cv.width + 30,
-      y: cv.height - GROUND - 34,
-      w: 34, h: 34,
-      v: 2.8 + (level-1)*0.35
-    });
-  }
-  function spawnPower(){
-    powers.push({
-      x: cv.width + 26,
-      y: cv.height - GROUND - 40 - rand(0, 120),
-      w: 26, h: 26,
-      v: 3.0 + (level-1)*0.25
-    });
-  }
-
-  // === 入力 ===
-  function jump(){
-    if (!gameOn) return;
-    if (player.onGround){
-      player.vy = JUMP;
-      player.onGround = false;
+  // アイテム
+  items = items.filter(it=>{
+    it.x -= it.v;
+    if (AABB(player,it)){
+      score += it.score; ult = clamp(ult + (it.char==='🍨'?10:6), 0, 100);
+      return false;
     }
-  }
-  function shoot(){
-    if (!gameOn) return;
-    const t = now();
-    if (t - lastShot < shootCD) return;
-    lastShot = t;
-    bullets.push({
-      x: player.x + player.w,
-      y: player.y + player.h/2 - 3,
-      w: 10, h: 6, v: 9 + level*0.6
-    });
-  }
-
-  // キー入力（PC用）
-  window.addEventListener('keydown', e=>{
-    if (e.code==='Space' || e.code==='ArrowUp') jump();
-    if (e.key==='z' || e.key==='x' || e.key==='Z' || e.key==='X') shoot();
+    return it.x+it.w>0;
   });
 
-  // タッチ（左半分＝ジャンプ／右半分＝攻撃）
-  cv.addEventListener('touchstart', e=>{
-    e.preventDefault();
-    const rect = cv.getBoundingClientRect();
-    const touch = e.changedTouches[0];
-    const x = touch.clientX - rect.left;
-    if (x < rect.width/2) jump();
-    else shoot();
-  }, {passive:false});
+  // ⭐
+  powers = powers.filter(pw=>{
+    pw.x -= pw.v;
+    if (AABB(player,pw)){ invUntil=now()+powerMillis; ult = clamp(ult+12,0,100); return false; }
+    return pw.x+pw.w>0;
+  });
 
-  // === 更新 ===
-  function update(t){
-    if (!gameOn) return;
-    const elapsed = t - t0;
-    const remain = GAME_TIME_MS - elapsed;
-    if (remain <= 0) return endGame();
+  // 必殺準備
+  if (ult>=100) ultReady=true;
 
-    // レベル更新
-    level = Math.max(1, Math.floor(score / levelUpStep) + 1);
+  // 敵
+  enemies = enemies.filter(en=>{
+    en.x -= en.v;
 
-    // 生成間隔（レベルで短縮）
-    const itemIv  = clamp(1300 - (level-1)*120, 500, 1300);
-    const enemyIv = clamp(1700 - (level-1)*140, 600, 1700);
-    const powerIv = 6000; // ⭐は固定め
-
-    if (t - lastSpawn > itemIv){ spawnItem(); lastSpawn = t; }
-    if (t - lastEnemy > enemyIv){ spawnEnemy(); lastEnemy = t; }
-    if (t - lastPower > powerIv){ spawnPower(); lastPower = t; }
-
-    // 物理
-    player.vy += G;
-    player.y  += player.vy;
-    if (player.y + player.h >= cv.height - GROUND){
-      player.y = cv.height - GROUND - player.h;
-      player.vy = 0;
-      player.onGround = true;
+    // 必殺ビーム判定（画面横断）
+    if (now()<ultActiveUntil){
+      // ビームはプレイヤーの胸の高さで横一直線
+      const beamY = player.y + player.h/2;
+      const hit = (en.y-6 <= beamY && beamY <= en.y+en.h+6);
+      if (hit){ score += enemyBonus; return false; }
     }
 
-    // 弾
-    bullets = bullets.filter(b=>{
-      b.x += b.v;
-      return b.x < cv.width + 20;
-    });
-
-    // アイテム衝突
-    items = items.filter(it=>{
-      it.x -= it.v;
-      if (AABB(player, it)){
-        score += it.score;
-        return false;
-      }
-      return it.x + it.w > 0;
-    });
-
-    // ⭐衝突
-    powers = powers.filter(pw=>{
-      pw.x -= pw.v;
-      if (AABB(player, pw)){
-        invUntil = now() + powerMillis;
-        return false;
-      }
-      return pw.x + pw.w > 0;
-    });
-
-    // 敵・弾の衝突
-    enemies = enemies.filter(en=>{
-      en.x -= en.v;
-      // 弾ヒット
-      for (let i=0;i<bullets.length;i++){
-        if (AABB(en, bullets[i])){
-          score += enemyHitBonus;
-          bullets.splice(i,1);
-          return false;
-        }
-      }
-      // プレイヤー接触
-      if (AABB(player, en)){
-        if (now() < invUntil){
-          score += enemyHitBonus; // 無敵中は倒した扱い
-          return false;
-        }
-        if (now() > hurtUntil){
-          lives = Math.max(0, lives - 1);
-          hurtUntil = now() + 800; // 連続ダメ軽減
-          if (lives === 0) { endGame(); return false; }
-        }
-      }
-      return en.x + en.w > 0;
-    });
-
-    draw(remain);
-    requestAnimationFrame(update);
-  }
-
-  // === 描画 ===
-  function draw(remainMs){
-    c.clearRect(0,0,cv.width,cv.height);
-    // 地面
-    c.fillStyle = '#78ad07';
-    c.fillRect(0, cv.height-GROUND, cv.width, GROUND);
-
-    // プレイヤー
-    if (now() < invUntil){   // 無敵中の縁取り
-      c.strokeStyle = '#f5c542';
-      c.lineWidth = 4;
-      c.strokeRect(player.x-2, player.y-2, player.w+4, player.h+4);
-    }
-    if (now() < hurtUntil){  // ダメージ中チラつき
-      if (Math.floor(now()/60)%2===0) { /* スキップで点滅 */ }
-      else {
-        c.fillStyle = player.color;
-        c.fillRect(player.x, player.y, player.w, player.h);
-      }
-    } else {
-      c.fillStyle = player.color;
-      c.fillRect(player.x, player.y, player.w, player.h);
+    // 弾ヒット
+    for (let i=0;i<bullets.length;i++){
+      if (AABB(en,bullets[i])){ score+=enemyBonus; ult=clamp(ult+8,0,100); bullets.splice(i,1); return false; }
     }
 
-    // 弾
-    c.fillStyle = '#333';
-    bullets.forEach(b=> c.fillRect(b.x, b.y, b.w, b.h));
+    // 体当たり
+    if (AABB(player,en)){
+      if (now()<invUntil){ score+=enemyBonus; return false; }
+      if (now()>hurtUntil){
+        lives=Math.max(0,lives-1); hurtUntil=now()+900;
+        if (lives===0){ endGame(); return false; }
+      }
+    }
+    return en.x+en.w>0;
+  });
 
-    // アイテム
-    c.font = '28px serif';
-    c.textBaseline = 'top';
-    items.forEach(it=> c.fillText(it.char, it.x, it.y));
+  draw(remain, st);
+  requestAnimationFrame(update);
+}
 
-    // ⭐
-    powers.forEach(pw=>{
-      c.font = '26px serif';
-      c.fillText('⭐', pw.x, pw.y);
-    });
+// 描画
+function draw(remain, st){
+  // 背景
+  const g=c.createLinearGradient(0,0,0,cv.height);
+  g.addColorStop(0, st.bg1); g.addColorStop(1, st.bg2);
+  c.fillStyle=g; c.fillRect(0,0,cv.width,cv.height);
 
-    // 敵
-    enemies.forEach(en=>{
-      c.font = '32px serif';
-      c.fillText('👾', en.x, en.y-4);
-    });
+  // 地面
+  c.fillStyle=st.ground; c.fillRect(0, cv.height-GROUND, cv.width, GROUND);
 
-    setHUD(remainMs);
+  // プレイヤー（無敵/ダメージ演出）
+  if (now()<invUntil){ c.strokeStyle='#f5c542'; c.lineWidth=4; c.strokeRect(player.x-2,player.y-2,player.w+4,player.h+4); }
+  const blink = now()<hurtUntil && Math.floor(now()/60)%2===0;
+  if (!blink){ c.fillStyle=player.color; c.fillRect(player.x,player.y,player.w,player.h); }
+
+  // ビーム
+  if (now()<ultActiveUntil){
+    const y = player.y + player.h/2;
+    c.fillStyle='rgba(255,80,80,.7)';
+    c.fillRect(player.x, y-6, cv.width-player.x, 12);
+    c.fillStyle='rgba(255,255,255,.6)';
+    c.fillRect(player.x, y-2, cv.width-player.x, 4);
   }
 
-  // === ゲーム開始・終了 ===
-  function startGame(){
-    score=0; level=1; lives=3; invUntil=0; hurtUntil=0;
-    items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
-    player.x=110; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+  // 弾
+  c.fillStyle='#333'; bullets.forEach(b=> c.fillRect(b.x,b.y,b.w,b.h));
 
-    btnStart.style.display='none';
-    btnRestart.style.display='none';
-    t0 = now();
-    gameOn = true;
-    lastSpawn = lastEnemy = lastPower = lastShot = t0;
-    setHUD(GAME_TIME_MS);
-    draw(GAME_TIME_MS);
-    requestAnimationFrame(update);
-  }
-  function endGame(){
-    if (!gameOn) return;
-    gameOn = false;
-    draw(0);
-    // 終了オーバーレイ
-    c.fillStyle = 'rgba(0,0,0,.55)';
-    c.fillRect(0,0,cv.width,cv.height);
-    c.fillStyle = '#fff';
-    c.textAlign='center';
-    c.font = '36px sans-serif';
-    c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
-    c.font = '24px sans-serif';
-    c.fillText(`最終スコア: ${score}　レベル: ${level}`, cv.width/2, cv.height/2 + 10);
-    c.textAlign='start';
-    btnRestart.style.display='inline-block';
-  }
+  // アイテム
+  c.font='28px serif'; c.textBaseline='top';
+  items.forEach(it=> c.fillText(it.char,it.x,it.y));
 
-  btnStart.addEventListener('click', startGame);
-  btnRestart.addEventListener('click', startGame);
+  // ⭐
+  powers.forEach(pw=>{ c.font='26px serif'; c.fillText('⭐', pw.x, pw.y); });
 
-  // 初期HUD
-  setHUD(GAME_TIME_MS);
+  // 敵
+  enemies.forEach(en=>{ c.font='32px serif'; c.fillText('👾', en.x, en.y-4); });
+
+  // HUD
+  setHUD(remain);
+}
+
+// ゲーム開始/終了
+function startGame(){
+  score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
+  items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
+  player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+  btnStart.style.display='none'; btnRestart.style.display='none';
+  t0=now(); gameOn=true;
+  lastItem=lastEnemy=lastPower=lastShot=t0;
+  setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
+  requestAnimationFrame(update);
+}
+function endGame(){
+  if(!gameOn) return; gameOn=false;
+  const st = stageForLevel(level);
+  draw(0, st);
+  c.fillStyle='rgba(0,0,0,.55)'; c.fillRect(0,0,cv.width,cv.height);
+  c.fillStyle='#fff'; c.textAlign='center';
+  c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
+  c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}`, cv.width/2, cv.height/2 + 10);
+  c.textAlign='start'; btnRestart.style.display='inline-block';
+}
+
+// ボタン
+btnStart.addEventListener('click', startGame);
+btnRestart.addEventListener('click', startGame);
+btnHow.addEventListener('click', ()=>{
+  alert('操作: 左＝ジャンプ / 右＝攻撃 / 右長押し or 右下の「必殺」＝必殺技（ゲージ100%必要）\n・アイテム🍨/🐟でスコア & 必殺ゲージUP\n・⭐で無敵（約6秒）\n・15点ごとにレベルUP。Lvに応じてステージと難易度が変化します。');
+});
+
+// 初期HUD
+setHUD(GAME_TIME);
 })();
-      </script>
+</script>
+</body>
+</html>
