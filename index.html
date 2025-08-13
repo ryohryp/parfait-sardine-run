@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>パフェとイワシ RUN! EX</title>
+<title>パフェとイワシ RUN! – Character Gacha EX</title>
 <style>
   :root { --maxw: 920px; }
   * { box-sizing: border-box; }
@@ -13,24 +13,56 @@
   #hud{font-size:clamp(13px,3.2vw,18px);margin-bottom:8px}
   #wrap{max-width:var(--maxw);margin:0 auto;padding:8px}
   canvas{width:100%;height:auto;max-width:var(--maxw);background:linear-gradient(#9ed6ee,#fff7e6);border:2px solid #333;border-radius:12px;touch-action:none}
-  #btns{display:flex;gap:8px;justify-content:center;margin:10px 0;}
+  #btns{display:flex;gap:8px;justify-content:center;margin:10px 0;flex-wrap:wrap}
   button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2)}
   button.secondary{background:#3b82f6}
   button.ghost{background:#6b7280}
+  button.warn{background:#ef4444}
+  button:disabled{opacity:.5}
   .muted{opacity:.75}
-  /* モバイル固定ボタン */
   #ultBtn{
     position: fixed; right: 14px; bottom: 18px; z-index: 10;
     padding:12px 16px; border-radius:14px; background:#ef4444; color:#fff; font-weight:700;
     box-shadow:0 3px 0 rgba(0,0,0,.25); user-select:none;
   }
   @media(hover:hover){ #ultBtn:hover{ filter:brightness(1.05); } }
+
+  /* ガチャ & コレクション オーバーレイ */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; z-index:20;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .cardWrap{
+    width:min(94vw,820px); background:#111827; color:#fff; border-radius:16px; padding:16px;
+    box-shadow:0 8px 32px rgba(0,0,0,.45); text-align:left;
+  }
+  .cardHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .cardHeader h2{margin:0;font-size:20px}
+  .cardBody{min-height:160px;border:1px solid #374151;border-radius:12px;padding:12px;background:#0b1220}
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .miniCard{
+    border-radius:12px; padding:10px; text-align:center; min-height:84px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.08); cursor:pointer;
+  }
+  .rar-c{background:#111827}
+  .rar-r{background:linear-gradient(135deg,#1f2937,#0ea5e9)}
+  .rar-e{background:linear-gradient(135deg,#3b0764,#a21caf)}
+  .rar-l{background:linear-gradient(135deg,#7c2d12,#f59e0b)}
+  .rar-m{background:linear-gradient(135deg,#16213e,#22d3ee)}
+  .big{font-size:28px}
+  .small{font-size:12px;opacity:.85}
+  .footerBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
+  /* 右上インジケーター */
+  #charInfo{position:fixed; right:12px; top:8px; font-size:12px; background:rgba(0,0,0,.5); color:#fff; padding:6px 10px; border-radius:10px}
 </style>
 </head>
 <body>
   <header>
-    <h1>パフェとイワシ RUN! EX</h1>
+    <h1>パフェとイワシ RUN! – Character Gacha EX</h1>
     <div id="hud" class="muted">読み込み中…</div>
+    <div id="charInfo" class="muted">CHAR: -</div>
   </header>
 
   <div id="wrap">
@@ -39,11 +71,47 @@
       <button id="start">スタート</button>
       <button id="restart" class="secondary" style="display:none">リスタート</button>
       <button id="howto" class="ghost">遊び方</button>
+      <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
+      <button id="gacha10" class="warn" disabled>10連(100)</button>
+      <button id="collection" class="ghost">コレクション</button>
     </div>
     <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃 / 右長押し or 右下の<strong>必殺</strong>＝必殺技</p>
   </div>
 
   <button id="ultBtn" style="display:none">必殺</button>
+
+  <!-- ガチャ -->
+  <div id="gachaOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>ガチャ結果</h2>
+        <button id="gachaClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <div id="gachaResults" class="grid"></div>
+      </div>
+      <div class="footerBtns">
+        <button id="pull1" class="warn">もう一度(10)</button>
+        <button id="pull10" class="warn">10連(100)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- コレクション -->
+  <div id="colOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>コレクション（タップで選択）</h2>
+        <button id="colClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <div id="colGrid" class="grid"></div>
+      </div>
+      <div class="footerBtns">
+        <button id="colEquip" class="secondary" disabled>このキャラを装備</button>
+      </div>
+    </div>
+  </div>
 
 <script>
 (()=>{
@@ -55,21 +123,44 @@ const btnStart = document.getElementById('start');
 const btnRestart = document.getElementById('restart');
 const btnHow = document.getElementById('howto');
 const btnUlt = document.getElementById('ultBtn');
+const btnGacha = document.getElementById('gachaOpen');
+const btnGacha10 = document.getElementById('gacha10');
+const btnCollection = document.getElementById('collection');
+const charInfo = document.getElementById('charInfo');
 
-const G = 0.62, JUMP = -12.2, GROUND = 72;
+// ガチャUI
+const ov = document.getElementById('gachaOverlay');
+const resWrap = document.getElementById('gachaResults');
+document.getElementById('gachaClose').onclick = ()=> ov.style.display='none';
+document.getElementById('pull1').onclick = ()=> doGacha(1);
+document.getElementById('pull10').onclick = ()=> doGacha(10);
+
+// コレクションUI
+const colOv = document.getElementById('colOverlay');
+const colGrid = document.getElementById('colGrid');
+const colClose = document.getElementById('colClose');
+const colEquip = document.getElementById('colEquip');
+let colSelectedKey = null;
+colClose.onclick = ()=>{ colOv.style.display='none'; colSelectedKey=null; colEquip.disabled=true; };
+colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); colOv.style.display='none'; } };
+
+// 物理 & ゲーム基本
+const G = 0.62, BASE_JUMP = -12.2, GROUND = 72;
 const GAME_TIME = 60000;
 
 let gameOn=false, t0=0;
 let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
 let score=0, level=1, lives=3, invUntil=0, hurtUntil=0;
 let ult=0, ultReady=false, ultActiveUntil=0;
+let coins=0; // ガチャ用
+let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
 const shootCD=250, powerMillis=6000, enemyBonus=3, itemLv=15;
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
 let items=[], enemies=[], bullets=[], powers=[];
 
-// ステージ（背景と難易度ブースト）
+// ステージ
 const stages = [
   { name:'草原',  bg1:'#9ed6ee', bg2:'#fff7e6', ground:'#7fb10a', enemyMul:1.00 },
   { name:'砂漠',  bg1:'#ffd28a', bg2:'#ffe9c7', ground:'#d2a659', enemyMul:1.10 },
@@ -83,23 +174,176 @@ function stageForLevel(lv){
   return stages[0];
 }
 
-// HUD
+// ====== キャラ定義 ======
+/*
+  各値は倍率/ミリ秒。
+  special: ['magnet','oneGuard','doubleJump','pierce']
+  ult: 'rainbow' | 'storm' | null
+*/
+const characters = {
+  // Common
+  parfen:   { key:'parfen',   name:'🍓パフェン',    emoji:'🍓', rar:'C', move:1.00, jump:1.00, bullet:1.00, inv:6000, ultRate:1.00, special:[],             ult:null },
+  iwassy:   { key:'iwassy',   name:'🐟イワッシー',  emoji:'🐟', rar:'C', move:1.00, jump:1.10, bullet:1.00, inv:6000, ultRate:1.00, special:['airAttack'], ult:null },
+
+  // Rare
+  choco:    { key:'choco',    name:'🍫チョコパフェン', emoji:'🍫', rar:'R', move:1.00, jump:1.00, bullet:1.15, inv:7000, ultRate:1.00, special:[],           ult:null },
+  missile:  { key:'missile',  name:'🚀ミサイル君',   emoji:'🚀', rar:'R', move:1.10, jump:1.00, bullet:1.00, inv:6000, ultRate:1.05, special:[],           ult:null },
+
+  // Epic
+  ice:      { key:'ice',      name:'❄️アイス皇帝',  emoji:'❄️', rar:'E', move:1.00, jump:1.20, bullet:1.00, inv:6000, ultRate:1.00, special:['slowEnemy'], ult:null },
+
+  // Legendary
+  king:     { key:'king',     name:'👑キングパフェ', emoji:'👑', rar:'L', move:1.15, jump:1.10, bullet:1.10, inv:7000, ultRate:1.20, special:[], ult:'rainbow' },
+
+  // Mythic
+  aurora:   { key:'aurora',   name:'🌈オーロラパフェ', emoji:'🌈', rar:'M', move:1.18, jump:1.12, bullet:1.15, inv:8000, ultRate:1.35, special:['magnet','oneGuard'], ult:'rainbow' },
+  iwashiK:  { key:'iwashiK',  name:'🌀トルネード鰯王', emoji:'🌀', rar:'M', move:1.15, jump:1.20, bullet:1.10, inv:7000, ultRate:1.30, special:['doubleJump','pierce'], ult:'storm' },
+};
+
+// レア→カラー/順序
+const rarOrder = ['C','R','E','L','M'];
+function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==='R'?'rar-r':'rar-c'; }
+
+// 所持データ（localStorage）
+const STORE_KEY = 'psrun_char_collection_v1';
+let collection = loadCollection();
+let currentCharKey = collection.current || 'parfen';
+if(!collection.owned[currentCharKey]) {
+  // 初回はパフェン付与
+  collection.owned.parfen = { owned:true, dup:0, limit:0 };
+  saveCollection();
+  currentCharKey = 'parfen';
+}
+updateCharInfo();
+
+// ====== ガチャ：確率 & 天井 ======
+/*
+  確率：C60/R24/E10/L5/M1
+  天井：30連でL以上保証 / 100連でM保証
+*/
+const pityKey = 'psrun_pity_v1';
+let pity = loadPity(); // {sinceL:0, sinceM:0}
+
+function rollRarity(){
+  const p = Math.random();
+  if (p < 0.01) return 'M';
+  if (p < 0.06) return 'L';
+  if (p < 0.16) return 'E';
+  if (p < 0.40) return 'R';
+  return 'C';
+}
+function rollCharByRar(r){
+  const pool = Object.values(characters).filter(c=>c.rar===r);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function doGacha(n){
+  const cost = n===10?100:10;
+  if (coins<cost) return;
+  coins -= cost;
+
+  // 保障適用のため、結果配列を先にレアだけ決める
+  let rarities = [];
+  for(let i=0;i<n;i++){
+    let r = rollRarity();
+    // 30連L保障（sinceL>=29 で次はL以上保証）
+    if (pity.sinceL >= 29 && i===0) r = (Math.random()<0.167)?'M':'L';
+    rarities.push(r);
+  }
+  // 100連M保障（sinceM>=99 で最後をMに）
+  if (pity.sinceM >= 99) rarities[rarities.length-1] = 'M';
+
+  // 結果生成
+  const results = rarities.map(r=>{
+    const ch = rollCharByRar(r);
+    addToCollection(ch.key);
+    // pity更新
+    if (r==='M') { pity.sinceM=0; pity.sinceL=0; }
+    else if (r==='L') { pity.sinceL=0; pity.sinceM++; }
+    else { pity.sinceL++; pity.sinceM++; }
+    return ch;
+  });
+  savePity();
+  setHUD(GAME_TIME-(now()-t0));
+
+  // 表示
+  resWrap.innerHTML='';
+  resWrap.style.gridTemplateColumns = `repeat(${Math.min(5,results.length)},1fr)`;
+  results.forEach(ch=>{
+    const dv=document.createElement('div');
+    dv.className=`miniCard ${rarClass(ch.rar)}`;
+    const own = collection.owned[ch.key];
+    dv.innerHTML = `<div class="big">${ch.emoji}</div>
+      <div>${ch.name}</div>
+      <div class="small">R:${ch.rar} / LB:${own.limit}</div>`;
+    dv.onclick = ()=>{ setCurrentChar(ch.key); ov.style.display='none'; };
+    resWrap.appendChild(dv);
+  });
+  ov.style.display='flex';
+}
+
+function addToCollection(key){
+  if (!collection.owned[key]) collection.owned[key] = { owned:true, dup:0, limit:0 };
+  else {
+    collection.owned[key].dup++;
+    // 限界突破ルール（被り強化）
+    const rar = characters[key].rar;
+    const inc = rar==='M' ? 0.04 : rar==='L' ? 0.03 : rar==='E' ? 0.025 : rar==='R' ? 0.015 : 0.005;
+    collection.owned[key].limit = +(collection.owned[key].limit + inc).toFixed(3); // 小数で蓄積
+  }
+  saveCollection();
+}
+
+// コレクションUI
+btnCollection.onclick = ()=>{
+  colGrid.innerHTML='';
+  // ソート：レア→所持→名前
+  const list = Object.values(characters).sort((a,b)=>{
+    const ra = rarOrder.indexOf(a.rar), rb = rarOrder.indexOf(b.rar);
+    if (ra!==rb) return ra-rb;
+    const oa = !!collection.owned[a.key], ob = !!collection.owned[b.key];
+    if (oa!==ob) return (ob?1:-1);
+    return a.name.localeCompare(b.name,'ja');
+  });
+  list.forEach(ch=>{
+    const own = collection.owned[ch.key];
+    const dv=document.createElement('div');
+    dv.className=`miniCard ${rarClass(ch.rar)}`;
+    dv.innerHTML = `<div class="big">${ch.emoji}</div>
+      <div>${ch.name}</div>
+      <div class="small">${own?`R:${ch.rar} / LB:${own.limit||0}`:'未所持'}</div>`;
+    dv.onclick = ()=>{
+      colSelectedKey = ch.key;
+      colEquip.disabled = !own;
+      // 軽い選択ハイライト
+      [...colGrid.children].forEach(x=>x.style.outline='none');
+      dv.style.outline='2px solid #fff';
+    };
+    colGrid.appendChild(dv);
+  });
+  colOv.style.display='flex';
+};
+
+// ====== HUD / 便利 ======
 function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
 function setHUD(remainMs){
   const sec = Math.max(0, Math.ceil(remainMs/1000));
   const inv = now()<invUntil ? '（無敵中）' : '';
   const st = stageForLevel(level).name;
-  hud.textContent = `ステージ:${st}　スコア:${score}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${ult}%　残り:${sec}秒 ${inv}`;
+  const ch = characters[currentCharKey];
+  const own = collection.owned[currentCharKey];
+  const lb = own?.limit? own.limit : 0;
+  hud.textContent = `ステージ:${st}　スコア:${score}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${Math.floor(ult)}%　コイン:🪙${coins}　残り:${sec}秒 ${inv}`;
+  charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
   btnUlt.style.display = ultReady ? 'block':'none';
+  btnGacha.disabled = coins < 10;
+  btnGacha10.disabled = coins < 100;
 }
-
-// 便利
 const now = ()=>performance.now();
 const rand = (a,b)=> a + Math.random()*(b-a);
 const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
 const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
 
-// スポーン
+// ====== スポーン ======
 function spawnItem(){
   const isParfait = Math.random()<0.5;
   items.push({
@@ -129,21 +373,33 @@ function spawnPower(){
   });
 }
 
-// 入力
+// ====== 入力 ======
+let canDouble = false, guardReadyTime = 0;
 function jump(){
   if (!gameOn) return;
-  if (player.onGround){ player.vy=JUMP; player.onGround=false; }
+  // 二段ジャンプ判定
+  const hasDouble = characters[currentCharKey].special?.includes('doubleJump');
+  if (player.onGround){
+    player.vy = currentStats.jump; player.onGround=false;
+    canDouble = hasDouble; // 地上離陸時に2段目権利付与
+  } else if (hasDouble && canDouble){
+    player.vy = currentStats.jump * 0.9; // 2段目はやや弱め
+    canDouble = false;
+  }
 }
 function shoot(){
   if (!gameOn) return;
-  const t=now(); if (t-lastShot<shootCD) return;
-  lastShot=t;
-  bullets.push({ x:player.x+player.w, y:player.y+player.h/2-3, w:12, h:6, v:9+level*.6 });
+  const t=now(); if (t-lastShot<shootCD) return; lastShot=t;
+  const pierce = characters[currentCharKey].special?.includes('pierce');
+  const v = 9+level*.6 + (now()<bulletBoostUntil? 4:0);
+  bullets.push({ x:player.x+player.w, y:player.y+player.h/2-3, w:12, h:6, v: v*currentStats.bullet, hitsLeft: pierce? 2 : 1 });
 }
 function tryUlt(){
   if (!gameOn||!ultReady) return;
   ultReady=false; ult=0;
-  ultActiveUntil = now()+1200; // 1.2秒ビーム
+  const type = characters[currentCharKey].ult;
+  if (type==='storm') ultActiveUntil = now()+1600;
+  else ultActiveUntil = now()+2000; // rainbowデフォ
 }
 
 // PCキー
@@ -163,14 +419,45 @@ cv.addEventListener('touchstart', e=>{
   if (isLeft){ jump(); pressedRight=false; }
   else {
     pressedRight=true;
-    pressTimer=setTimeout(()=>{ if(pressedRight) tryUlt(); }, 350); // 0.35秒で必殺
+    pressTimer=setTimeout(()=>{ if(pressedRight) tryUlt(); }, 350);
     shoot();
   }
 },{passive:false});
 cv.addEventListener('touchend', ()=>{ pressedRight=false; clearTimeout(pressTimer); }, {passive:true});
 btnUlt.addEventListener('click', tryUlt);
 
-// 更新
+// ====== キャラ適用 ======
+let currentStats = getEffectiveStats(currentCharKey);
+function getEffectiveStats(key){
+  // 基本
+  const ch = characters[key];
+  const lb = collection.owned[key]?.limit || 0; // 小数の累積
+  // 限界突破ぶんを等倍増加（例：+0.03 なら +3%）
+  return {
+    move:   ch.move   * (1+lb),
+    jump:   BASE_JUMP * ch.jump * (1+lb*0.5), // ジャンプは控えめに反映
+    bullet: ch.bullet * (1+lb),
+    inv:    Math.floor(ch.inv * (1+lb*0.5)),
+    ultRate:ch.ultRate* (1+lb*0.5),
+    special: ch.special,
+    ult: ch.ult,
+  };
+}
+function setCurrentChar(key){
+  currentCharKey = key;
+  collection.current = key;
+  saveCollection();
+  currentStats = getEffectiveStats(key);
+  updateCharInfo();
+}
+function updateCharInfo(){
+  const ch = characters[currentCharKey];
+  const own = collection.owned[currentCharKey];
+  const lb = own?.limit? own.limit : 0;
+  charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
+}
+
+// ====== 更新 ======
 function update(t){
   if(!gameOn) return;
   const elapsed=t-t0, remain=GAME_TIME-elapsed;
@@ -180,7 +467,7 @@ function update(t){
   level = Math.max(1, Math.floor(score/itemLv)+1);
   const st = stageForLevel(level);
 
-  // 生成間隔（レベルで短縮）
+  // 生成間隔
   const itemIv  = clamp(1200 - (level-1)*100, 480, 1200);
   const enemyIv = clamp(1650 - (level-1)*130, 600, 1650);
   const powerIv = 6200;
@@ -192,17 +479,34 @@ function update(t){
   // 物理
   player.vy += G; player.y += player.vy;
   if (player.y+player.h >= cv.height-GROUND){
-    player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+    player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true; canDouble = characters[currentCharKey].special?.includes('doubleJump');
   }
 
-  // 弾
-  bullets = bullets.filter(b=> (b.x+=b.v) < cv.width+24 );
+  // オート射撃（ガチャ効果など将来用）
+  if (now()<autoShootUntil && t-lastShot>shootCD*0.6){ shoot(); }
 
-  // アイテム
+  // 弾
+  bullets = bullets.filter(b=> {
+    b.x += b.v;
+    return (b.x < cv.width+24) && b.hitsLeft>0;
+  });
+
+  // アイテム（Mythic magnet）
+  const hasMagnet = characters[currentCharKey].special?.includes('magnet');
   items = items.filter(it=>{
+    // 吸引
+    if (hasMagnet){
+      const dx = (player.x - it.x), dy = (player.y - it.y);
+      const dist = Math.hypot(dx,dy);
+      if (dist < 160){
+        it.x += dx*0.18; it.y += dy*0.18;
+      }
+    }
     it.x -= it.v;
     if (AABB(player,it)){
-      score += it.score; ult = clamp(ult + (it.char==='🍨'?10:6), 0, 100);
+      const mul = now()<scoreMulUntil ? 2 : 1;
+      score += it.score*mul; coins += 1 * mul;
+      ult = clamp(ult + (it.char==='🍨'?10:6) * currentStats.ultRate, 0, 100);
       return false;
     }
     return it.x+it.w>0;
@@ -211,7 +515,7 @@ function update(t){
   // ⭐
   powers = powers.filter(pw=>{
     pw.x -= pw.v;
-    if (AABB(player,pw)){ invUntil=now()+powerMillis; ult = clamp(ult+12,0,100); return false; }
+    if (AABB(player,pw)){ invUntil=now()+Math.max(powerMillis,currentStats.inv); ult=Math.min(100,ult+12*currentStats.ultRate); return false; }
     return pw.x+pw.w>0;
   });
 
@@ -219,110 +523,41 @@ function update(t){
   if (ult>=100) ultReady=true;
 
   // 敵
+  const hasSlow = characters[currentCharKey].special?.includes('slowEnemy');
   enemies = enemies.filter(en=>{
     en.x -= en.v;
 
-    // 必殺ビーム判定（画面横断）
+    // 必殺
     if (now()<ultActiveUntil){
-      // ビームはプレイヤーの胸の高さで横一直線
-      const beamY = player.y + player.h/2;
-      const hit = (en.y-6 <= beamY && beamY <= en.y+en.h+6);
-      if (hit){ score += enemyBonus; return false; }
+      const type = characters[currentCharKey].ult;
+      if (type==='storm'){
+        // 渦：半径120
+        const cx = player.x+player.w/2, cy = player.y+player.h/2;
+        const ex = en.x+en.w/2, ey = en.y+en.h/2;
+        const hit = Math.hypot(cx-ex, cy-ey) <= 120;
+        if (hit){ score+=enemyBonus; coins+=2; return false; }
+      } else {
+        // rainbow：3レーン
+        const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
+        const hit = lanes.some(y=> en.y-6 <= y && y <= en.y+en.h+6);
+        if (hit){ score+=enemyBonus; coins+=2; return false; }
+      }
     }
 
-    // 弾ヒット
+    // 弾ヒット（pierce対応）
     for (let i=0;i<bullets.length;i++){
-      if (AABB(en,bullets[i])){ score+=enemyBonus; ult=clamp(ult+8,0,100); bullets.splice(i,1); return false; }
+      if (AABB(en,bullets[i])){
+        score+=enemyBonus; coins+=2;
+        bullets[i].hitsLeft--;
+        if (hasSlow) en.v *= 0.6; // 一時的スロー（簡易）
+        if (bullets[i].hitsLeft<=0) bullets.splice(i,1);
+        return false;
+      }
     }
 
     // 体当たり
     if (AABB(player,en)){
-      if (now()<invUntil){ score+=enemyBonus; return false; }
-      if (now()>hurtUntil){
-        lives=Math.max(0,lives-1); hurtUntil=now()+900;
-        if (lives===0){ endGame(); return false; }
-      }
-    }
-    return en.x+en.w>0;
-  });
-
-  draw(remain, st);
-  requestAnimationFrame(update);
-}
-
-// 描画
-function draw(remain, st){
-  // 背景
-  const g=c.createLinearGradient(0,0,0,cv.height);
-  g.addColorStop(0, st.bg1); g.addColorStop(1, st.bg2);
-  c.fillStyle=g; c.fillRect(0,0,cv.width,cv.height);
-
-  // 地面
-  c.fillStyle=st.ground; c.fillRect(0, cv.height-GROUND, cv.width, GROUND);
-
-  // プレイヤー（無敵/ダメージ演出）
-  if (now()<invUntil){ c.strokeStyle='#f5c542'; c.lineWidth=4; c.strokeRect(player.x-2,player.y-2,player.w+4,player.h+4); }
-  const blink = now()<hurtUntil && Math.floor(now()/60)%2===0;
-  if (!blink){ c.fillStyle=player.color; c.fillRect(player.x,player.y,player.w,player.h); }
-
-  // ビーム
-  if (now()<ultActiveUntil){
-    const y = player.y + player.h/2;
-    c.fillStyle='rgba(255,80,80,.7)';
-    c.fillRect(player.x, y-6, cv.width-player.x, 12);
-    c.fillStyle='rgba(255,255,255,.6)';
-    c.fillRect(player.x, y-2, cv.width-player.x, 4);
-  }
-
-  // 弾
-  c.fillStyle='#333'; bullets.forEach(b=> c.fillRect(b.x,b.y,b.w,b.h));
-
-  // アイテム
-  c.font='28px serif'; c.textBaseline='top';
-  items.forEach(it=> c.fillText(it.char,it.x,it.y));
-
-  // ⭐
-  powers.forEach(pw=>{ c.font='26px serif'; c.fillText('⭐', pw.x, pw.y); });
-
-  // 敵
-  enemies.forEach(en=>{ c.font='32px serif'; c.fillText('👾', en.x, en.y-4); });
-
-  // HUD
-  setHUD(remain);
-}
-
-// ゲーム開始/終了
-function startGame(){
-  score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
-  items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
-  player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
-  btnStart.style.display='none'; btnRestart.style.display='none';
-  t0=now(); gameOn=true;
-  lastItem=lastEnemy=lastPower=lastShot=t0;
-  setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
-  requestAnimationFrame(update);
-}
-function endGame(){
-  if(!gameOn) return; gameOn=false;
-  const st = stageForLevel(level);
-  draw(0, st);
-  c.fillStyle='rgba(0,0,0,.55)'; c.fillRect(0,0,cv.width,cv.height);
-  c.fillStyle='#fff'; c.textAlign='center';
-  c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
-  c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}`, cv.width/2, cv.height/2 + 10);
-  c.textAlign='start'; btnRestart.style.display='inline-block';
-}
-
-// ボタン
-btnStart.addEventListener('click', startGame);
-btnRestart.addEventListener('click', startGame);
-btnHow.addEventListener('click', ()=>{
-  alert('操作: 左＝ジャンプ / 右＝攻撃 / 右長押し or 右下の「必殺」＝必殺技（ゲージ100%必要）\n・アイテム🍨/🐟でスコア & 必殺ゲージUP\n・⭐で無敵（約6秒）\n・15点ごとにレベルUP。Lvに応じてステージと難易度が変化します。');
-});
-
-// 初期HUD
-setHUD(GAME_TIME);
-})();
-</script>
-</body>
-</html>
+      if (now()<invUntil){ score+=enemyBonus; coins+=2; return false; }
+      // oneGuard（7秒CD）
+      const hasGuard = characters[currentCharKey].special?.includes('oneGuard');
+      if (hasGuard && now() - guar
