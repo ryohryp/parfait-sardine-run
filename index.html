@@ -387,7 +387,10 @@ function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==
 const STORE_KEY = 'psrun_char_collection_v1';
 const USERNAME_KEY = 'psrun_username_v1';
 const RANK_MAX = 20;
-const API_BASE = window.PSRUN_API_BASE || '';
+const DEFAULT_API_BASE = '/api';
+const API_BASE = (typeof window.PSRUN_API_BASE === 'string' && window.PSRUN_API_BASE.trim().length > 0)
+  ? window.PSRUN_API_BASE.trim()
+  : DEFAULT_API_BASE;
 let collection = loadCollection();
 let currentCharKey = collection.current || 'parfen';
 if(!collection.owned[currentCharKey]) {
@@ -1062,7 +1065,7 @@ async function recordRanking(entry){
   renderRanking();
   refreshHUD();
   try{
-    const res = await fetch(apiUrl('/api/leaderboard'), {
+    const res = await fetch(apiUrl('leaderboard'), {
       method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body: JSON.stringify({
@@ -1174,13 +1177,31 @@ function validateUsername(name){
 }
 
 function apiUrl(path){
-  if (!API_BASE) return path;
+  const rawPath = typeof path === 'string' ? path : '';
+  if (/^https?:\/\//i.test(rawPath)) return rawPath;
+  const safeBase = (typeof API_BASE === 'string' && API_BASE.length > 0) ? API_BASE : DEFAULT_API_BASE;
   try{
-    const baseUrl = new URL(API_BASE, window.location.href);
-    return new URL(path, baseUrl).toString();
+    const baseUrl = new URL(safeBase, window.location.href);
+    const finalUrl = new URL(baseUrl.toString());
+    finalUrl.search = '';
+    finalUrl.hash = '';
+    const trimmedPath = rawPath.trim();
+    if (!trimmedPath){
+      return finalUrl.toString();
+    }
+    const dummy = new URL(trimmedPath.replace(/^\/+/, ''), 'https://placeholder/');
+    const cleanPath = dummy.pathname.replace(/^\/+|\/+$/g, '');
+    const basePath = baseUrl.pathname.replace(/\/+$/g, '');
+    const joinedSegments = cleanPath ? [basePath, cleanPath].filter(Boolean).join('/') : basePath;
+    finalUrl.pathname = joinedSegments
+      ? (joinedSegments.startsWith('/') ? joinedSegments : `/${joinedSegments}`)
+      : (basePath ? basePath : '/');
+    finalUrl.search = dummy.search;
+    finalUrl.hash = dummy.hash;
+    return finalUrl.toString();
   }catch(err){
     console.warn('Invalid API base URL', API_BASE, err);
-    return path;
+    return rawPath || safeBase;
   }
 }
 
@@ -1191,7 +1212,7 @@ async function refreshLeaderboard(opts){
   rankingError = '';
   if (showSpinner) renderRanking();
   try{
-    const res = await fetch(apiUrl(`/api/leaderboard?limit=${RANK_MAX}`), { headers:{'Accept':'application/json'} });
+    const res = await fetch(apiUrl(`leaderboard?limit=${RANK_MAX}`), { headers:{'Accept':'application/json'} });
     if (!res.ok) throw new Error(`bad status ${res.status}`);
     const data = await res.json();
     const list = Array.isArray(data?.leaderboard) ? data.leaderboard : data;
