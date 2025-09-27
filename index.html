@@ -136,6 +136,93 @@
   .resultList .note{font-size:12px;opacity:.75}
   .resultList li.resultEmpty{justify-content:center;opacity:.6;font-style:italic}
 
+  /* コメント */
+  .commentBody{display:flex;flex-direction:column;gap:16px}
+  .commentForm{display:grid;gap:12px}
+  .commentLabel{display:flex;flex-direction:column;gap:6px;font-size:14px}
+  .commentLabel span{font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:12px;opacity:.8}
+  .commentLabel span small{font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;opacity:.75}
+  .commentLabel input,
+  .commentLabel textarea{
+    width:100%;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.12);
+    padding:10px 12px;
+    background:rgba(15,23,42,.45);
+    color:#f9fafb;
+    font:inherit;
+    resize:vertical;
+    min-height:42px;
+  }
+  .commentLabel textarea{min-height:96px;line-height:1.6}
+  .commentLabel input::placeholder,
+  .commentLabel textarea::placeholder{color:rgba(248,250,252,.5)}
+  .commentFormActions{display:flex;justify-content:flex-end;gap:8px}
+  .commentList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .commentItem{background:rgba(15,23,42,.65);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 1px rgba(148,163,184,.15)}
+  .commentItemHeader{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#f3f4f6;opacity:.9}
+  .commentItemMeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .commentItemName{font-weight:600;word-break:break-word}
+  .commentItemDate{font-variant-numeric:tabular-nums;opacity:.75}
+  .commentItemMessage{font-size:14px;line-height:1.6;color:#f9fafb;word-break:break-word;white-space:pre-wrap}
+  .commentItemEmpty{justify-content:center;align-items:center;opacity:.7;font-style:italic;color:#e5e7eb}
+  .commentLikeBtn{
+    background:rgba(148,163,184,.18);
+    border:1px solid rgba(248,250,252,.18);
+    border-radius:999px;
+    color:#facc15;
+    padding:4px 10px;
+    font-size:12px;
+    font-weight:600;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    box-shadow:none;
+    transition:background .2s,color .2s,transform .15s;
+  }
+  .commentLikeBtn .commentLikeIcon{font-size:14px;line-height:1}
+  .commentLikeBtn.isLiked{
+    background:#f97316;
+    color:#fff;
+    border-color:rgba(249,115,22,.3);
+  }
+  .commentLikeBtn:disabled{
+    opacity:.6;
+    cursor:wait;
+  }
+  @media(hover:hover){
+    .commentLikeBtn:hover{transform:translateY(-1px);}
+    .commentLikeBtn:disabled:hover{transform:none;}
+  }
+  .commentFeed{
+    max-width:var(--maxw);
+    margin:20px auto 24px;
+    text-align:left;
+    background:#f8fafc;
+    color:#0f172a;
+    border-radius:18px;
+    padding:18px 20px;
+    box-shadow:0 16px 32px rgba(15,23,42,.16);
+  }
+  .commentFeed h2{margin:0 0 10px;font-size:clamp(18px,3vw,24px)}
+  .commentFeedStatus{margin:0 0 12px;font-size:14px;color:#475569}
+  .commentFeed .commentItem{background:#fff;color:#0f172a;box-shadow:inset 0 0 0 1px rgba(148,163,184,.25)}
+  .commentFeed .commentItemHeader{color:#1f2937;opacity:1}
+  .commentFeed .commentItemDate{opacity:.8;color:#475569}
+  .commentFeed .commentItemMessage{color:#1f2937}
+  .commentFeed .commentItemEmpty{color:#94a3b8}
+  .commentFeed .commentLikeBtn{
+    background:rgba(226,232,240,.75);
+    border-color:rgba(148,163,184,.45);
+    color:#f97316;
+  }
+  .commentFeed .commentLikeBtn.isLiked{
+    background:#f97316;
+    color:#fff;
+    border-color:rgba(249,115,22,.45);
+  }
+
   /* 右上インジケーター */
   #charInfo{position:fixed; right:12px; top:8px; font-size:12px; background:rgba(0,0,0,.5); color:#fff; padding:6px 10px; border-radius:10px}
 </style>
@@ -168,6 +255,7 @@
       <button id="collection" class="ghost">コレクション</button>
       <button id="codexBtn" class="ghost">図鑑</button>
       <button id="leaderboardBtn" class="ghost">ランキング</button>
+      <button id="commentBtn" class="ghost">コメント</button>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
   </div>
@@ -287,6 +375,43 @@
     </div>
   </div>
 
+  <section id="commentFeed" class="commentFeed">
+    <h2>みんなのコメント</h2>
+    <p id="commentFeedStatus" class="commentFeedStatus" style="display:none"></p>
+    <ul id="commentFeedList" class="commentList"></ul>
+  </section>
+
+  <!-- コメント -->
+  <div id="commentOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>コメント</h2>
+        <button id="commentClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody commentBody">
+        <form id="commentForm" class="commentForm" novalidate>
+          <label class="commentLabel" for="commentName">
+            <span>名前 <small>(必須・1〜40文字)</small></span>
+            <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
+          </label>
+          <label class="commentLabel" for="commentEmail">
+            <span>メールアドレス <small>(任意・公開されません)</small></span>
+            <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
+          </label>
+          <label class="commentLabel" for="commentMessage">
+            <span>コメント <small>(必須・1〜1000文字)</small></span>
+            <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
+          </label>
+          <div class="commentFormActions">
+            <button id="commentSubmit" class="secondary" type="submit">送信</button>
+          </div>
+        </form>
+        <p id="commentStatus" class="howLead" style="display:none"></p>
+        <ul id="commentList" class="commentList"></ul>
+      </div>
+    </div>
+  </div>
+
 
 <script>
 (()=>{
@@ -303,6 +428,7 @@ const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
 const btnCodex = document.getElementById('codexBtn');
 const btnLeaderboard = document.getElementById('leaderboardBtn');
+const btnComment = document.getElementById('commentBtn');
 const charInfo = document.getElementById('charInfo');
 const howOverlay = document.getElementById('howOverlay');
 const howClose = document.getElementById('howClose');
@@ -356,8 +482,48 @@ if (lbClose){ lbClose.onclick = ()=>{ lbOverlay.style.display='none'; }; }
 if (btnLeaderboard){ btnLeaderboard.onclick = ()=>{ openLeaderboardOverlay(); }; }
 if (lbRefresh){ lbRefresh.onclick = ()=>{ loadLeaderboard(true); }; }
 
+// コメントUI
+const commentOverlay = document.getElementById('commentOverlay');
+const commentClose = document.getElementById('commentClose');
+const commentForm = document.getElementById('commentForm');
+const commentNameInput = document.getElementById('commentName');
+const commentEmailInput = document.getElementById('commentEmail');
+const commentMessageInput = document.getElementById('commentMessage');
+const commentSubmitBtn = document.getElementById('commentSubmit');
+const commentStatus = document.getElementById('commentStatus');
+const commentList = document.getElementById('commentList');
+const commentFeedStatus = document.getElementById('commentFeedStatus');
+const commentFeedList = document.getElementById('commentFeedList');
+if (btnComment){ btnComment.onclick = ()=>{ openCommentOverlay(); }; }
+if (commentClose){ commentClose.onclick = ()=>{ if(commentOverlay) commentOverlay.style.display='none'; }; }
+if (commentOverlay){
+  commentOverlay.addEventListener('click', (ev)=>{
+    if (ev.target === commentOverlay){ commentOverlay.style.display='none'; }
+  });
+}
+if (commentForm){
+  commentForm.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    submitComment();
+  });
+}
+if (commentList){ commentList.addEventListener('click', onCommentListClick); }
+if (commentFeedList){ commentFeedList.addEventListener('click', onCommentListClick); }
+
 const PLAYER_NAME_KEY = 'psrun_player_name_v1';
+const PLAYER_EMAIL_KEY = 'psrun_player_email_v1';
 const DEFAULT_PLAYER_NAME = 'プレイヤー';
+const COMMENT_POST_ID = 103;
+const COMMENT_API_DEFAULT = 'https://howasaba-code.com/wp-json/psr/v1';
+const COMMENT_REFRESH_MS = 60000;
+let lastCommentFetch = 0;
+const COMMENT_CLIENT_ID_KEY = 'psrun_comment_client_id_v1';
+const COMMENT_CLIENT_HEADER = 'X-PSR-Client';
+let cachedComments = [];
+const pendingLikeIds = new Set();
+let commentFeedStatusTimer = null;
+
+loadComments(true);
 
 function leaderboardUrl(){
   const base = (typeof window !== 'undefined' && window.PSRUN_API_BASE)
@@ -366,9 +532,23 @@ function leaderboardUrl(){
   return base.endsWith('/leaderboard') ? base : `${base}/leaderboard`;
 }
 
+function graphemeLength(str){
+  return Array.from(str || '').length;
+}
+
+function clampGraphemes(str, limit){
+  const arr = Array.from(str || '');
+  if (arr.length <= limit) return arr.join('');
+  return arr.slice(0, limit).join('');
+}
+
 function sanitizeName(raw){
   if (!raw) return '';
-  return String(raw).replace(/[\u0000-\u001F\u007F<>]/g,'').trim().slice(0, 32);
+  const cleaned = String(raw)
+    .replace(/[\u0000-\u001F\u007F<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clampGraphemes(cleaned, 40);
 }
 
 function loadPlayerName(){
@@ -381,10 +561,55 @@ function savePlayerName(name){
   catch{}
 }
 
+function loadPlayerEmail(){
+  try{ return localStorage.getItem(PLAYER_EMAIL_KEY) || ''; }
+  catch{ return ''; }
+}
+
+function savePlayerEmail(email){
+  try{
+    if (email){
+      localStorage.setItem(PLAYER_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(PLAYER_EMAIL_KEY);
+    }
+  }
+  catch{}
+}
+
 function openLeaderboardOverlay(){
   if (!lbOverlay) return;
   lbOverlay.style.display='flex';
   loadLeaderboard(true);
+}
+
+function openCommentOverlay(){
+  if (!commentOverlay) return;
+  commentOverlay.style.display='flex';
+  if (commentStatus){
+    commentStatus.style.display = 'none';
+    commentStatus.textContent = '';
+  }
+  if (commentNameInput){
+    const stored = sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
+    if (stored && !commentNameInput.value){
+      commentNameInput.value = stored;
+    }
+  }
+  if (commentEmailInput){
+    const storedEmail = loadPlayerEmail();
+    if (storedEmail && !commentEmailInput.value){
+      commentEmailInput.value = storedEmail;
+    }
+  }
+  if (commentMessageInput){
+    try{ commentMessageInput.focus({ preventScroll:true }); }
+    catch{ commentMessageInput.focus(); }
+  }
+  const now = Date.now();
+  if (!lastCommentFetch || (now - lastCommentFetch) > COMMENT_REFRESH_MS){
+    loadComments(true);
+  }
 }
 
 function describeCharLabel(key){
@@ -407,6 +632,8 @@ function formatLeaderboardDate(entry){
     if (/^\d+$/.test(trimmed)){
       const num = Number(trimmed);
       dt = new Date(trimmed.length <= 10 ? num*1000 : num);
+    } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)){
+      dt = new Date(`${trimmed.replace(' ', 'T')}Z`);
     } else {
       dt = new Date(trimmed);
     }
@@ -527,6 +754,510 @@ async function loadLeaderboard(showLoading){
   }
 }
 
+function ensureCommentClientId(){
+  if (typeof window === 'undefined') return '';
+  if (!window.__psrunCommentClientId){
+    let stored = '';
+    try{ stored = localStorage.getItem(COMMENT_CLIENT_ID_KEY) || ''; }
+    catch{ stored = ''; }
+    if (!stored){
+      const fallback = `psr-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+      try{
+        const uuid = window.crypto?.randomUUID?.();
+        stored = uuid ? `psr-${uuid}` : fallback;
+      }catch{
+        stored = fallback;
+      }
+      try{ localStorage.setItem(COMMENT_CLIENT_ID_KEY, stored); }
+      catch{}
+    }
+    window.__psrunCommentClientId = stored;
+  }
+  return window.__psrunCommentClientId || '';
+}
+
+function commentApiBase(){
+  let candidate = COMMENT_API_DEFAULT;
+  if (typeof window !== 'undefined'){
+    const raw = window.PSRUN_COMMENT_API_BASE ?? window.PSRUN_API_BASE;
+    if (raw){
+      candidate = String(raw).trim();
+    }
+  }
+  if (!candidate){
+    candidate = COMMENT_API_DEFAULT;
+  }
+  let base = String(candidate).trim();
+  if (!base){
+    base = COMMENT_API_DEFAULT;
+  }
+  base = base
+    .replace(/\/(comments?|comment)(\?.*)?$/i, '')
+    .replace(/\/leaderboard(\?.*)?$/i, '')
+    .replace(/\/$/, '');
+  if (/\/wp-json\/psrun\/v2/i.test(base)){
+    base = base.replace(/\/wp-json\/psrun\/v2.*/i, '/wp-json/psr/v1');
+  }
+  return base || COMMENT_API_DEFAULT;
+}
+
+function commentListUrl(){
+  const base = commentApiBase();
+  const params = new URLSearchParams({ post_id: String(COMMENT_POST_ID), page: '1', per_page: '20' });
+  return `${base}/comments?${params.toString()}`;
+}
+
+function commentPostUrl(){
+  return `${commentApiBase()}/comment`;
+}
+
+function commentLikeUrl(){
+  return `${commentApiBase()}/like`;
+}
+
+function sanitizeCommentMessage(raw, limit = 1000){
+  if (!raw) return '';
+  let normalized = String(raw)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00A0/g, ' ');
+  normalized = normalized.replace(/[<>]/g, '');
+  normalized = normalized.trim();
+  return clampGraphemes(normalized, limit).trim();
+}
+
+function extractCommentId(entry){
+  const candidates = [
+    entry?.comment_id,
+    entry?.commentId,
+    entry?.id,
+    entry?.ID,
+    entry?.commentid
+  ];
+  for (const candidate of candidates){
+    if (candidate === undefined || candidate === null) continue;
+    if (typeof candidate === 'number' && Number.isFinite(candidate)){
+      return String(Math.trunc(candidate));
+    }
+    const str = String(candidate).trim();
+    if (str){
+      if (/^\d+$/.test(str)){
+        return String(Number(str));
+      }
+    }
+  }
+  return null;
+}
+
+function normalizeLikeCount(value){
+  if (value === undefined || value === null) return 0;
+  if (typeof value === 'number' && Number.isFinite(value)){
+    return Math.max(0, Math.round(value));
+  }
+  const str = String(value).trim();
+  if (!str) return 0;
+  const num = Number(str.replace(/[^0-9.-]/g, ''));
+  if (Number.isFinite(num)){
+    return Math.max(0, Math.round(num));
+  }
+  return 0;
+}
+
+function normalizeLiked(value){
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value > 0;
+  if (typeof value === 'string'){
+    const str = value.trim().toLowerCase();
+    if (!str) return false;
+    return str === '1' || str === 'true' || str === 'yes' || str === 'liked';
+  }
+  return false;
+}
+
+function normalizeComments(raw){
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== 'object'){
+    if (typeof raw === 'string'){
+      try{ return normalizeComments(JSON.parse(raw)); }
+      catch{ return []; }
+    }
+    return [];
+  }
+  const candidates = ['comments','items','results','data'];
+  for (const key of candidates){
+    if (Array.isArray(raw[key])) return raw[key];
+  }
+  if (raw.data && typeof raw.data === 'object'){
+    const nested = normalizeComments(raw.data);
+    if (nested.length) return nested;
+  }
+  return [];
+}
+
+function formatCommentDate(entry){
+  return formatLeaderboardDate(entry);
+}
+
+function renderComments(targetList, items, emptyMessage='まだコメントがありません。'){
+  if (!targetList) return;
+  targetList.innerHTML = '';
+  if (!items.length){
+    const li = document.createElement('li');
+    li.className = 'commentItem commentItemEmpty';
+    li.textContent = emptyMessage;
+    targetList.appendChild(li);
+    return;
+  }
+  items.forEach(item=>{
+    const li = document.createElement('li');
+    li.className = 'commentItem';
+    if (item?.id){
+      li.dataset.commentId = item.id;
+    }
+
+    const header = document.createElement('div');
+    header.className = 'commentItemHeader';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'commentItemName';
+    const nameRaw = item?.name ?? item?.author ?? item?.author_name ?? '';
+    const sanitizedName = typeof item?.name === 'string' ? item.name : (sanitizeName(nameRaw) || '匿名');
+    nameSpan.textContent = sanitizedName || '匿名';
+
+    const metaWrap = document.createElement('div');
+    metaWrap.className = 'commentItemMeta';
+
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'commentItemDate';
+    dateSpan.textContent = formatCommentDate(item);
+    metaWrap.appendChild(dateSpan);
+
+    const likeCapable = typeof item?.id === 'string' && item.id;
+    const likeCount = normalizeLikeCount(item?.likeCount ?? item?.likes ?? item?.like_count ?? 0);
+    const likedState = normalizeLiked(item?.liked);
+    if (likeCapable){
+      const likeBtn = document.createElement('button');
+      likeBtn.type = 'button';
+      likeBtn.className = 'commentLikeBtn';
+      likeBtn.dataset.commentId = item.id;
+      likeBtn.disabled = pendingLikeIds.has(item.id);
+      if (likedState){
+        likeBtn.classList.add('isLiked');
+      }
+      likeBtn.setAttribute('aria-pressed', likedState ? 'true' : 'false');
+      const countSpan = document.createElement('span');
+      countSpan.className = 'commentLikeCount';
+      countSpan.textContent = String(likeCount);
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'commentLikeIcon';
+      iconSpan.setAttribute('aria-hidden', 'true');
+      iconSpan.textContent = likedState ? '❤' : '♡';
+      likeBtn.appendChild(iconSpan);
+      likeBtn.appendChild(countSpan);
+      const ariaLabel = likedState
+        ? `いいねを取り消す（${likeCount}）`
+        : `いいね（${likeCount}）`;
+      likeBtn.setAttribute('aria-label', ariaLabel);
+      metaWrap.appendChild(likeBtn);
+    }
+
+    header.appendChild(nameSpan);
+    header.appendChild(metaWrap);
+
+    const message = document.createElement('p');
+    message.className = 'commentItemMessage';
+    const source = item?.message ?? item?.comment ?? item?.body ?? item?.content ?? item?.content?.rendered ?? '';
+    const sanitizedMessage = typeof item?.message === 'string' ? item.message : sanitizeCommentMessage(typeof source === 'string' ? source : '', 1000);
+    message.textContent = sanitizedMessage || '…';
+
+    li.appendChild(header);
+    li.appendChild(message);
+    targetList.appendChild(li);
+  });
+}
+
+function renderAllCommentLists(){
+  const lists = [];
+  if (commentList) lists.push({ el: commentList, empty: 'まだコメントがありません。' });
+  if (commentFeedList) lists.push({ el: commentFeedList, empty: 'まだコメントがありません。' });
+  lists.forEach(entry=>{
+    if (!entry.el) return;
+    renderComments(entry.el, cachedComments, entry.empty);
+  });
+}
+
+function updateCachedComment(commentId, patch){
+  if (!commentId || !patch) return;
+  cachedComments = cachedComments.map(entry=>{
+    if (entry.id === commentId){
+      return { ...entry, ...patch };
+    }
+    return entry;
+  });
+}
+
+function showCommentError(message){
+  const text = message || 'エラーが発生しました。時間をおいて再度お試しください。';
+  let shown = false;
+  if (commentOverlay && commentOverlay.style.display === 'flex' && commentStatus){
+    commentStatus.textContent = text;
+    commentStatus.style.display = 'block';
+    shown = true;
+  }
+  if (commentFeedStatus){
+    commentFeedStatus.textContent = text;
+    commentFeedStatus.style.display = 'block';
+    if (commentFeedStatusTimer){
+      clearTimeout(commentFeedStatusTimer);
+    }
+    commentFeedStatusTimer = setTimeout(()=>{
+      if (commentFeedStatus.textContent === text){
+        commentFeedStatus.style.display = 'none';
+        commentFeedStatus.textContent = '';
+      }
+    }, 4000);
+    shown = true;
+  }
+  if (!shown){
+    console.warn(text);
+  }
+}
+
+function onCommentListClick(ev){
+  const target = ev.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest('button.commentLikeBtn');
+  if (!button) return;
+  const commentId = button.dataset.commentId;
+  if (!commentId || pendingLikeIds.has(commentId)) return;
+  ev.preventDefault();
+  toggleCommentLike(commentId);
+}
+
+async function toggleCommentLike(commentId){
+  if (!commentId) return;
+  const entry = cachedComments.find(item=>item.id === commentId) || null;
+  const currentLiked = entry ? normalizeLiked(entry.liked) : false;
+  pendingLikeIds.add(commentId);
+  renderAllCommentLists();
+  try{
+    const clientId = ensureCommentClientId();
+    const payload = {
+      comment_id: Number(commentId),        // 常に数値で
+      client_id: clientId,                  // 必須
+      op: currentLiked ? 'unlike' : 'like'  // ← ここを修正
+    };
+    const likeHeaders = {
+      'Content-Type':'application/json; charset=utf-8',
+      'Accept':'application/json'
+    };
+    if (clientId){
+      likeHeaders[COMMENT_CLIENT_HEADER] = clientId;
+    }
+    const res = await fetch(commentLikeUrl(), {
+      method:'POST',
+      headers: likeHeaders,
+      body: JSON.stringify(payload)
+    });
+    let detail = null;
+    try{ detail = await res.json(); }
+    catch{ detail = null; }
+    if (!res.ok){
+      const code = (detail?.code || detail?.data?.code || '').toString();
+      let friendly = '';
+      if (res.status === 429 || code === 'rate_limited'){
+        friendly = 'いいねの回数が多すぎます。少し時間をおいて再度お試しください。';
+      } else if (res.status === 403 || code === 'origin_not_allowed'){
+        friendly = 'この環境からはいいねできません。';
+      } else if (res.status === 400){
+        if (code === 'bad_comment_id'){ friendly = 'このコメントにはいいねできません。'; }
+      } else if (res.status >= 500){
+        friendly = 'サーバーエラーが発生しました。時間をおいて再度お試しください。';
+      }
+      throw new Error(friendly || (typeof detail?.message === 'string' ? detail.message : '') || `HTTP ${res.status}`);
+    }
+    const liked = normalizeLiked(detail?.liked ?? detail?.is_liked ?? detail?.has_liked ?? (!currentLiked));
+    const likeCountSource = detail?.like_count ?? detail?.likes ?? detail?.count;
+    let likeCount = normalizeLikeCount(likeCountSource);
+    if (likeCountSource === undefined || likeCountSource === null){
+      const baseCount = entry ? normalizeLikeCount(entry.likeCount) : 0;
+      const delta = liked === currentLiked ? 0 : (liked ? 1 : -1);
+      likeCount = Math.max(0, baseCount + delta);
+    }
+    updateCachedComment(commentId, {
+      likeCount: likeCount,
+      liked: liked
+    });
+    pendingLikeIds.delete(commentId);
+    renderAllCommentLists();
+  }catch(err){
+    pendingLikeIds.delete(commentId);
+    renderAllCommentLists();
+    console.error('Failed to toggle like', err);
+    showCommentError(err?.message || 'いいねに失敗しました。時間をおいて再度お試しください。');
+  }
+}
+
+async function loadComments(showLoading){
+  const lists = [];
+  if (commentList) lists.push({ el: commentList, empty: 'まだコメントがありません。' });
+  if (commentFeedList) lists.push({ el: commentFeedList, empty: 'まだコメントがありません。' });
+  if (!lists.length) return;
+  if (showLoading && commentStatus){
+    commentStatus.textContent = '最新コメントを読み込み中…';
+    commentStatus.style.display = 'block';
+  }
+  if (commentFeedStatus){
+    commentFeedStatus.textContent = 'コメントを読み込み中…';
+    commentFeedStatus.style.display = 'block';
+  }
+  lists.forEach(entry=>{ entry.el.innerHTML = ''; });
+  try{
+    const headers = { 'Accept':'application/json' };
+    const clientId = ensureCommentClientId();
+    if (clientId){
+      headers[COMMENT_CLIENT_HEADER] = clientId;
+    }
+    const res = await fetch(commentListUrl(), { method:'GET', headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let raw = null;
+    try{ raw = await res.json(); }
+    catch{ raw = []; }
+    const collection = Array.isArray(raw?.items) ? raw.items : normalizeComments(raw);
+    const normalized = collection
+      .map(entry=>{
+        const id = extractCommentId(entry);
+        const likeRaw = entry?.like_count ?? entry?.likes ?? entry?.likeCount ?? entry?.meta?.psr_like_count ?? entry?.meta?.like_count;
+        const likedRaw = entry?.liked ?? entry?.has_liked ?? entry?.is_liked ?? entry?.meta?.liked;
+        const messageSource = entry?.content ?? entry?.message ?? entry?.comment ?? entry?.body ?? (typeof entry?.content?.rendered === 'string' ? entry.content.rendered : '');
+        const sanitizedMessage = sanitizeCommentMessage(messageSource, 1000);
+        const sanitizedName = sanitizeName(entry?.author_name ?? entry?.author ?? entry?.name ?? entry?.user ?? entry?.title ?? '匿名') || '匿名';
+        return {
+          id: id || null,
+          name: sanitizedName,
+          message: sanitizedMessage,
+          date: entry?.date_gmt ?? entry?.date ?? entry?.createdAt ?? entry?.created_at ?? entry?.updatedAt ?? entry?.updated_at ?? entry?.time ?? null,
+          likeCount: normalizeLikeCount(likeRaw),
+          liked: normalizeLiked(likedRaw)
+        };
+      })
+      .filter(entry=>entry.message.length > 0)
+      .slice(0, 30);
+    cachedComments = normalized;
+    renderAllCommentLists();
+    if (showLoading && commentStatus){
+      commentStatus.style.display = 'none';
+      commentStatus.textContent = '';
+    }
+    if (commentFeedStatus){
+      commentFeedStatus.style.display = 'none';
+      commentFeedStatus.textContent = '';
+    }
+    lastCommentFetch = Date.now();
+  }catch(err){
+    console.error('Failed to load comments', err);
+    if (showLoading && commentStatus){
+      commentStatus.textContent = 'コメントを取得できませんでした。';
+      commentStatus.style.display = 'block';
+    }
+    if (commentFeedStatus){
+      commentFeedStatus.textContent = 'コメントを表示できませんでした。';
+      commentFeedStatus.style.display = 'block';
+    }
+  }
+}
+
+async function submitComment(){
+  if (!commentMessageInput || !commentStatus || !commentSubmitBtn) return;
+  const rawName = commentNameInput?.value ?? '';
+  const sanitizedName = sanitizeName(rawName) || DEFAULT_PLAYER_NAME;
+  const nameLength = graphemeLength(sanitizedName);
+  if (nameLength < 1 || nameLength > 40){
+    commentStatus.textContent = '名前は1〜40文字で入力してください。';
+    commentStatus.style.display = 'block';
+    commentNameInput?.focus();
+    return;
+  }
+  const message = sanitizeCommentMessage(commentMessageInput.value, 1000);
+  if (!message){
+    commentStatus.textContent = 'コメントは1〜1000文字で入力してください。';
+    commentStatus.style.display = 'block';
+    commentMessageInput.focus();
+    return;
+  }
+  let email = '';
+  if (commentEmailInput){
+    const rawEmail = (commentEmailInput.value || '').trim();
+    if (rawEmail){
+      const trimmedEmail = clampGraphemes(rawEmail, 254);
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)){
+        commentStatus.textContent = 'メールアドレスの形式が正しくありません。';
+        commentStatus.style.display = 'block';
+        commentEmailInput.focus();
+        return;
+      }
+      email = trimmedEmail;
+    }
+  }
+  commentStatus.textContent = '送信中…';
+  commentStatus.style.display = 'block';
+  commentSubmitBtn.disabled = true;
+  try{
+    const payload = {
+      author_name: sanitizedName,
+      content: message,
+      author_email: email,
+      post_id: COMMENT_POST_ID
+    };
+    const res = await fetch(commentPostUrl(), {
+      method:'POST',
+      headers:(()=>{
+        const baseHeaders = { 'Content-Type':'application/json; charset=utf-8','Accept':'application/json' };
+        const clientIdHeader = ensureCommentClientId();
+        if (clientIdHeader){
+          baseHeaders[COMMENT_CLIENT_HEADER] = clientIdHeader;
+        }
+        return baseHeaders;
+      })(),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok){
+      let errorDetail = null;
+      try{ errorDetail = await res.json(); }
+      catch{}
+      const code = (errorDetail?.code || errorDetail?.data?.code || '').toString();
+      const serverMessage = typeof errorDetail?.message === 'string' ? errorDetail.message.trim() : '';
+      let friendly = '';
+      if (res.status === 429 || code === 'rate_limited'){
+        friendly = '短時間に多数の送信が行われたため、しばらく時間をおいて再度お試しください。';
+      } else if (res.status === 403 || code === 'origin_not_allowed'){
+        friendly = 'この環境からはコメントを送信できません。';
+      } else if (res.status === 400){
+        if (code === 'bad_author_name') friendly = '名前は1〜40文字で入力してください。';
+        else if (code === 'bad_content_length') friendly = 'コメントは1〜1000文字で入力してください。';
+        else if (code === 'bad_email') friendly = 'メールアドレスの形式が正しくありません。';
+        else friendly = serverMessage || '入力内容を確認してください。';
+      } else if (res.status >= 500){
+        friendly = 'サーバーエラーが発生しました。時間をおいて再度お試しください。';
+      }
+      throw new Error(friendly || serverMessage || `HTTP ${res.status}`);
+    }
+    savePlayerName(sanitizedName);
+    savePlayerEmail(email);
+    commentMessageInput.value = '';
+    commentStatus.textContent = 'コメントを送信しました。承認後に公開されます。ありがとう！';
+    commentStatus.style.display = 'block';
+    loadComments(false);
+  }catch(err){
+    console.error('Failed to submit comment', err);
+    commentStatus.textContent = err?.message || 'コメントの送信に失敗しました。時間をおいて再度お試しください。';
+    commentStatus.style.display = 'block';
+  }finally{
+    commentSubmitBtn.disabled = false;
+  }
+}
 
 function normalizeLeaderboardEntries(raw){
   if (Array.isArray(raw)){
