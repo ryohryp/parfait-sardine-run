@@ -18,6 +18,8 @@ const howOverlay = document.getElementById('howOverlay');
 const howClose = document.getElementById('howClose');
 const howStart = document.getElementById('howStart');
 const howLead = document.getElementById('howLead');
+const howList = document.getElementById('howList');
+const howFooterNote = document.getElementById('howFooterNote');
 const resultOverlay = document.getElementById('resultOverlay');
 const resultClose = document.getElementById('resultClose');
 const resultSummary = document.getElementById('resultSummary');
@@ -93,6 +95,66 @@ if (commentForm){
 }
 if (commentList){ commentList.addEventListener('click', onCommentListClick); }
 if (commentFeedList){ commentFeedList.addEventListener('click', onCommentListClick); }
+
+const DEFAULT_HOWTO_COPY = {
+  initialLead: 'まずは操作をチェック！60秒ランでベストスコアを狙い、コインでキャラを集めましょう。',
+  defaultLead: '困ったらいつでもここで操作と目的を確認できます。',
+  steps: [
+    '画面左タップ/クリックでジャンプ。二段ジャンプ可能なキャラもいます。',
+    '画面右タップで攻撃、長押し or 右下の<strong>必殺</strong>ボタンでゲージ100%時の必殺技を発動。',
+    '🍨や🐟アイテムでスコア＆コイン、⭐で無敵とゲージUP。敵を倒すとさらにボーナス。',
+    '集めたコインでガチャを回し、キャラを装備して能力を入れ替えましょう。'
+  ],
+  hint: 'ヒント：ベストスコアは自動保存。連続プレイで令和チャンプを目指そう！'
+};
+
+let howtoCopy = { ...DEFAULT_HOWTO_COPY };
+let howtoLeadMode = 'default';
+
+function renderHowtoCopy(){
+  if (howList){
+    howList.innerHTML = '';
+    for (const step of howtoCopy.steps){
+      const li = document.createElement('li');
+      li.innerHTML = step;
+      howList.appendChild(li);
+    }
+  }
+  if (howFooterNote){
+    howFooterNote.textContent = howtoCopy.hint;
+  }
+}
+
+async function loadHowtoCopy(){
+  if (typeof fetch !== 'function') return;
+  try {
+    const response = await fetch('howto.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    howtoCopy = {
+      initialLead: data.initialLead || howtoCopy.initialLead,
+      defaultLead: data.defaultLead || howtoCopy.defaultLead,
+      steps: Array.isArray(data.steps) && data.steps.length ? data.steps : howtoCopy.steps,
+      hint: data.hint || howtoCopy.hint
+    };
+    renderHowtoCopy();
+    if (howLead){
+      if (howOverlay && howOverlay.style.display === 'flex'){
+        howLead.textContent = howtoLeadMode === 'initial' ? howtoCopy.initialLead : howtoCopy.defaultLead;
+      } else if (!howLead.textContent){
+        howLead.textContent = howtoCopy.defaultLead;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load how-to copy', err);
+  }
+}
+
+renderHowtoCopy();
+if (howLead && !howLead.textContent){
+  howLead.textContent = howtoCopy.defaultLead;
+}
+loadHowtoCopy();
 
 const PLAYER_NAME_KEY = 'psrun_player_name_v1';
 const PLAYER_EMAIL_KEY = 'psrun_player_email_v1';
@@ -971,10 +1033,10 @@ async function handleLeaderboardAfterGame(result){
 
 function openHowto(initial=false){
   if (!howOverlay) return;
+  howtoLeadMode = initial ? 'initial' : 'default';
+  renderHowtoCopy();
   if (howLead){
-    howLead.textContent = initial
-      ? 'まずは操作をチェック！60秒ランでベストスコアを狙い、コインでキャラを集めましょう。'
-      : '困ったらいつでもここで操作と目的を確認できます。';
+    howLead.textContent = howtoLeadMode === 'initial' ? howtoCopy.initialLead : howtoCopy.defaultLead;
   }
   howOverlay.style.display='flex';
 }
