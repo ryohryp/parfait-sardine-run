@@ -303,16 +303,20 @@ async function loadLeaderboard(showLoading){
   try{
     const res = await fetch(leaderboardUrl(), { method:'GET', headers:{ 'Accept':'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const raw = await res.json();
     const entries = normalizeLeaderboardEntries(raw);
     if (!entries.length){
+
       lbStatus.textContent = 'No results yet';
       lbStatus.style.display = 'block';
       return;
     }
     lbStatus.textContent = '';
     lbStatus.style.display = 'none';
+
     entries.slice(0, 20).forEach((entry, idx)=>{
+
       const li = document.createElement('li');
       li.className = 'leaderboardItem';
       const title = document.createElement('div');
@@ -354,6 +358,7 @@ async function loadLeaderboard(showLoading){
   }
 }
 
+
 function normalizeLeaderboardEntries(raw){
   if (Array.isArray(raw)){
     return raw;
@@ -380,6 +385,7 @@ function normalizeLeaderboardEntries(raw){
   }
   return [];
 }
+
 
 async function submitLeaderboardScore(name, result){
   const payload = {
