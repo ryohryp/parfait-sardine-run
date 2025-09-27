@@ -1199,15 +1199,19 @@ function apiUrl(path){
     finalUrl.pathname = normalizedPath;
 
     const mergedSearch = new URLSearchParams(baseUrl.search);
-    const mergeParams = (params) => {
-      for (const [key, value] of params.entries()){
-        mergedSearch.append(key, value);
-      }
-    };
 
-    mergeParams(new URLSearchParams(dummy.search));
-    mergeParams(new URLSearchParams(baseUrl.hash.replace(/^#/, '')));
-    mergeParams(new URLSearchParams(dummy.hash.replace(/^#/, '')));
+    const extraSearch = new URLSearchParams(dummy.search);
+    const baseHashParams = new URLSearchParams(baseUrl.hash ? baseUrl.hash.replace(/^#/, '') : '');
+    const dummyHashParams = new URLSearchParams(dummy.hash ? dummy.hash.replace(/^#/, '') : '');
+    for (const [key, value] of extraSearch.entries()){
+      mergedSearch.append(key, value);
+    }
+    for (const [key, value] of baseHashParams.entries()){
+      mergedSearch.append(key, value);
+    }
+    for (const [key, value] of dummyHashParams.entries()){
+      mergedSearch.append(key, value);
+    }
 
     const searchString = mergedSearch.toString();
     finalUrl.search = searchString ? `?${searchString}` : '';
