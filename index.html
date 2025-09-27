@@ -40,6 +40,7 @@
   button.warn{background:#ef4444}
   button:disabled{opacity:.5}
   .leaderboardList{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+  #leaderboardOverlay .leaderboardList{margin:0;}
   .leaderboardItem{background:#1f2937;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
   .leaderboardTitle{font-weight:600;color:#f9fafb;font-size:15px}
   .leaderboardMeta{font-size:12px;color:rgba(229,231,235,.8);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px}
@@ -79,6 +80,13 @@
   .cardHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   .cardHeader h2{margin:0;font-size:20px}
   .cardBody{min-height:160px;border:1px solid #374151;border-radius:12px;padding:12px;background:#0b1220}
+  #leaderboardOverlay .cardBody{
+    max-height:min(70vh,520px);
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
   .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .miniCard{
     border-radius:12px; padding:10px; text-align:center; min-height:84px;
