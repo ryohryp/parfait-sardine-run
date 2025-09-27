@@ -1167,7 +1167,7 @@ function update(t){
   // 生成間隔
   const itemIv  = clamp(1200 - (level-1)*100, 480, 1200);
   const enemyIv = clamp(1600 - (level-1)*120, 520, 1600);
-  const powerIv = 6200;
+  const powerIv = 11000;
 
   if(t-lastItem  > itemIv)  { spawnItem();  lastItem=t; }
   if(t-lastEnemy > enemyIv) {
