@@ -1045,6 +1045,9 @@ async function toggleCommentLike(commentId){
     const payload = { comment_id: (/^\d+$/.test(commentId) ? Number(commentId) : commentId) };
     payload.op = currentLiked ? 'unset' : 'set';
     const clientId = ensureCommentClientId();
+    if (clientId){
+      payload.client_id = clientId;
+    }
     const likeHeaders = {
       'Content-Type':'application/json; charset=utf-8',
       'Accept':'application/json'
