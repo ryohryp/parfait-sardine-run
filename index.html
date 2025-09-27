@@ -966,8 +966,13 @@ function validateUsername(name){
 
 function apiUrl(path){
   if (!API_BASE) return path;
-  const base = API_BASE.endsWith('/') ? API_BASE.slice(0,-1) : API_BASE;
-  return `${base}${path}`;
+  try{
+    const baseUrl = new URL(API_BASE, window.location.href);
+    return new URL(path, baseUrl).toString();
+  }catch(err){
+    console.warn('Invalid API base URL', API_BASE, err);
+    return path;
+  }
 }
 
 async function refreshLeaderboard(opts){
