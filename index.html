@@ -335,7 +335,7 @@ let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 const shootCD=250, powerMillis=6000, enemyBonus=3, itemLv=15;
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
-let items=[], enemies=[], bullets=[], powers=[];
+let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
 
 // ステージ
 const stages = [
@@ -355,7 +355,7 @@ function stageForLevel(lv){
 /*
   各値は倍率/ミリ秒。
   special: ['magnet','oneGuard','doubleJump','pierce']
-  ult: 'rainbow' | 'storm' | null
+  ult: 'rainbow' | 'storm' | 'ncha' | 'yadon' | null
 */
 const characters = {
   // Common
@@ -371,10 +371,12 @@ const characters = {
 
   // Legendary
   king:     { key:'king',     name:'👑キングパフェ', emoji:'👑', rar:'L', move:1.15, jump:1.10, bullet:1.10, inv:7000, ultRate:1.20, special:[], ult:'rainbow' },
+  ncha:     { key:'ncha',     name:'🤖んちゃマシン', emoji:'🤖', rar:'L', move:1.20, jump:1.05, bullet:1.25, inv:6800, ultRate:1.25, special:['pierce'], ult:'ncha' },
 
   // Mythic
   aurora:   { key:'aurora',   name:'🌈オーロラパフェ', emoji:'🌈', rar:'M', move:1.18, jump:1.12, bullet:1.15, inv:8000, ultRate:1.35, special:['magnet','oneGuard'], ult:'rainbow' },
   iwashiK:  { key:'iwashiK',  name:'🌀トルネード鰯王', emoji:'🌀', rar:'M', move:1.15, jump:1.20, bullet:1.10, inv:7000, ultRate:1.30, special:['doubleJump','pierce'], ult:'storm' },
+  yadon:    { key:'yadon',    name:'🦛まったりヤドン', emoji:'🦛', rar:'M', move:0.98, jump:1.08, bullet:1.05, inv:8500, ultRate:1.45, special:['magnet'], ult:'yadon' },
 };
 
 // レア→カラー/順序
@@ -620,8 +622,34 @@ function tryUlt(){
   if (!gameOn||!ultReady) return;
   ultReady=false; ult=0;
   const type = characters[currentCharKey].ult;
-  if (type==='storm') ultActiveUntil = now()+1600;
-  else ultActiveUntil = now()+2000; // rainbowデフォ
+  ultProjectiles.length = 0;
+  if (type==='storm') {
+    ultActiveUntil = now()+1600;
+  } else if (type==='ncha') {
+    ultActiveUntil = now()+1500;
+  } else if (type==='yadon') {
+    ultActiveUntil = now()+2600;
+    const baseY = player.y + player.h/2;
+    const count = 6;
+    for (let i=0;i<count;i++){
+      const spread = i - (count-1)/2;
+      ultProjectiles.push({
+        x: player.x + player.w - 8,
+        y: baseY + spread*20,
+        w: 32,
+        h: 32,
+        vx: 5.4 + Math.abs(spread)*0.6,
+        vy: spread*0.28,
+        gravity: 0.08,
+        hits: 2,
+        char: '🦛',
+        expires: now()+2800,
+        dead: false,
+      });
+    }
+  } else {
+    ultActiveUntil = now()+2000; // rainbowデフォ
+  }
 }
 
 // PCキー
@@ -741,6 +769,13 @@ function update(t){
     return pw.x+pw.w>0;
   });
 
+  // 必殺投射体（ヤドン砲）
+  ultProjectiles.forEach(p=>{
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity;
+  });
+
   // 必殺準備
   if (ult>=100) ultReady=true;
 
@@ -758,11 +793,31 @@ function update(t){
         const ex = en.x+en.w/2, ey = en.y+en.h/2;
         const hit = Math.hypot(cx-ex, cy-ey) <= 120;
         if (hit){ score+=enemyBonus; coins+=2; return false; }
+      } else if (type==='ncha'){
+        // んちゃ砲：前方ビーム
+        const beamX = player.x + player.w - 6;
+        const beamTop = player.y - 36;
+        const beamBottom = player.y + player.h + 36;
+        const hit = (en.x+en.w) >= beamX && en.x <= cv.width && en.y <= beamBottom && (en.y+en.h) >= beamTop;
+        if (hit){ score+=enemyBonus; coins+=2; return false; }
       } else {
         // rainbow：3レーン
         const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
         const hit = lanes.some(y=> en.y-6 <= y && y <= en.y+en.h+6);
         if (hit){ score+=enemyBonus; coins+=2; return false; }
+      }
+    }
+
+    if (characters[currentCharKey].ult==='yadon'){
+      for (let i=0;i<ultProjectiles.length;i++){
+        const shot = ultProjectiles[i];
+        if (!shot || shot.dead) continue;
+        if (AABB(en, shot)){
+          score+=enemyBonus; coins+=2;
+          shot.hits--;
+          if (shot.hits<=0) shot.dead=true;
+          return false;
+        }
       }
     }
 
@@ -794,6 +849,8 @@ function update(t){
     return en.x+en.w>0;
   });
 
+  ultProjectiles = ultProjectiles.filter(p=> !p.dead && now()<p.expires && p.x<cv.width+60 && p.y>-80 && p.y<cv.height+80 && p.hits>0);
+
   draw(remain, st);
   requestAnimationFrame(update);
 }
@@ -816,6 +873,18 @@ function draw(remain, st){
       const cx = player.x+player.w/2, cy = player.y+player.h/2;
       c.fillStyle='rgba(80,160,255,.25)'; c.beginPath(); c.arc(cx,cy,120,0,Math.PI*2); c.fill();
       c.strokeStyle='rgba(200,230,255,.7)'; c.lineWidth=3; c.beginPath(); c.arc(cx,cy,88,0,Math.PI*2); c.stroke();
+    } else if (type==='ncha'){
+      const beamX = player.x + player.w - 6;
+      const beamTop = player.y - 36;
+      const beamH = player.h + 72;
+      const intensity = 0.45 + 0.25 * ((Math.sin(now()/90)+1)/2);
+      c.fillStyle=`rgba(255,235,59,${intensity})`; c.fillRect(beamX, beamTop, cv.width-beamX, beamH);
+      c.fillStyle='rgba(255,255,255,0.8)'; c.fillRect(beamX, beamTop + beamH/2 - 6, cv.width-beamX, 12);
+    } else if (type==='yadon'){
+      const auraPulse = 40 + Math.sin(now()/140)*6;
+      c.strokeStyle='rgba(255,192,203,0.7)';
+      c.lineWidth=6;
+      c.beginPath(); c.arc(player.x+player.w/2, player.y+player.h/2, auraPulse, 0, Math.PI*2); c.stroke();
     } else {
       const laneYs = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
       laneYs.forEach((y,idx)=>{
@@ -831,6 +900,18 @@ function draw(remain, st){
   // アイテム
   c.font='28px serif'; c.textBaseline='top';
   items.forEach(it=> c.fillText(it.char,it.x,it.y));
+
+  // ヤドン砲の群れ
+  if (ultProjectiles.length){
+    c.font='32px serif';
+    ultProjectiles.forEach(p=>{
+      const fade = Math.max(0.35, Math.min(1, (p.expires - now())/400));
+      c.save();
+      c.globalAlpha = fade;
+      c.fillText(p.char, p.x, p.y);
+      c.restore();
+    });
+  }
 
   // ⭐
   powers.forEach(pw=>{ c.font='26px serif'; c.fillText('⭐', pw.x, pw.y); });
@@ -849,7 +930,7 @@ function startGame(){
   }
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
   coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
-  items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
+  items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0;
   player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
   canDouble = characters[currentCharKey].special?.includes('doubleJump');
   guardReadyTime = 0;
@@ -891,12 +972,15 @@ btnHow.addEventListener('click', ()=>{
     '▶ コレクション\n' +
     '・引いたキャラは自動登録。重複で限界突破して性能が少しアップ。\n' +
     '・装備したキャラの特性や必殺を活かしてハイスコアを狙おう！\n\n' +
+    '▶ Legendaryキャラ\n' +
+    '・👑キング：虹レーザー。\n' +
+    '・🤖んちゃマシン：んちゃ砲。\n' +
     '▶ Mythicキャラ\n' +
     '・🌈オーロラ：吸引＋一度だけガード。必殺はレインボーレーザー。\n' +
-    '・🌀鰯王：二段ジャンプ＋貫通弾。必殺はトルネード攻撃。'
+    '・🌀鰯王：二段ジャンプ＋貫通弾。必殺はトルネード攻撃。\n' +
+    '・🦛ヤドン：ヤドン砲。'
   );
 });
-
 
 // ====== スポーンと攻撃トリガ ======
 function shootIfAuto(t){ /* 予備フック */ }
