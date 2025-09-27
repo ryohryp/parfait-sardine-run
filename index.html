@@ -1183,8 +1183,6 @@ function apiUrl(path){
   try{
     const baseUrl = new URL(safeBase, window.location.href);
     const finalUrl = new URL(baseUrl.toString());
-    finalUrl.search = '';
-    finalUrl.hash = '';
     const trimmedPath = rawPath.trim();
     if (!trimmedPath){
       return finalUrl.toString();
@@ -1192,12 +1190,28 @@ function apiUrl(path){
     const dummy = new URL(trimmedPath.replace(/^\/+/, ''), 'https://placeholder/');
     const cleanPath = dummy.pathname.replace(/^\/+|\/+$/g, '');
     const basePath = baseUrl.pathname.replace(/\/+$/g, '');
-    const joinedSegments = cleanPath ? [basePath, cleanPath].filter(Boolean).join('/') : basePath;
-    finalUrl.pathname = joinedSegments
-      ? (joinedSegments.startsWith('/') ? joinedSegments : `/${joinedSegments}`)
-      : (basePath ? basePath : '/');
-    finalUrl.search = dummy.search;
-    finalUrl.hash = dummy.hash;
+    const combinedPath = cleanPath
+      ? [basePath, cleanPath].filter(Boolean).join('/')
+      : basePath;
+    const normalizedPath = combinedPath
+      ? (combinedPath.startsWith('/') ? combinedPath : `/${combinedPath}`)
+      : '/';
+    finalUrl.pathname = normalizedPath;
+
+    const mergedSearch = new URLSearchParams(baseUrl.search);
+    const mergeParams = (params) => {
+      for (const [key, value] of params.entries()){
+        mergedSearch.append(key, value);
+      }
+    };
+
+    mergeParams(new URLSearchParams(dummy.search));
+    mergeParams(new URLSearchParams(baseUrl.hash.replace(/^#/, '')));
+    mergeParams(new URLSearchParams(dummy.hash.replace(/^#/, '')));
+
+    const searchString = mergedSearch.toString();
+    finalUrl.search = searchString ? `?${searchString}` : '';
+    finalUrl.hash = dummy.hash || baseUrl.hash;
     return finalUrl.toString();
   }catch(err){
     console.warn('Invalid API base URL', API_BASE, err);
