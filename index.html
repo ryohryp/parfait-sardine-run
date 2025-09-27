@@ -45,6 +45,14 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     box-shadow:inset 0 0 0 2px rgba(255,255,255,.08); cursor:pointer;
   }
+  .rankList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .rankList li{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.08);padding:8px 12px;border-radius:10px;font-size:14px}
+  .rankList li .rankMeta{font-size:12px;opacity:.8;margin-top:2px}
+  .rankList li .rankScore{font-size:18px;font-weight:700;margin-left:16px}
+  .rankLeft{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+  .rankHeader{display:flex;align-items:center;gap:10px;font-weight:600}
+  .rankNo{display:inline-block;min-width:24px;text-align:center;font-size:16px;font-weight:700;background:rgba(0,0,0,.2);padding:2px 6px;border-radius:999px}
+  .rankEmpty{list-style:none;padding:18px 0;text-align:center;opacity:.65}
   .rar-c{background:#111827}
   .rar-r{background:linear-gradient(135deg,#1f2937,#0ea5e9)}
   .rar-e{background:linear-gradient(135deg,#3b0764,#a21caf)}
@@ -74,6 +82,7 @@
       <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
       <button id="gacha10" class="warn" disabled>10連(100)</button>
       <button id="collection" class="ghost">コレクション</button>
+      <button id="ranking" class="ghost">ランキング</button>
     </div>
     <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃 / 右長押し or 右下の<strong>必殺</strong>＝必殺技</p>
   </div>
@@ -113,6 +122,22 @@
     </div>
   </div>
 
+  <!-- ランキング -->
+  <div id="rankOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>ランキング</h2>
+        <button id="rankClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <ol id="rankList" class="rankList"></ol>
+      </div>
+      <div class="footerBtns">
+        <button id="rankClear" class="ghost">リセット</button>
+      </div>
+    </div>
+  </div>
+
 
 <script>
 (()=>{
@@ -127,6 +152,7 @@ const btnUlt = document.getElementById('ultBtn');
 const btnGacha = document.getElementById('gachaOpen');
 const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
+const btnRanking = document.getElementById('ranking');
 const charInfo = document.getElementById('charInfo');
 
 // ガチャUI
@@ -144,6 +170,12 @@ const colEquip = document.getElementById('colEquip');
 let colSelectedKey = null;
 colClose.onclick = ()=>{ colOv.style.display='none'; colSelectedKey=null; colEquip.disabled=true; };
 colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); colOv.style.display='none'; } };
+
+// ランキングUI
+const rankOv = document.getElementById('rankOverlay');
+const rankList = document.getElementById('rankList');
+const rankClose = document.getElementById('rankClose');
+const rankClear = document.getElementById('rankClear');
 
 // 物理 & ゲーム基本
 const G = 0.62, BASE_JUMP = -12.2, GROUND = 72;
@@ -207,6 +239,8 @@ function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==
 
 // 所持データ（localStorage）
 const STORE_KEY = 'psrun_char_collection_v1';
+const RANK_KEY = 'psrun_rankings_v1';
+const RANK_MAX = 10;
 let collection = loadCollection();
 let currentCharKey = collection.current || 'parfen';
 if(!collection.owned[currentCharKey]) {
@@ -216,6 +250,8 @@ if(!collection.owned[currentCharKey]) {
   currentCharKey = 'parfen';
 }
 updateCharInfo();
+let rankings = loadRanking();
+renderRanking();
 
 // ====== ガチャ：確率 & 天井 ======
 /*
@@ -324,6 +360,21 @@ btnCollection.onclick = ()=>{
   colOv.style.display='flex';
 };
 
+btnRanking.onclick = ()=>{
+  renderRanking();
+  rankOv.style.display='flex';
+};
+rankClose.onclick = ()=>{ rankOv.style.display='none'; };
+rankClear.onclick = ()=>{
+  if (!rankings.length) return;
+  if (confirm('ランキングをリセットしますか？')) {
+    rankings = [];
+    saveRanking();
+    renderRanking();
+    refreshHUD();
+  }
+};
+
 // ====== HUD / 便利 ======
 function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
 function setHUD(remainMs){
@@ -333,11 +384,19 @@ function setHUD(remainMs){
   const ch = characters[currentCharKey];
   const own = collection.owned[currentCharKey];
   const lb = own?.limit? own.limit : 0;
-  hud.textContent = `ステージ:${st}　スコア:${score}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${Math.floor(ult)}%　コイン:🪙${coins}　残り:${sec}秒 ${inv}`;
+  const best = rankings.length ? rankings[0].score.toLocaleString('ja-JP') : 0;
+  const scoreText = score.toLocaleString('ja-JP');
+  const coinText = coins.toLocaleString('ja-JP');
+  hud.textContent = `ステージ:${st}　スコア:${scoreText}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${Math.floor(ult)}%　コイン:🪙${coinText}　ベスト:${best}　残り:${sec}秒 ${inv}`;
   charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
   btnUlt.style.display = ultReady ? 'block':'none';
   btnGacha.disabled = coins < 10;
   btnGacha10.disabled = coins < 100;
+}
+
+function refreshHUD(){
+  const remain = gameOn ? (GAME_TIME - (now()-t0)) : 0;
+  setHUD(remain);
 }
 const now = ()=>performance.now();
 const rand = (a,b)=> a + Math.random()*(b-a);
@@ -643,6 +702,7 @@ function endGame(){
   c.fillStyle='#fff'; c.textAlign='center';
   c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
   c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}　コイン: 🪙${coins}`, cv.width/2, cv.height/2 + 10);
+  recordRanking({ score, level, coins, char: currentCharKey, time: Date.now() });
   c.textAlign='start'; btnRestart.style.display='inline-block';
 }
 
@@ -665,6 +725,66 @@ function shootIfAuto(t){ /* 予備フック */ }
 btnGacha.onclick = ()=> doGacha(1);
 btnGacha10.onclick = ()=> doGacha(10);
 
+function renderRanking(){
+  if (!rankList) return;
+  rankList.innerHTML='';
+  if (!rankings.length){
+    const empty=document.createElement('li');
+    empty.className='rankEmpty';
+    empty.textContent='まだ記録がありません';
+    rankList.appendChild(empty);
+    return;
+  }
+  rankings.forEach((r, idx)=>{
+    const ch = characters[r.char] || {};
+    const li=document.createElement('li');
+    const left=document.createElement('div');
+    left.className='rankLeft';
+    const head=document.createElement('div');
+    head.className='rankHeader';
+    const no=document.createElement('span');
+    no.className='rankNo';
+    no.textContent=`${idx+1}`;
+    const name=document.createElement('span');
+    const titleParts=[ch.emoji||'', ch.name||r.char].filter(Boolean);
+    const displayName=titleParts.join(' ').trim() || '???';
+    name.textContent=displayName;
+    head.appendChild(no);
+    head.appendChild(name);
+    left.appendChild(head);
+    const meta=document.createElement('div');
+    meta.className='rankMeta';
+    meta.textContent=`${formatRankDate(r.time)} / レベル:${r.level} / コイン:🪙${r.coins}`;
+    left.appendChild(meta);
+    const score=document.createElement('div');
+    score.className='rankScore';
+    score.textContent=r.score.toLocaleString('ja-JP');
+    li.appendChild(left);
+    li.appendChild(score);
+    rankList.appendChild(li);
+  });
+}
+
+function recordRanking(entry){
+  if (!entry || typeof entry.score!=='number') return;
+  const safe = {
+    score: Math.max(0, Math.floor(entry.score)),
+    level: Math.max(1, Math.floor(entry.level||0)),
+    coins: Math.max(0, Math.floor(entry.coins||0)),
+    char: typeof entry.char==='string'?entry.char:currentCharKey,
+    time: typeof entry.time==='number' ? entry.time : Date.now()
+  };
+  rankings.push(safe);
+  rankings.sort((a,b)=>{
+    if (b.score!==a.score) return b.score-a.score;
+    return a.time-b.time;
+  });
+  if (rankings.length>RANK_MAX) rankings = rankings.slice(0,RANK_MAX);
+  saveRanking();
+  renderRanking();
+  refreshHUD();
+}
+
 // ====== ストレージ ======
 function loadCollection(){
   try{
@@ -679,6 +799,44 @@ function loadPity(){
   return { sinceL:0, sinceM:0 };
 }
 function savePity(){ try{ localStorage.setItem(pityKey, JSON.stringify(pity)); }catch{} }
+
+function loadRanking(){
+  try{
+    const s = localStorage.getItem(RANK_KEY);
+    if (s){
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)){
+        return parsed.map(r=>{
+          const t = Number(r.time);
+          return {
+            score: Math.max(0, Math.floor(Number(r.score)||0)),
+            level: Math.max(1, Math.floor(Number(r.level)||0)),
+            coins: Math.max(0, Math.floor(Number(r.coins)||0)),
+            char: typeof r.char==='string'?r.char:'parfen',
+            time: Number.isFinite(t) ? t : Date.now()
+          };
+        }).sort((a,b)=>{
+          if (b.score!==a.score) return b.score-a.score;
+          return a.time-b.time;
+        }).slice(0,RANK_MAX);
+      }
+    }
+  }catch{}
+  return [];
+}
+function saveRanking(){
+  try{ localStorage.setItem(RANK_KEY, JSON.stringify(rankings)); }catch{}
+}
+function formatRankDate(ts){
+  const d = new Date(ts||Date.now());
+  const y = d.getFullYear();
+  const m = pad2(d.getMonth()+1);
+  const day = pad2(d.getDate());
+  const h = pad2(d.getHours());
+  const min = pad2(d.getMinutes());
+  return `${y}/${m}/${day} ${h}:${min}`;
+}
+function pad2(n){ return `${n}`.padStart(2,'0'); }
 
 // ====== 初期HUD ======
 setHUD(GAME_TIME);
