@@ -56,6 +56,6 @@
 このガイドを起点にコードを読み解き、目的のセクションから掘り下げていってください。必要に応じてメモや図解を作成しながら理解を進めるとスムーズです。
 
 ## 8. WordPress REST API リーダーボード連携
-- ゲーム終了時にスコアが 0 より大きい場合は名前入力ダイアログが表示され、外部の WordPress REST API (`/wp-json/psrun/v1/leaderboard`) へスコアを送信します。送信が失敗した場合はアラートとランキングオーバーレイ内のメッセージで通知します。【F:index.html†L356-L408】【F:index.html†L1045-L1048】
+- ゲーム終了時にスコアが 0 より大きい場合は名前入力ダイアログが表示され、外部の WordPress REST API (`/wp-json/psrun/v2/leaderboard`) へスコアを送信します。送信が失敗した場合はアラートとランキングオーバーレイ内のメッセージで通知します。【F:index.html†L356-L408】【F:index.html†L1045-L1048】
 - 「ランキング」ボタンで開くオーバーレイでは最大 20 件の結果を表示し、API から返却された名前・スコア・レベル・コイン・キャラ・登録時刻を並べます。結果が空のときは “No results yet” と表示されます。【F:index.html†L195-L208】【F:index.html†L296-L348】
-- API ベース URL は既定で `https://howasaba-code.com/wp-json/psrun/v1/leaderboard` を指します。開発や検証で別環境を使いたい場合は、`window.PSRUN_API_BASE` でベースパスを上書きできます。例：`<script>window.PSRUN_API_BASE='https://example.com/wp-json/psrun/v1';</script>` を `index.html` に追加すると、そのドメインの `/leaderboard` エンドポイントに対して通信します。【F:index.html†L262-L287】
+- API ベース URL は既定で `https://howasaba-code.com/wp-json/psrun/v2/leaderboard` を指します。開発や検証で別環境を使いたい場合は、`window.PSRUN_API_BASE` でベースパスを上書きできます。例：`<script>window.PSRUN_API_BASE='https://example.com/wp-json/psrun/v2';</script>` を `index.html` に追加すると、そのドメインの `/leaderboard` エンドポイントに対して通信します。【F:index.html†L262-L287】
