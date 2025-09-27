@@ -136,6 +136,36 @@
   .resultList .note{font-size:12px;opacity:.75}
   .resultList li.resultEmpty{justify-content:center;opacity:.6;font-style:italic}
 
+  /* コメント */
+  .commentBody{display:flex;flex-direction:column;gap:16px}
+  .commentForm{display:grid;gap:12px}
+  .commentLabel{display:flex;flex-direction:column;gap:6px;font-size:14px}
+  .commentLabel span{font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:12px;opacity:.8}
+  .commentLabel span small{font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;opacity:.75}
+  .commentLabel input,
+  .commentLabel textarea{
+    width:100%;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.12);
+    padding:10px 12px;
+    background:rgba(15,23,42,.45);
+    color:#f9fafb;
+    font:inherit;
+    resize:vertical;
+    min-height:42px;
+  }
+  .commentLabel textarea{min-height:96px;line-height:1.6}
+  .commentLabel input::placeholder,
+  .commentLabel textarea::placeholder{color:rgba(248,250,252,.5)}
+  .commentFormActions{display:flex;justify-content:flex-end;gap:8px}
+  .commentList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .commentItem{background:rgba(15,23,42,.65);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 1px rgba(148,163,184,.15)}
+  .commentItemHeader{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#f3f4f6;opacity:.9}
+  .commentItemName{font-weight:600;word-break:break-word}
+  .commentItemDate{font-variant-numeric:tabular-nums;opacity:.75}
+  .commentItemMessage{font-size:14px;line-height:1.6;color:#f9fafb;word-break:break-word;white-space:pre-wrap}
+  .commentItemEmpty{justify-content:center;align-items:center;opacity:.7;font-style:italic;color:#e5e7eb}
+
   /* 右上インジケーター */
   #charInfo{position:fixed; right:12px; top:8px; font-size:12px; background:rgba(0,0,0,.5); color:#fff; padding:6px 10px; border-radius:10px}
 </style>
@@ -168,6 +198,7 @@
       <button id="collection" class="ghost">コレクション</button>
       <button id="codexBtn" class="ghost">図鑑</button>
       <button id="leaderboardBtn" class="ghost">ランキング</button>
+      <button id="commentBtn" class="ghost">コメント</button>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
   </div>
@@ -287,6 +318,37 @@
     </div>
   </div>
 
+  <!-- コメント -->
+  <div id="commentOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>コメント</h2>
+        <button id="commentClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody commentBody">
+        <form id="commentForm" class="commentForm" novalidate>
+          <label class="commentLabel" for="commentName">
+            <span>名前 <small>(必須・1〜40文字)</small></span>
+            <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
+          </label>
+          <label class="commentLabel" for="commentEmail">
+            <span>メールアドレス <small>(任意・公開されません)</small></span>
+            <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
+          </label>
+          <label class="commentLabel" for="commentMessage">
+            <span>コメント <small>(必須・1〜1000文字)</small></span>
+            <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
+          </label>
+          <div class="commentFormActions">
+            <button id="commentSubmit" class="secondary" type="submit">送信</button>
+          </div>
+        </form>
+        <p id="commentStatus" class="howLead" style="display:none"></p>
+        <ul id="commentList" class="commentList"></ul>
+      </div>
+    </div>
+  </div>
+
 
 <script>
 (()=>{
@@ -303,6 +365,7 @@ const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
 const btnCodex = document.getElementById('codexBtn');
 const btnLeaderboard = document.getElementById('leaderboardBtn');
+const btnComment = document.getElementById('commentBtn');
 const charInfo = document.getElementById('charInfo');
 const howOverlay = document.getElementById('howOverlay');
 const howClose = document.getElementById('howClose');
@@ -356,8 +419,35 @@ if (lbClose){ lbClose.onclick = ()=>{ lbOverlay.style.display='none'; }; }
 if (btnLeaderboard){ btnLeaderboard.onclick = ()=>{ openLeaderboardOverlay(); }; }
 if (lbRefresh){ lbRefresh.onclick = ()=>{ loadLeaderboard(true); }; }
 
+// コメントUI
+const commentOverlay = document.getElementById('commentOverlay');
+const commentClose = document.getElementById('commentClose');
+const commentForm = document.getElementById('commentForm');
+const commentNameInput = document.getElementById('commentName');
+const commentEmailInput = document.getElementById('commentEmail');
+const commentMessageInput = document.getElementById('commentMessage');
+const commentSubmitBtn = document.getElementById('commentSubmit');
+const commentStatus = document.getElementById('commentStatus');
+const commentList = document.getElementById('commentList');
+if (btnComment){ btnComment.onclick = ()=>{ openCommentOverlay(); }; }
+if (commentClose){ commentClose.onclick = ()=>{ if(commentOverlay) commentOverlay.style.display='none'; }; }
+if (commentOverlay){
+  commentOverlay.addEventListener('click', (ev)=>{
+    if (ev.target === commentOverlay){ commentOverlay.style.display='none'; }
+  });
+}
+if (commentForm){
+  commentForm.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    submitComment();
+  });
+}
+
 const PLAYER_NAME_KEY = 'psrun_player_name_v1';
+const PLAYER_EMAIL_KEY = 'psrun_player_email_v1';
 const DEFAULT_PLAYER_NAME = 'プレイヤー';
+const COMMENT_POST_ID = 103;
+const COMMENT_API_DEFAULT = 'https://howasaba-code.com/wp-json/psr/v1';
 
 function leaderboardUrl(){
   const base = (typeof window !== 'undefined' && window.PSRUN_API_BASE)
@@ -366,9 +456,23 @@ function leaderboardUrl(){
   return base.endsWith('/leaderboard') ? base : `${base}/leaderboard`;
 }
 
+function graphemeLength(str){
+  return Array.from(str || '').length;
+}
+
+function clampGraphemes(str, limit){
+  const arr = Array.from(str || '');
+  if (arr.length <= limit) return arr.join('');
+  return arr.slice(0, limit).join('');
+}
+
 function sanitizeName(raw){
   if (!raw) return '';
-  return String(raw).replace(/[\u0000-\u001F\u007F<>]/g,'').trim().slice(0, 32);
+  const cleaned = String(raw)
+    .replace(/[\u0000-\u001F\u007F<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clampGraphemes(cleaned, 40);
 }
 
 function loadPlayerName(){
@@ -381,10 +485,52 @@ function savePlayerName(name){
   catch{}
 }
 
+function loadPlayerEmail(){
+  try{ return localStorage.getItem(PLAYER_EMAIL_KEY) || ''; }
+  catch{ return ''; }
+}
+
+function savePlayerEmail(email){
+  try{
+    if (email){
+      localStorage.setItem(PLAYER_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(PLAYER_EMAIL_KEY);
+    }
+  }
+  catch{}
+}
+
 function openLeaderboardOverlay(){
   if (!lbOverlay) return;
   lbOverlay.style.display='flex';
   loadLeaderboard(true);
+}
+
+function openCommentOverlay(){
+  if (!commentOverlay) return;
+  commentOverlay.style.display='flex';
+  if (commentStatus){
+    commentStatus.style.display = 'none';
+    commentStatus.textContent = '';
+  }
+  if (commentNameInput){
+    const stored = sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
+    if (stored && !commentNameInput.value){
+      commentNameInput.value = stored;
+    }
+  }
+  if (commentEmailInput){
+    const storedEmail = loadPlayerEmail();
+    if (storedEmail && !commentEmailInput.value){
+      commentEmailInput.value = storedEmail;
+    }
+  }
+  if (commentMessageInput){
+    try{ commentMessageInput.focus({ preventScroll:true }); }
+    catch{ commentMessageInput.focus(); }
+  }
+  loadComments(true);
 }
 
 function describeCharLabel(key){
@@ -407,6 +553,8 @@ function formatLeaderboardDate(entry){
     if (/^\d+$/.test(trimmed)){
       const num = Number(trimmed);
       dt = new Date(trimmed.length <= 10 ? num*1000 : num);
+    } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)){
+      dt = new Date(`${trimmed.replace(' ', 'T')}Z`);
     } else {
       dt = new Date(trimmed);
     }
@@ -527,6 +675,242 @@ async function loadLeaderboard(showLoading){
   }
 }
 
+function commentApiBase(){
+  let candidate = COMMENT_API_DEFAULT;
+  if (typeof window !== 'undefined'){
+    const raw = window.PSRUN_COMMENT_API_BASE ?? window.PSRUN_API_BASE;
+    if (raw){
+      candidate = String(raw).trim();
+    }
+  }
+  if (!candidate){
+    candidate = COMMENT_API_DEFAULT;
+  }
+  let base = String(candidate).trim();
+  if (!base){
+    base = COMMENT_API_DEFAULT;
+  }
+  base = base
+    .replace(/\/(comments?|comment)(\?.*)?$/i, '')
+    .replace(/\/leaderboard(\?.*)?$/i, '')
+    .replace(/\/$/, '');
+  if (/\/wp-json\/psrun\/v2/i.test(base)){
+    base = base.replace(/\/wp-json\/psrun\/v2.*/i, '/wp-json/psr/v1');
+  }
+  return base || COMMENT_API_DEFAULT;
+}
+
+function commentListUrl(){
+  const base = commentApiBase();
+  const params = new URLSearchParams({ post_id: String(COMMENT_POST_ID), page: '1', per_page: '20' });
+  return `${base}/comments?${params.toString()}`;
+}
+
+function commentPostUrl(){
+  return `${commentApiBase()}/comment`;
+}
+
+function sanitizeCommentMessage(raw, limit = 1000){
+  if (!raw) return '';
+  let normalized = String(raw)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00A0/g, ' ');
+  normalized = normalized.replace(/[<>]/g, '');
+  normalized = normalized.trim();
+  return clampGraphemes(normalized, limit).trim();
+}
+
+function normalizeComments(raw){
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== 'object'){
+    if (typeof raw === 'string'){
+      try{ return normalizeComments(JSON.parse(raw)); }
+      catch{ return []; }
+    }
+    return [];
+  }
+  const candidates = ['comments','items','results','data'];
+  for (const key of candidates){
+    if (Array.isArray(raw[key])) return raw[key];
+  }
+  if (raw.data && typeof raw.data === 'object'){
+    const nested = normalizeComments(raw.data);
+    if (nested.length) return nested;
+  }
+  return [];
+}
+
+function formatCommentDate(entry){
+  return formatLeaderboardDate(entry);
+}
+
+function renderComments(items){
+  if (!commentList) return;
+  commentList.innerHTML = '';
+  if (!items.length){
+    const li = document.createElement('li');
+    li.className = 'commentItem commentItemEmpty';
+    li.textContent = 'まだコメントがありません。';
+    commentList.appendChild(li);
+    return;
+  }
+  items.forEach(item=>{
+    const li = document.createElement('li');
+    li.className = 'commentItem';
+
+    const header = document.createElement('div');
+    header.className = 'commentItemHeader';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'commentItemName';
+    const nameRaw = item?.name ?? item?.author ?? item?.author_name ?? '';
+    const sanitizedName = sanitizeName(nameRaw) || '匿名';
+    nameSpan.textContent = sanitizedName;
+
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'commentItemDate';
+    dateSpan.textContent = formatCommentDate(item);
+
+    header.appendChild(nameSpan);
+    header.appendChild(dateSpan);
+
+    const message = document.createElement('p');
+    message.className = 'commentItemMessage';
+    const source = item?.message ?? item?.comment ?? item?.body ?? item?.content ?? item?.content?.rendered ?? '';
+    const sanitizedMessage = typeof item?.message === 'string' ? item.message : sanitizeCommentMessage(typeof source === 'string' ? source : '', 1000);
+    message.textContent = sanitizedMessage || '…';
+
+    li.appendChild(header);
+    li.appendChild(message);
+    commentList.appendChild(li);
+  });
+}
+
+async function loadComments(showLoading){
+  if (!commentList || !commentStatus) return;
+  if (showLoading){
+    commentStatus.textContent = '最新コメントを読み込み中…';
+    commentStatus.style.display = 'block';
+  }
+  commentList.innerHTML = '';
+  try{
+    const res = await fetch(commentListUrl(), { method:'GET', headers:{ 'Accept':'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let raw = null;
+    try{ raw = await res.json(); }
+    catch{ raw = []; }
+    const collection = Array.isArray(raw?.items) ? raw.items : normalizeComments(raw);
+    const normalized = collection
+      .map(entry=>({
+        name: entry?.author_name ?? entry?.author ?? entry?.name ?? entry?.user ?? entry?.title ?? '匿名',
+        message: entry?.content ?? entry?.message ?? entry?.comment ?? entry?.body ?? (typeof entry?.content?.rendered === 'string' ? entry.content.rendered : ''),
+        date: entry?.date_gmt ?? entry?.date ?? entry?.createdAt ?? entry?.created_at ?? entry?.updatedAt ?? entry?.updated_at ?? entry?.time ?? null
+      }))
+      .map(entry=>({
+        ...entry,
+        message: sanitizeCommentMessage(entry.message, 1000)
+      }))
+      .filter(entry=>entry.message.length > 0)
+      .slice(0, 30);
+    renderComments(normalized);
+    if (commentStatus){
+      commentStatus.style.display = 'none';
+      commentStatus.textContent = '';
+    }
+  }catch(err){
+    console.error('Failed to load comments', err);
+    if (commentStatus){
+      commentStatus.textContent = 'コメントを取得できませんでした。';
+      commentStatus.style.display = 'block';
+    }
+  }
+}
+
+async function submitComment(){
+  if (!commentMessageInput || !commentStatus || !commentSubmitBtn) return;
+  const rawName = commentNameInput?.value ?? '';
+  const sanitizedName = sanitizeName(rawName) || DEFAULT_PLAYER_NAME;
+  const nameLength = graphemeLength(sanitizedName);
+  if (nameLength < 1 || nameLength > 40){
+    commentStatus.textContent = '名前は1〜40文字で入力してください。';
+    commentStatus.style.display = 'block';
+    commentNameInput?.focus();
+    return;
+  }
+  const message = sanitizeCommentMessage(commentMessageInput.value, 1000);
+  if (!message){
+    commentStatus.textContent = 'コメントは1〜1000文字で入力してください。';
+    commentStatus.style.display = 'block';
+    commentMessageInput.focus();
+    return;
+  }
+  let email = '';
+  if (commentEmailInput){
+    const rawEmail = (commentEmailInput.value || '').trim();
+    if (rawEmail){
+      const trimmedEmail = clampGraphemes(rawEmail, 254);
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)){
+        commentStatus.textContent = 'メールアドレスの形式が正しくありません。';
+        commentStatus.style.display = 'block';
+        commentEmailInput.focus();
+        return;
+      }
+      email = trimmedEmail;
+    }
+  }
+  commentStatus.textContent = '送信中…';
+  commentStatus.style.display = 'block';
+  commentSubmitBtn.disabled = true;
+  try{
+    const payload = {
+      author_name: sanitizedName,
+      content: message,
+      author_email: email,
+      post_id: COMMENT_POST_ID
+    };
+    const res = await fetch(commentPostUrl(), {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json; charset=utf-8','Accept':'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok){
+      let errorDetail = null;
+      try{ errorDetail = await res.json(); }
+      catch{}
+      const code = (errorDetail?.code || errorDetail?.data?.code || '').toString();
+      const serverMessage = typeof errorDetail?.message === 'string' ? errorDetail.message.trim() : '';
+      let friendly = '';
+      if (res.status === 429 || code === 'rate_limited'){
+        friendly = '短時間に多数の送信が行われたため、しばらく時間をおいて再度お試しください。';
+      } else if (res.status === 403 || code === 'origin_not_allowed'){
+        friendly = 'この環境からはコメントを送信できません。';
+      } else if (res.status === 400){
+        if (code === 'bad_author_name') friendly = '名前は1〜40文字で入力してください。';
+        else if (code === 'bad_content_length') friendly = 'コメントは1〜1000文字で入力してください。';
+        else if (code === 'bad_email') friendly = 'メールアドレスの形式が正しくありません。';
+        else friendly = serverMessage || '入力内容を確認してください。';
+      } else if (res.status >= 500){
+        friendly = 'サーバーエラーが発生しました。時間をおいて再度お試しください。';
+      }
+      throw new Error(friendly || serverMessage || `HTTP ${res.status}`);
+    }
+    savePlayerName(sanitizedName);
+    savePlayerEmail(email);
+    commentMessageInput.value = '';
+    commentStatus.textContent = 'コメントを送信しました。承認後に公開されます。ありがとう！';
+    commentStatus.style.display = 'block';
+    loadComments(false);
+  }catch(err){
+    console.error('Failed to submit comment', err);
+    commentStatus.textContent = err?.message || 'コメントの送信に失敗しました。時間をおいて再度お試しください。';
+    commentStatus.style.display = 'block';
+  }finally{
+    commentSubmitBtn.disabled = false;
+  }
+}
 
 function normalizeLeaderboardEntries(raw){
   if (Array.isArray(raw)){

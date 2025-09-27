@@ -59,3 +59,8 @@
 - ゲーム終了時にスコアが 0 より大きい場合は名前入力ダイアログが表示され、外部の WordPress REST API (`/wp-json/psrun/v2/leaderboard`) へスコアを送信します。送信が失敗した場合はアラートとランキングオーバーレイ内のメッセージで通知します。【F:index.html†L356-L408】【F:index.html†L1045-L1048】
 - 「ランキング」ボタンで開くオーバーレイでは最大 20 件の結果を表示し、API から返却された名前・スコア・レベル・コイン・キャラ・登録時刻を並べます。結果が空のときは “No results yet” と表示されます。【F:index.html†L195-L208】【F:index.html†L296-L348】
 - API ベース URL は既定で `https://howasaba-code.com/wp-json/psrun/v2/leaderboard` を指します。開発や検証で別環境を使いたい場合は、`window.PSRUN_API_BASE` でベースパスを上書きできます。例：`<script>window.PSRUN_API_BASE='https://example.com/wp-json/psrun/v2';</script>` を `index.html` に追加すると、そのドメインの `/leaderboard` エンドポイントに対して通信します。【F:index.html†L262-L287】
+
+## 9. ユーザーコメント投稿
+- 画面下部の「コメント」ボタンからコメントオーバーレイを開き、名前（必須・1〜40 文字）、任意のメールアドレス、メッセージ（必須・1〜1000 文字）を送信できます。名前とメールはローカルストレージに保存され、次回以降自動で復元されます。【F:index.html†L212-L244】【F:index.html†L396-L444】【F:index.html†L458-L503】
+- コメント一覧は開閉時に最新 30 件まで WordPress REST API (`GET /wp-json/psr/v1/comments?post_id=103`) から取得し、本文はサーバー側の承認済みデータのみを表示します。制御文字や HTML タグはクライアント側でも除去し、日付は日本ローカル形式に整えます。【F:index.html†L134-L210】【F:index.html†L512-L575】
+- 投稿時は `POST /wp-json/psr/v1/comment` を呼び出し、バリデーションエラー（400）、Origin 制限（403）、レート制限（429）などに応じてユーザー向けメッセージを表示します。ベース URL は `window.PSRUN_COMMENT_API_BASE`（未設定時は `https://howasaba-code.com/wp-json/psr/v1`）で上書きでき、`window.PSRUN_API_BASE` を指定している場合も自動で `/psr/v1` に変換されます。【F:index.html†L124-L210】【F:index.html†L522-L575】
