@@ -644,6 +644,7 @@ try{
 // 物理 & ゲーム基本
 const G = 0.62, BASE_JUMP = -12.2, GROUND = 72;
 const GAME_TIME = 60000;
+const INVINCIBILITY_DURATION = 3000;
 
 let gameOn=false, t0=0;
 let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
@@ -652,7 +653,7 @@ let ult=0, ultReady=false, ultActiveUntil=0;
 let coins=0; // ガチャ用
 let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
-const shootCD=250, powerMillis=3000, enemyBonus=3, itemLv=15;
+const shootCD=250, powerMillis=INVINCIBILITY_DURATION, enemyBonus=3, itemLv=15;
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
 let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
@@ -711,24 +712,24 @@ const itemCatalogMap = ITEM_CATALOG.reduce((map,item)=>{ map[item.key]=item; ret
 */
 const characters = {
   // Common
-  parfen:   { key:'parfen',   name:'🍓パフェン',    emoji:'🍓', rar:'C', move:1.00, jump:1.00, bullet:1.00, inv:6000, ultRate:1.00, special:[],             ult:null },
-  iwassy:   { key:'iwassy',   name:'🐟イワッシー',  emoji:'🐟', rar:'C', move:1.00, jump:1.10, bullet:1.00, inv:6000, ultRate:1.00, special:['airAttack'], ult:null },
+  parfen:   { key:'parfen',   name:'🍓パフェン',    emoji:'🍓', rar:'C', move:1.00, jump:1.00, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:[],             ult:null },
+  iwassy:   { key:'iwassy',   name:'🐟イワッシー',  emoji:'🐟', rar:'C', move:1.00, jump:1.10, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:['airAttack'], ult:null },
 
   // Rare
-  choco:    { key:'choco',    name:'🍫チョコパフェン', emoji:'🍫', rar:'R', move:1.00, jump:1.00, bullet:1.15, inv:7000, ultRate:1.00, special:[],           ult:null },
-  missile:  { key:'missile',  name:'🚀ミサイル君',   emoji:'🚀', rar:'R', move:1.10, jump:1.00, bullet:1.00, inv:6000, ultRate:1.05, special:[],           ult:null },
+  choco:    { key:'choco',    name:'🍫チョコパフェン', emoji:'🍫', rar:'R', move:1.00, jump:1.00, bullet:1.15, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:[],           ult:null },
+  missile:  { key:'missile',  name:'🚀ミサイル君',   emoji:'🚀', rar:'R', move:1.10, jump:1.00, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.05, special:[],           ult:null },
 
   // Epic
-  ice:      { key:'ice',      name:'❄️アイス皇帝',  emoji:'❄️', rar:'E', move:1.00, jump:1.20, bullet:1.00, inv:6000, ultRate:1.00, special:['slowEnemy'], ult:null },
+  ice:      { key:'ice',      name:'❄️アイス皇帝',  emoji:'❄️', rar:'E', move:1.00, jump:1.20, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:['slowEnemy'], ult:null },
 
   // Legendary
-  king:     { key:'king',     name:'👑キングパフェ', emoji:'👑', rar:'L', move:1.15, jump:1.10, bullet:1.10, inv:7000, ultRate:1.20, special:[], ult:'rainbow' },
-  ncha:     { key:'ncha',     name:'🤖んちゃマシン', emoji:'🤖', rar:'L', move:1.20, jump:1.05, bullet:1.25, inv:6800, ultRate:1.25, special:['pierce'], ult:'ncha' },
+  king:     { key:'king',     name:'👑キングパフェ', emoji:'👑', rar:'L', move:1.15, jump:1.10, bullet:1.10, inv:INVINCIBILITY_DURATION, ultRate:1.20, special:[], ult:'rainbow' },
+  ncha:     { key:'ncha',     name:'🤖んちゃマシン', emoji:'🤖', rar:'L', move:1.20, jump:1.05, bullet:1.25, inv:INVINCIBILITY_DURATION, ultRate:1.25, special:['pierce'], ult:'ncha' },
 
   // Mythic
-  aurora:   { key:'aurora',   name:'🌈オーロラパフェ', emoji:'🌈', rar:'M', move:1.18, jump:1.12, bullet:1.15, inv:8000, ultRate:1.35, special:['magnet','oneGuard'], ult:'rainbow' },
-  iwashiK:  { key:'iwashiK',  name:'🌀トルネード鰯王', emoji:'🌀', rar:'M', move:1.15, jump:1.20, bullet:1.10, inv:7000, ultRate:1.30, special:['doubleJump','pierce'], ult:'storm' },
-  yadon:    { key:'yadon',    name:'🦛まったりヤドン', emoji:'🦛', rar:'M', move:0.98, jump:1.08, bullet:1.05, inv:8500, ultRate:1.45, special:['magnet'], ult:'yadon' },
+  aurora:   { key:'aurora',   name:'🌈オーロラパフェ', emoji:'🌈', rar:'M', move:1.18, jump:1.12, bullet:1.15, inv:INVINCIBILITY_DURATION, ultRate:1.35, special:['magnet','oneGuard'], ult:'rainbow' },
+  iwashiK:  { key:'iwashiK',  name:'🌀トルネード鰯王', emoji:'🌀', rar:'M', move:1.15, jump:1.20, bullet:1.10, inv:INVINCIBILITY_DURATION, ultRate:1.30, special:['doubleJump','pierce'], ult:'storm' },
+  yadon:    { key:'yadon',    name:'🦛まったりヤドン', emoji:'🦛', rar:'M', move:0.98, jump:1.08, bullet:1.05, inv:INVINCIBILITY_DURATION, ultRate:1.45, special:['magnet'], ult:'yadon' },
 };
 
 // レア→カラー/順序
@@ -1133,7 +1134,7 @@ function getEffectiveStats(key){
     move:   ch.move   * (1+lb),
     jump:   BASE_JUMP * ch.jump * (1+lb*0.5), // ジャンプは控えめに反映
     bullet: ch.bullet * (1+lb),
-    inv:    Math.floor(ch.inv * (1+lb*0.5)),
+    inv:    Math.min(INVINCIBILITY_DURATION, Math.floor(ch.inv * (1+lb*0.5))),
     ultRate:ch.ultRate* (1+lb*0.5),
     special: ch.special,
     ult: ch.ult,
@@ -1380,7 +1381,22 @@ function draw(remain, st){
   }
 
   // 弾
-  c.fillStyle='#333'; bullets.forEach(b=> c.fillRect(b.x,b.y,b.w,b.h));
+  if (bullets.length){
+    c.save();
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    bullets.forEach(b=>{
+      const grad = c.createLinearGradient(b.x, b.y, b.x + b.w, b.y + b.h);
+      grad.addColorStop(0, '#fef3c7');
+      grad.addColorStop(1, '#f97316');
+      c.fillStyle = grad;
+      c.fillRect(b.x, b.y, b.w, b.h);
+      c.strokeStyle = 'rgba(124,45,18,0.75)';
+      c.lineWidth = 1.2;
+      c.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+    });
+    c.restore();
+  }
 
   // アイテム
   c.font='28px serif'; c.textBaseline='top';
