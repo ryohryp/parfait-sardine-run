@@ -262,7 +262,7 @@ const DEFAULT_PLAYER_NAME = 'プレイヤー';
 function leaderboardUrl(){
   const base = (typeof window !== 'undefined' && window.PSRUN_API_BASE)
     ? String(window.PSRUN_API_BASE).trim().replace(/\/$/, '')
-    : 'https://howasaba-code.com/wp-json/psrun/v1';
+    : 'https://howasaba-code.com/wp-json/psrun/v2';
   return base.endsWith('/leaderboard') ? base : `${base}/leaderboard`;
 }
 
