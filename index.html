@@ -165,6 +165,23 @@
   .commentItemDate{font-variant-numeric:tabular-nums;opacity:.75}
   .commentItemMessage{font-size:14px;line-height:1.6;color:#f9fafb;word-break:break-word;white-space:pre-wrap}
   .commentItemEmpty{justify-content:center;align-items:center;opacity:.7;font-style:italic;color:#e5e7eb}
+  .commentFeed{
+    max-width:var(--maxw);
+    margin:20px auto 24px;
+    text-align:left;
+    background:#f8fafc;
+    color:#0f172a;
+    border-radius:18px;
+    padding:18px 20px;
+    box-shadow:0 16px 32px rgba(15,23,42,.16);
+  }
+  .commentFeed h2{margin:0 0 10px;font-size:clamp(18px,3vw,24px)}
+  .commentFeedStatus{margin:0 0 12px;font-size:14px;color:#475569}
+  .commentFeed .commentItem{background:#fff;color:#0f172a;box-shadow:inset 0 0 0 1px rgba(148,163,184,.25)}
+  .commentFeed .commentItemHeader{color:#1f2937;opacity:1}
+  .commentFeed .commentItemDate{opacity:.8;color:#475569}
+  .commentFeed .commentItemMessage{color:#1f2937}
+  .commentFeed .commentItemEmpty{color:#94a3b8}
 
   /* 右上インジケーター */
   #charInfo{position:fixed; right:12px; top:8px; font-size:12px; background:rgba(0,0,0,.5); color:#fff; padding:6px 10px; border-radius:10px}
@@ -318,6 +335,12 @@
     </div>
   </div>
 
+  <section id="commentFeed" class="commentFeed">
+    <h2>みんなのコメント</h2>
+    <p id="commentFeedStatus" class="commentFeedStatus" style="display:none"></p>
+    <ul id="commentFeedList" class="commentList"></ul>
+  </section>
+
   <!-- コメント -->
   <div id="commentOverlay" class="overlay">
     <div class="cardWrap">
@@ -429,6 +452,8 @@ const commentMessageInput = document.getElementById('commentMessage');
 const commentSubmitBtn = document.getElementById('commentSubmit');
 const commentStatus = document.getElementById('commentStatus');
 const commentList = document.getElementById('commentList');
+const commentFeedStatus = document.getElementById('commentFeedStatus');
+const commentFeedList = document.getElementById('commentFeedList');
 if (btnComment){ btnComment.onclick = ()=>{ openCommentOverlay(); }; }
 if (commentClose){ commentClose.onclick = ()=>{ if(commentOverlay) commentOverlay.style.display='none'; }; }
 if (commentOverlay){
@@ -448,6 +473,10 @@ const PLAYER_EMAIL_KEY = 'psrun_player_email_v1';
 const DEFAULT_PLAYER_NAME = 'プレイヤー';
 const COMMENT_POST_ID = 103;
 const COMMENT_API_DEFAULT = 'https://howasaba-code.com/wp-json/psr/v1';
+const COMMENT_REFRESH_MS = 60000;
+let lastCommentFetch = 0;
+
+loadComments(true);
 
 function leaderboardUrl(){
   const base = (typeof window !== 'undefined' && window.PSRUN_API_BASE)
@@ -530,7 +559,10 @@ function openCommentOverlay(){
     try{ commentMessageInput.focus({ preventScroll:true }); }
     catch{ commentMessageInput.focus(); }
   }
-  loadComments(true);
+  const now = Date.now();
+  if (!lastCommentFetch || (now - lastCommentFetch) > COMMENT_REFRESH_MS){
+    loadComments(true);
+  }
 }
 
 function describeCharLabel(key){
@@ -746,14 +778,14 @@ function formatCommentDate(entry){
   return formatLeaderboardDate(entry);
 }
 
-function renderComments(items){
-  if (!commentList) return;
-  commentList.innerHTML = '';
+function renderComments(targetList, items, emptyMessage='まだコメントがありません。'){
+  if (!targetList) return;
+  targetList.innerHTML = '';
   if (!items.length){
     const li = document.createElement('li');
     li.className = 'commentItem commentItemEmpty';
-    li.textContent = 'まだコメントがありません。';
-    commentList.appendChild(li);
+    li.textContent = emptyMessage;
+    targetList.appendChild(li);
     return;
   }
   items.forEach(item=>{
@@ -784,17 +816,24 @@ function renderComments(items){
 
     li.appendChild(header);
     li.appendChild(message);
-    commentList.appendChild(li);
+    targetList.appendChild(li);
   });
 }
 
 async function loadComments(showLoading){
-  if (!commentList || !commentStatus) return;
-  if (showLoading){
+  const lists = [];
+  if (commentList) lists.push({ el: commentList, empty: 'まだコメントがありません。' });
+  if (commentFeedList) lists.push({ el: commentFeedList, empty: 'まだコメントがありません。' });
+  if (!lists.length) return;
+  if (showLoading && commentStatus){
     commentStatus.textContent = '最新コメントを読み込み中…';
     commentStatus.style.display = 'block';
   }
-  commentList.innerHTML = '';
+  if (commentFeedStatus){
+    commentFeedStatus.textContent = 'コメントを読み込み中…';
+    commentFeedStatus.style.display = 'block';
+  }
+  lists.forEach(entry=>{ entry.el.innerHTML = ''; });
   try{
     const res = await fetch(commentListUrl(), { method:'GET', headers:{ 'Accept':'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -814,16 +853,28 @@ async function loadComments(showLoading){
       }))
       .filter(entry=>entry.message.length > 0)
       .slice(0, 30);
-    renderComments(normalized);
-    if (commentStatus){
+    lists.forEach(entry=>{
+      if (!entry.el) return;
+      renderComments(entry.el, normalized, entry.empty);
+    });
+    if (showLoading && commentStatus){
       commentStatus.style.display = 'none';
       commentStatus.textContent = '';
     }
+    if (commentFeedStatus){
+      commentFeedStatus.style.display = 'none';
+      commentFeedStatus.textContent = '';
+    }
+    lastCommentFetch = Date.now();
   }catch(err){
     console.error('Failed to load comments', err);
-    if (commentStatus){
+    if (showLoading && commentStatus){
       commentStatus.textContent = 'コメントを取得できませんでした。';
       commentStatus.style.display = 'block';
+    }
+    if (commentFeedStatus){
+      commentFeedStatus.textContent = 'コメントを表示できませんでした。';
+      commentFeedStatus.style.display = 'block';
     }
   }
 }

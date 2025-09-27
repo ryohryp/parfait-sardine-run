@@ -61,6 +61,7 @@
 - API ベース URL は既定で `https://howasaba-code.com/wp-json/psrun/v2/leaderboard` を指します。開発や検証で別環境を使いたい場合は、`window.PSRUN_API_BASE` でベースパスを上書きできます。例：`<script>window.PSRUN_API_BASE='https://example.com/wp-json/psrun/v2';</script>` を `index.html` に追加すると、そのドメインの `/leaderboard` エンドポイントに対して通信します。【F:index.html†L262-L287】
 
 ## 9. ユーザーコメント投稿
-- 画面下部の「コメント」ボタンからコメントオーバーレイを開き、名前（必須・1〜40 文字）、任意のメールアドレス、メッセージ（必須・1〜1000 文字）を送信できます。名前とメールはローカルストレージに保存され、次回以降自動で復元されます。【F:index.html†L212-L244】【F:index.html†L396-L444】【F:index.html†L458-L503】
-- コメント一覧は開閉時に最新 30 件まで WordPress REST API (`GET /wp-json/psr/v1/comments?post_id=103`) から取得し、本文はサーバー側の承認済みデータのみを表示します。制御文字や HTML タグはクライアント側でも除去し、日付は日本ローカル形式に整えます。【F:index.html†L134-L210】【F:index.html†L512-L575】
-- 投稿時は `POST /wp-json/psr/v1/comment` を呼び出し、バリデーションエラー（400）、Origin 制限（403）、レート制限（429）などに応じてユーザー向けメッセージを表示します。ベース URL は `window.PSRUN_COMMENT_API_BASE`（未設定時は `https://howasaba-code.com/wp-json/psr/v1`）で上書きでき、`window.PSRUN_API_BASE` を指定している場合も自動で `/psr/v1` に変換されます。【F:index.html†L124-L210】【F:index.html†L522-L575】
+- 画面下部の「コメント」ボタンからコメントオーバーレイを開き、名前（必須・1〜40 文字）、任意のメールアドレス、メッセージ（必須・1〜1000 文字）を送信できます。名前とメールはローカルストレージに保存され、次回以降自動で復元されます。【F:index.html†L207-L221】【F:index.html†L338-L370】【F:index.html†L445-L503】
+- コメント一覧は開閉時に最新 30 件まで WordPress REST API (`GET /wp-json/psr/v1/comments?post_id=103`) から取得し、本文はサーバー側の承認済みデータのみを表示します。制御文字や HTML タグはクライアント側でも除去し、日付は日本ローカル形式に整えます。【F:index.html†L134-L210】【F:index.html†L735-L880】
+- 画面本体の「みんなのコメント」セクションにも同じ一覧を同期表示し、ゲームを遊んでいない訪問者でも承認済みの投稿を閲覧できます。リストは 60 秒キャッシュし、必要に応じてコメントオーバーレイから即座に再取得されます。【F:index.html†L338-L370】【F:index.html†L471-L566】【F:index.html†L823-L880】
+- 投稿時は `POST /wp-json/psr/v1/comment` を呼び出し、バリデーションエラー（400）、Origin 制限（403）、レート制限（429）などに応じてユーザー向けメッセージを表示します。ベース URL は `window.PSRUN_COMMENT_API_BASE`（未設定時は `https://howasaba-code.com/wp-json/psr/v1`）で上書きでき、`window.PSRUN_API_BASE` を指定している場合も自動で `/psr/v1` に変換されます。【F:index.html†L124-L210】【F:index.html†L882-L964】
