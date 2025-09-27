@@ -10,7 +10,27 @@
   body{margin:0;background:#eaf1f8;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#222;text-align:center}
   header{padding:12px 8px 4px}
   h1{margin:0 0 6px;font-size:clamp(20px,4vw,28px)}
-  #hud{font-size:clamp(13px,3.2vw,18px);margin-bottom:8px}
+  #hud{
+    font-size:clamp(13px,3.2vw,18px);
+    margin:0 auto 12px;
+    max-width:var(--maxw);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    text-align:left;
+    background:rgba(255,255,255,.85);
+    color:#111827;
+    border-radius:12px;
+    padding:10px 14px;
+    box-shadow:0 6px 22px rgba(15,23,42,.12);
+  }
+  .hudRow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+  .hudItem{display:inline-flex;align-items:center;gap:6px;line-height:1.4}
+  .hudItem strong{font-size:.78em;letter-spacing:.08em;color:#2563eb;text-transform:uppercase}
+  .hudItem .value{font-weight:600}
+  .hudTag{display:inline-flex;align-items:center;padding:2px 8px;background:#facc15;color:#111827;border-radius:999px;font-size:.75em;font-weight:600}
+  .hudHearts{font-size:1.05em}
+  .hudCoins{gap:4px}
   #wrap{max-width:var(--maxw);margin:0 auto;padding:8px}
   canvas{width:100%;height:auto;max-width:var(--maxw);background:linear-gradient(#9ed6ee,#fff7e6);border:2px solid #333;border-radius:12px;touch-action:none}
   #btns{display:flex;gap:8px;justify-content:center;margin:10px 0;flex-wrap:wrap}
@@ -20,6 +40,22 @@
   button.warn{background:#ef4444}
   button:disabled{opacity:.5}
   .muted{opacity:.75}
+  .controls{max-width:var(--maxw);margin:0 auto;line-height:1.6;text-align:left}
+  #objective{
+    max-width:var(--maxw);
+    margin:0 auto 14px;
+    text-align:left;
+    background:#111827;
+    color:#f9fafb;
+    border-radius:16px;
+    padding:14px 18px;
+    box-shadow:0 14px 28px rgba(15,23,42,.28);
+  }
+  #objective h2{margin:0 0 6px;font-size:clamp(18px,3.2vw,24px)}
+  #objective p{margin:0 0 8px;line-height:1.65}
+  #objective ul{margin:0;padding-left:22px;display:grid;gap:4px;font-size:clamp(12px,3.2vw,16px)}
+  #objective li::marker{color:#facc15}
+  #objective strong{color:#fbbf24}
   #ultBtn{
     position: fixed; right: 14px; bottom: 18px; z-index: 10;
     padding:12px 16px; border-radius:14px; background:#ef4444; color:#fff; font-weight:700;
@@ -53,6 +89,11 @@
   .rankHeader{display:flex;align-items:center;gap:10px;font-weight:600}
   .rankNo{display:inline-block;min-width:24px;text-align:center;font-size:16px;font-weight:700;background:rgba(0,0,0,.2);padding:2px 6px;border-radius:999px}
   .rankEmpty{list-style:none;padding:18px 0;text-align:center;opacity:.65}
+  .howList{display:grid;gap:8px;margin:12px 0 0;padding-left:20px;line-height:1.6}
+  .howList li::marker{color:#3b82f6;font-weight:700}
+  .howLead{margin:8px 0 0;line-height:1.6}
+  .howFooter{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+  .howFooterNote{font-size:13px;opacity:.75}
   .rar-c{background:#111827}
   .rar-r{background:linear-gradient(135deg,#1f2937,#0ea5e9)}
   .rar-e{background:linear-gradient(135deg,#3b0764,#a21caf)}
@@ -73,6 +114,16 @@
     <div id="charInfo" class="muted">CHAR: -</div>
   </header>
 
+  <section id="objective">
+    <h2>ゲームの目的</h2>
+    <p>令和スタイルのラン＆シュートで、<strong>60秒以内にベストスコアを叩き出し</strong>つつコインを稼ぎ、コレクションを増やしましょう。</p>
+    <ul>
+      <li><strong>アイテムを集めて</strong>スコアとコインを獲得。集めたコインでガチャを回し、新しいキャラを開放！</li>
+      <li><strong>ジャンプと攻撃で敵をかわしつつ撃破</strong>。連続ヒットでスコアがぐんぐん伸びます。</li>
+      <li><strong>必殺技ゲージが100%になったら一気に反撃</strong>。キャラ固有のスキルを活かしてハイスコアを狙いましょう。</li>
+    </ul>
+  </section>
+
   <div id="wrap">
     <canvas id="cv" width="900" height="430"></canvas>
     <div id="btns">
@@ -84,10 +135,33 @@
       <button id="collection" class="ghost">コレクション</button>
       <button id="ranking" class="ghost">ランキング</button>
     </div>
-    <p class="muted">操作：左半分タップ＝ジャンプ / 右半分タップ＝攻撃 / 右長押し or 右下の<strong>必殺</strong>＝必殺技</p>
+    <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
   </div>
 
   <button id="ultBtn" style="display:none">必殺</button>
+
+  <!-- 遊び方 -->
+  <div id="howOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>遊び方ガイド</h2>
+        <button id="howClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <p id="howLead" class="howLead">60秒でベストスコアを更新し、コインでガチャを解放してキャラ図鑑を充実させましょう。</p>
+        <ul class="howList">
+          <li>画面左タップ/クリックでジャンプ。二段ジャンプ可能なキャラもいます。</li>
+          <li>画面右タップで攻撃、長押し or 右下の<strong>必殺</strong>ボタンでゲージ100%時の必殺技を発動。</li>
+          <li>🍨や🐟アイテムでスコア＆コイン、⭐で無敵とゲージUP。敵を倒すとさらにボーナス。</li>
+          <li>集めたコインでガチャを回し、キャラを装備して能力を入れ替えましょう。</li>
+        </ul>
+      </div>
+      <div class="howFooter">
+        <span class="howFooterNote">ヒント：ランキングは自動で保存。連続プレイで令和チャンプを目指そう！</span>
+        <button id="howStart" class="secondary">今すぐプレイ</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ガチャ -->
   <div id="gachaOverlay" class="overlay">
@@ -154,6 +228,10 @@ const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
 const btnRanking = document.getElementById('ranking');
 const charInfo = document.getElementById('charInfo');
+const howOverlay = document.getElementById('howOverlay');
+const howClose = document.getElementById('howClose');
+const howStart = document.getElementById('howStart');
+const howLead = document.getElementById('howLead');
 
 // ガチャUI
 const ov = document.getElementById('gachaOverlay');
@@ -176,6 +254,38 @@ const rankOv = document.getElementById('rankOverlay');
 const rankList = document.getElementById('rankList');
 const rankClose = document.getElementById('rankClose');
 const rankClear = document.getElementById('rankClear');
+
+function openHowto(initial=false){
+  if (!howOverlay) return;
+  if (howLead){
+    howLead.textContent = initial
+      ? 'まずは操作をチェック！60秒ランでベストスコアを狙い、コインでキャラを集めましょう。'
+      : '困ったらいつでもここで操作と目的を確認できます。';
+  }
+  howOverlay.style.display='flex';
+}
+
+if (btnHow){
+  btnHow.addEventListener('click', ()=> openHowto(false));
+}
+if (howClose){
+  howClose.addEventListener('click', ()=>{ howOverlay.style.display='none'; });
+}
+if (howStart){
+  howStart.addEventListener('click', ()=>{
+    howOverlay.style.display='none';
+    if (!gameOn) startGame();
+  });
+}
+const INTRO_KEY = 'psrun_intro_seen_v2';
+try{
+  if (!localStorage.getItem(INTRO_KEY)){
+    openHowto(true);
+    localStorage.setItem(INTRO_KEY,'1');
+  }
+}catch{
+  openHowto(true);
+}
 
 // 物理 & ゲーム基本
 const G = 0.62, BASE_JUMP = -12.2, GROUND = 72;
@@ -379,7 +489,7 @@ rankClear.onclick = ()=>{
 function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
 function setHUD(remainMs){
   const sec = Math.max(0, Math.ceil(remainMs/1000));
-  const inv = now()<invUntil ? '（無敵中）' : '';
+  const invActive = now()<invUntil;
   const st = stageForLevel(level).name;
   const ch = characters[currentCharKey];
   const own = collection.owned[currentCharKey];
@@ -387,7 +497,20 @@ function setHUD(remainMs){
   const best = rankings.length ? rankings[0].score.toLocaleString('ja-JP') : 0;
   const scoreText = score.toLocaleString('ja-JP');
   const coinText = coins.toLocaleString('ja-JP');
-  hud.textContent = `ステージ:${st}　スコア:${scoreText}　レベル:${level}　ライフ:${hearts(lives)}　必殺:${Math.floor(ult)}%　コイン:🪙${coinText}　ベスト:${best}　残り:${sec}秒 ${inv}`;
+  hud.innerHTML = `
+    <div class="hudRow">
+      <span class="hudItem"><strong>ステージ</strong><span class="value">${st}</span></span>
+      <span class="hudItem"><strong>レベル</strong><span class="value">${level}</span></span>
+      <span class="hudItem"><strong>残り</strong><span class="value">${sec}秒</span></span>
+      ${invActive ? '<span class="hudItem"><span class="hudTag">無敵中</span></span>' : ''}
+    </div>
+    <div class="hudRow">
+      <span class="hudItem hudHearts"><strong>ライフ</strong><span class="value">${hearts(lives)}</span></span>
+      <span class="hudItem"><strong>スコア</strong><span class="value">${scoreText}</span></span>
+      <span class="hudItem hudCoins"><strong>コイン</strong><span class="value">🪙${coinText}</span></span>
+      <span class="hudItem"><strong>必殺</strong><span class="value">${Math.floor(ult)}%</span></span>
+      <span class="hudItem"><strong>ベスト</strong><span class="value">${best}</span></span>
+    </div>`;
   charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
   btnUlt.style.display = ultReady ? 'block':'none';
   btnGacha.disabled = coins < 10;
@@ -709,14 +832,6 @@ function endGame(){
 // ====== ボタン ======
 btnStart.addEventListener('click', startGame);
 btnRestart.addEventListener('click', startGame);
-btnHow.addEventListener('click', ()=>{
-  alert(
-    '操作: 左＝ジャンプ / 右＝攻撃 / 右長押し or 右下の「必殺」＝必殺(ゲージ100%)\n' +
-    'ガチャ: 1回10コイン / 10連100コイン（30連でL保証/100連でM保証）\n' +
-    'コレクション: 所持キャラから選択、重複で限界突破（性能微増）\n' +
-    'Mythic: 🌈オーロラ(吸引+ガード) / 🌀鰯王(二段ジャンプ+貫通) 固有必殺あり'
-  );
-});
 
 // ====== スポーンと攻撃トリガ ======
 function shootIfAuto(t){ /* 予備フック */ }
