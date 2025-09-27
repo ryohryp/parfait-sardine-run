@@ -391,6 +391,7 @@ const DEFAULT_API_BASE = '/api';
 const API_BASE = (typeof window.PSRUN_API_BASE === 'string' && window.PSRUN_API_BASE.trim().length > 0)
   ? window.PSRUN_API_BASE.trim()
   : DEFAULT_API_BASE;
+const LEADERBOARD_ENDPOINT = 'leaderboard';
 let collection = loadCollection();
 let currentCharKey = collection.current || 'parfen';
 if(!collection.owned[currentCharKey]) {
@@ -401,9 +402,11 @@ if(!collection.owned[currentCharKey]) {
 }
 updateCharInfo();
 let username = loadUsername();
-let rankings = [];
-let isRankingLoading = false;
-let rankingError = '';
+const leaderboardState = {
+  entries: [],
+  loading: false,
+  error: '',
+};
 updateNameUI();
 if (!username) openNameModal();
 refreshLeaderboard();
@@ -538,7 +541,9 @@ function setHUD(remainMs){
   const ch = characters[currentCharKey];
   const own = collection.owned[currentCharKey];
   const lb = own?.limit? own.limit : 0;
-  const best = rankings.length ? rankings[0].score.toLocaleString('ja-JP') : 0;
+  const bestScore = leaderboardState.entries.length
+    ? leaderboardState.entries[0].score.toLocaleString('ja-JP')
+    : 0;
   const scoreText = score.toLocaleString('ja-JP');
   const coinText = coins.toLocaleString('ja-JP');
   hud.innerHTML = `
@@ -553,7 +558,7 @@ function setHUD(remainMs){
       <span class="hudItem"><strong>スコア</strong><span class="value">${scoreText}</span></span>
       <span class="hudItem hudCoins"><strong>コイン</strong><span class="value">🪙${coinText}</span></span>
       <span class="hudItem"><strong>必殺</strong><span class="value">${Math.floor(ult)}%</span></span>
-      <span class="hudItem"><strong>ベスト</strong><span class="value">${best}</span></span>
+      <span class="hudItem"><strong>ベスト</strong><span class="value">${bestScore}</span></span>
     </div>`;
   charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
   btnUlt.style.display = ultReady ? 'block':'none';
@@ -995,28 +1000,28 @@ btnGacha10.onclick = ()=> doGacha(10);
 function renderRanking(){
   if (!rankList) return;
   rankList.innerHTML='';
-  if (isRankingLoading){
+  if (leaderboardState.loading){
     const loading=document.createElement('li');
     loading.className='rankEmpty';
     loading.textContent='ランキングを読み込み中…';
     rankList.appendChild(loading);
     return;
   }
-  if (rankingError){
+  if (leaderboardState.error){
     const err=document.createElement('li');
     err.className='rankEmpty';
-    err.textContent=rankingError;
+    err.textContent=leaderboardState.error;
     rankList.appendChild(err);
     return;
   }
-  if (!rankings.length){
+  if (!leaderboardState.entries.length){
     const empty=document.createElement('li');
     empty.className='rankEmpty';
     empty.textContent='まだ記録がありません';
     rankList.appendChild(empty);
     return;
   }
-  rankings.forEach((r, idx)=>{
+  leaderboardState.entries.forEach((r, idx)=>{
     const ch = characters[r.char] || {};
     const li=document.createElement('li');
     const left=document.createElement('div');
@@ -1047,13 +1052,13 @@ function renderRanking(){
 }
 
 async function recordRanking(entry){
-  if (!entry || typeof entry.score!=='number') return;
+  if (!entry || typeof entry.score !== 'number') return;
   if (!username){
-    rankingError='ユーザー名を設定してください。';
+    leaderboardState.error = 'ユーザー名を設定してください。';
     renderRanking();
     return;
   }
-  const safe = normalizeEntry({
+  const candidate = normalizeEntry({
     score: entry.score,
     level: entry.level,
     coins: entry.coins,
@@ -1061,35 +1066,37 @@ async function recordRanking(entry){
     name: username,
     time: entry.time
   });
-  rankings = mergeRankings([...rankings, safe]);
+  const previousEntries = leaderboardState.entries.slice();
+  leaderboardState.entries = buildLeaderboard([...leaderboardState.entries, candidate]);
+  leaderboardState.error = '';
   renderRanking();
   refreshHUD();
   try{
-    const res = await fetch(apiUrl('leaderboard'), {
+    const res = await fetch(leaderboardUrl(), {
       method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body: JSON.stringify({
-        name: safe.name,
-        score: safe.score,
-        level: safe.level,
-        coins: safe.coins,
-        char: safe.char
+        name: candidate.name,
+        score: candidate.score,
+        level: candidate.level,
+        coins: candidate.coins,
+        char: candidate.char
       })
     });
     if (!res.ok) throw new Error(`bad status ${res.status}`);
     const data = await res.json();
-    const list = Array.isArray(data?.leaderboard) ? data.leaderboard : data;
-    if (Array.isArray(list)){
-      rankings = mergeRankings(list);
-      rankingError='';
-      renderRanking();
-      refreshHUD();
+    const list = extractLeaderboard(data);
+    if (list.length){
+      leaderboardState.entries = buildLeaderboard(list);
+      leaderboardState.error = '';
     }
   }catch(err){
     console.warn('Failed to submit score', err);
-    rankingError='スコア送信に失敗しました。ネットワークを確認してください。';
-    renderRanking();
+    leaderboardState.entries = previousEntries;
+    leaderboardState.error = 'スコア送信に失敗しました。ネットワークを確認してください。';
   }
+  renderRanking();
+  refreshHUD();
 }
 
 // ====== ストレージ ======
@@ -1158,7 +1165,7 @@ function saveUsernameFromInput(){
   username = sanitized;
   saveUsername();
   updateNameUI();
-  rankingError='';
+  leaderboardState.error='';
   renderRanking();
   refreshLeaderboard({ showSpinner:false });
   closeNameModal();
@@ -1176,100 +1183,62 @@ function validateUsername(name){
   return '';
 }
 
-function apiUrl(path){
-  const rawPath = typeof path === 'string' ? path : '';
-  if (/^https?:\/\//i.test(rawPath)) return rawPath;
-  const safeBase = (typeof API_BASE === 'string' && API_BASE.length > 0) ? API_BASE : DEFAULT_API_BASE;
-  try{
-    const baseUrl = new URL(safeBase, window.location.href);
-    const finalUrl = new URL(baseUrl.toString());
-    const trimmedPath = rawPath.trim();
-    if (!trimmedPath){
-      return finalUrl.toString();
-    }
-    const dummy = new URL(trimmedPath.replace(/^\/+/, ''), 'https://placeholder/');
-    const cleanPath = dummy.pathname.replace(/^\/+|\/+$/g, '');
-    const basePath = baseUrl.pathname.replace(/\/+$/g, '');
-    const combinedPath = cleanPath
-      ? [basePath, cleanPath].filter(Boolean).join('/')
-      : basePath;
-    const normalizedPath = combinedPath
-      ? (combinedPath.startsWith('/') ? combinedPath : `/${combinedPath}`)
-      : '/';
-    finalUrl.pathname = normalizedPath;
-
-    const mergedSearch = new URLSearchParams(baseUrl.search);
-
-    const extraSearch = new URLSearchParams(dummy.search);
-    const baseHashParams = new URLSearchParams(baseUrl.hash ? baseUrl.hash.replace(/^#/, '') : '');
-    const dummyHashParams = new URLSearchParams(dummy.hash ? dummy.hash.replace(/^#/, '') : '');
-    for (const [key, value] of extraSearch.entries()){
-      mergedSearch.append(key, value);
-    }
-    for (const [key, value] of baseHashParams.entries()){
-      mergedSearch.append(key, value);
-    }
-    for (const [key, value] of dummyHashParams.entries()){
-      mergedSearch.append(key, value);
-    }
-
-    const searchString = mergedSearch.toString();
-    finalUrl.search = searchString ? `?${searchString}` : '';
-    finalUrl.hash = dummy.hash || baseUrl.hash;
-    return finalUrl.toString();
-  }catch(err){
-    console.warn('Invalid API base URL', API_BASE, err);
-    return rawPath || safeBase;
-  }
-}
-
 async function refreshLeaderboard(opts){
-  if (isRankingLoading) return;
-  const showSpinner = opts?.showSpinner ?? (rankings.length === 0);
-  isRankingLoading = true;
-  rankingError = '';
+  if (leaderboardState.loading) return;
+  const showSpinner = opts?.showSpinner ?? (leaderboardState.entries.length === 0);
+  leaderboardState.loading = true;
+  leaderboardState.error = '';
   if (showSpinner) renderRanking();
   try{
-    const res = await fetch(apiUrl(`leaderboard?limit=${RANK_MAX}`), { headers:{'Accept':'application/json'} });
+    const res = await fetch(leaderboardUrl(`${LEADERBOARD_ENDPOINT}?limit=${RANK_MAX}`), {
+      headers:{'Accept':'application/json'}
+    });
     if (!res.ok) throw new Error(`bad status ${res.status}`);
     const data = await res.json();
-    const list = Array.isArray(data?.leaderboard) ? data.leaderboard : data;
-    if (Array.isArray(list)){
-      rankings = mergeRankings(list);
-      rankingError = '';
-    } else {
-      rankings = [];
-    }
+    const list = extractLeaderboard(data);
+    leaderboardState.entries = buildLeaderboard(list);
+    leaderboardState.error = '';
   }catch(err){
     console.warn('Failed to load leaderboard', err);
-    rankingError = 'ランキングの取得に失敗しました。時間をおいて再度お試しください。';
+    leaderboardState.error = 'ランキングの取得に失敗しました。時間をおいて再度お試しください。';
+    leaderboardState.entries = [];
   }finally{
-    isRankingLoading = false;
+    leaderboardState.loading = false;
     renderRanking();
     refreshHUD();
   }
 }
 
-function normalizeEntry(entry){
-  const safeTime = Number(entry?.time);
-  const safeScore = Math.max(0, Math.floor(Number(entry?.score)||0));
-  const safeLevel = Math.max(1, Math.floor(Number(entry?.level)||0));
-  const safeCoins = Math.max(0, Math.floor(Number(entry?.coins)||0));
-  const safeChar = typeof entry?.char === 'string' ? entry.char : 'parfen';
-  const safeName = sanitizeUsername(entry?.name||'') || '???';
-  return {
-    score: safeScore,
-    level: safeLevel,
-    coins: safeCoins,
-    char: safeChar,
-    name: safeName,
-    time: Number.isFinite(safeTime) ? safeTime : Date.now()
-  };
+function leaderboardUrl(pathSegment){
+  const base = (typeof API_BASE === 'string' && API_BASE.length > 0) ? API_BASE : DEFAULT_API_BASE;
+  const normalizedBase = base.replace(/\/+$/,'');
+  const target = (typeof pathSegment === 'string' && pathSegment.length > 0)
+    ? pathSegment
+    : LEADERBOARD_ENDPOINT;
+  const normalizedTarget = target.replace(/^\/+/, '');
+  return `${normalizedBase}/${normalizedTarget}`;
 }
 
-function mergeRankings(list){
-  return list
-    .filter(r=> typeof r?.score === 'number')
+function extractLeaderboard(data){
+  if (Array.isArray(data?.leaderboard)) return data.leaderboard;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
+function normalizeEntry(entry){
+  const safeTimeRaw = Number(entry?.time);
+  const safeScore = Math.max(0, Math.floor(Number(entry?.score) || 0));
+  const safeLevel = Math.max(1, Math.floor(Number(entry?.level) || 0));
+  const safeCoins = Math.max(0, Math.floor(Number(entry?.coins) || 0));
+  const safeChar = typeof entry?.char === 'string' ? entry.char : 'parfen';
+  const safeName = sanitizeUsername(entry?.name || '') || '???';
+  const safeTime = Number.isFinite(safeTimeRaw) ? safeTimeRaw : Date.now();
+  return { score: safeScore, level: safeLevel, coins: safeCoins, char: safeChar, name: safeName, time: safeTime };
+}
+
+function buildLeaderboard(list){
+  return (Array.isArray(list) ? list : [])
+    .filter(item => typeof item?.score === 'number')
     .map(normalizeEntry)
     .sort((a,b)=>{
       if (b.score !== a.score) return b.score - a.score;
@@ -1277,6 +1246,7 @@ function mergeRankings(list){
     })
     .slice(0, RANK_MAX);
 }
+
 function formatRankDate(ts){
   const d = new Date(ts||Date.now());
   const y = d.getFullYear();
