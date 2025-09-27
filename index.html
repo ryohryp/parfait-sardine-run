@@ -120,6 +120,21 @@
   .big{font-size:28px}
   .small{font-size:12px;opacity:.85}
   .footerBtns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+  .resultBody{display:flex;flex-direction:column;gap:18px}
+  .resultSummary{display:grid;gap:8px}
+  .resultSummaryRow{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);font-size:14px}
+  .resultSummaryRow strong{font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+  .resultSummaryRow span{font-variant-numeric:tabular-nums;font-weight:600}
+  .resultSection h3{margin:0 0 8px;font-size:16px}
+  .resultSection:first-of-type{margin-top:0}
+  .resultSection{margin-top:4px}
+  .resultList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .resultList li{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:rgba(15,23,42,.55);border-radius:10px;padding:8px 10px;font-size:14px}
+  .resultList .label{font-weight:600;display:flex;gap:6px;align-items:center}
+  .resultList .value{text-align:right;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .resultList .value small{font-size:12px;color:#facc15}
+  .resultList .note{font-size:12px;opacity:.75}
+  .resultList li.resultEmpty{justify-content:center;opacity:.6;font-style:italic}
 
   /* 右上インジケーター */
   #charInfo{position:fixed; right:12px; top:8px; font-size:12px; background:rgba(0,0,0,.5); color:#fff; padding:6px 10px; border-radius:10px}
@@ -228,6 +243,30 @@
     </div>
   </div>
 
+  <!-- リザルト -->
+  <div id="resultOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>リザルト</h2>
+        <button id="resultClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody resultBody">
+        <div id="resultSummary" class="resultSummary"></div>
+        <div class="resultSection">
+          <h3>アイテム別スコア内訳</h3>
+          <ul id="resultItemList" class="resultList"></ul>
+        </div>
+        <div class="resultSection">
+          <h3>敵撃破スコア内訳</h3>
+          <ul id="resultEnemyList" class="resultList"></ul>
+        </div>
+      </div>
+      <div class="footerBtns">
+        <button id="resultReplay" class="secondary">もう一度プレイ</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ランキング -->
   <div id="leaderboardOverlay" class="overlay">
     <div class="cardWrap">
@@ -269,6 +308,12 @@ const howOverlay = document.getElementById('howOverlay');
 const howClose = document.getElementById('howClose');
 const howStart = document.getElementById('howStart');
 const howLead = document.getElementById('howLead');
+const resultOverlay = document.getElementById('resultOverlay');
+const resultClose = document.getElementById('resultClose');
+const resultSummary = document.getElementById('resultSummary');
+const resultItemList = document.getElementById('resultItemList');
+const resultEnemyList = document.getElementById('resultEnemyList');
+const resultReplay = document.getElementById('resultReplay');
 
 // ガチャUI
 const ov = document.getElementById('gachaOverlay');
@@ -656,8 +701,7 @@ let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 const shootCD=250, powerMillis=INVINCIBILITY_DURATION, enemyBonus=3, itemLv=15;
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
-let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
-let runStats = createRunStats();
+let items=[], enemies=[], bullets=[], powers=[], ultProjectiles[];
 
 // ステージ
 const stages = [
@@ -703,6 +747,7 @@ const ITEM_CATALOG = [
   }
 ];
 const itemCatalogMap = ITEM_CATALOG.reduce((map,item)=>{ map[item.key]=item; return map; }, {});
+let runStats = createRunStats();
 
 // ====== キャラ定義 ======
 /*
@@ -899,13 +944,17 @@ const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
 const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
 
 function createRunStats(){
+  const itemStats = {};
+  ITEM_CATALOG.forEach(item=>{
+    itemStats[item.key] = { count:0, total:0 };
+  });
   return {
-    items: {
-      parfait: { count:0, total:0 },
-      fish:    { count:0, total:0 },
-      star:    { count:0, total:0 }
-    },
-    enemies: { count:0, total:0 }
+    items: itemStats,
+    enemies: {
+      totalCount:0,
+      totalScore:0,
+      types:{}
+    }
   };
 }
 
@@ -914,52 +963,238 @@ function resetRunStats(){
 }
 
 function registerItemGain(key, gained){
-  if (!runStats || !runStats.items[key]) return;
+  if (!runStats?.items?.[key]) return;
   runStats.items[key].count += 1;
   runStats.items[key].total += gained;
 }
 
-function awardEnemyDefeat(){
+function awardEnemyDefeat(enemy){
   score += enemyBonus;
   coins += 2;
-  if (runStats?.enemies){
-    runStats.enemies.count += 1;
-    runStats.enemies.total += enemyBonus;
+  if (!runStats?.enemies) return;
+  runStats.enemies.totalCount += 1;
+  runStats.enemies.totalScore += enemyBonus;
+  const type = enemy?.type || 'other';
+  if (!runStats.enemies.types[type]){
+    runStats.enemies.types[type] = { count:0, total:0 };
   }
+  runStats.enemies.types[type].count += 1;
+  runStats.enemies.types[type].total += enemyBonus;
+}
+
+function buildItemBreakdown(){
+  return ITEM_CATALOG.map(item=>{
+    const data = runStats?.items?.[item.key] || { count:0, total:0 };
+    const count = data.count || 0;
+    const base = item.base || 0;
+    const total = Number(data.total || 0);
+    const baseTotal = count * base;
+    const bonus = Math.max(0, total - baseTotal);
+    return {
+      key:item.key,
+      icon:item.icon,
+      name:item.name,
+      count,
+      base,
+      total,
+      bonus,
+      note: base===0 ? item.effect : ''
+    };
+  });
+}
+
+function buildEnemyBreakdown(){
+  const enemyStats = runStats?.enemies || { totalCount:0, totalScore:0, types:{} };
+  const breakdown = [];
+  const seen = new Set();
+  Object.entries(enemyTypeMeta).forEach(([type, meta])=>{
+    const data = enemyStats.types?.[type] || { count:0, total:0 };
+    const count = data.count || 0;
+    const total = Number(data.total || 0);
+    const bonus = Math.max(0, total - enemyBonus * count);
+    breakdown.push({
+      type,
+      icon: meta.icon,
+      name: meta.label,
+      count,
+      base: enemyBonus,
+      total,
+      bonus
+    });
+    seen.add(type);
+  });
+  Object.entries(enemyStats.types || {}).forEach(([type, data])=>{
+    if (seen.has(type)) return;
+    const count = data.count || 0;
+    const total = Number(data.total || 0);
+    const bonus = Math.max(0, total - enemyBonus * count);
+    const label = type === 'other' ? 'その他' : `その他 (${type})`;
+    breakdown.push({
+      type,
+      icon: enemyTypeIcons[type] || '⚔',
+      name: label,
+      count,
+      base: enemyBonus,
+      total,
+      bonus
+    });
+  });
+  return {
+    totalCount: enemyStats.totalCount || 0,
+    totalScore: enemyStats.totalScore || 0,
+    types: breakdown
+  };
 }
 
 function buildScoreBreakdownLines(){
   const lines = [];
-  const parfait = runStats?.items?.parfait || { count:0, total:0 };
-  const fish = runStats?.items?.fish || { count:0, total:0 };
-  const star = runStats?.items?.star || { count:0, total:0 };
-  const enemy = runStats?.enemies || { count:0, total:0 };
-
-  const formatLine = (info, data)=>{
-    const base = info?.base ?? 0;
-    const count = data.count || 0;
-    const total = data.total || 0;
-    const baseTotal = count * base;
-    const bonus = total - baseTotal;
-    let line = `${info.icon} ${info.name}: ${count}個 ×${base} = ${total.toLocaleString('ja-JP')}pt`;
-    if (bonus>0){
-      line += `（ボーナス+${bonus.toLocaleString('ja-JP')}）`;
+  const itemBreakdown = buildItemBreakdown();
+  itemBreakdown.forEach(entry=>{
+    const totalText = Number(entry.total || 0).toLocaleString('ja-JP');
+    if (entry.base === 0){
+      const note = entry.count>0 && entry.note ? `（${entry.note}）` : '';
+      lines.push(`${entry.icon} ${entry.name}: ${entry.count}個 ×0 = 0pt${note ? note : ''}`);
+    }else{
+      let line = `${entry.icon} ${entry.name}: ${entry.count}個 ×${entry.base} = ${totalText}pt`;
+      if (entry.bonus>0){
+        line += `（ボーナス+${entry.bonus.toLocaleString('ja-JP')}）`;
+      }
+      lines.push(line);
     }
-    return line;
-  };
-
-  const parfaitInfo = itemCatalogMap.parfait;
-  const fishInfo = itemCatalogMap.fish;
-  const starInfo = itemCatalogMap.star;
-
-  if (parfaitInfo) lines.push(formatLine(parfaitInfo, parfait));
-  if (fishInfo) lines.push(formatLine(fishInfo, fish));
-  if (starInfo){
-    const count = star.count || 0;
-    lines.push(`${starInfo.icon} ${starInfo.name}: ${count}個 ×0 = 0pt（無敵＆ゲージUP）`);
+  });
+  const enemyBreak = buildEnemyBreakdown();
+  const counted = enemyBreak.types.filter(entry=>entry.count>0);
+  if (counted.length){
+    counted.forEach(entry=>{
+      let line = `${entry.icon} ${entry.name}: ${entry.count}体 ×${entry.base} = ${Number(entry.total || 0).toLocaleString('ja-JP')}pt`;
+      if (entry.bonus>0){
+        line += `（ボーナス+${entry.bonus.toLocaleString('ja-JP')}）`;
+      }
+      lines.push(line);
+    });
+  }else{
+    lines.push('⚔ 敵撃破: 0体 ×0 = 0pt');
   }
-  lines.push(`⚔ 敵撃破: ${enemy.count || 0}体 ×${enemyBonus} = ${(enemy.total || 0).toLocaleString('ja-JP')}pt`);
   return lines;
+}
+
+function populateResultOverlay(result){
+  if (!resultOverlay) return;
+  if (resultSummary){
+    const ch = characters[currentCharKey];
+    const summaryRows = [
+      { label:'SCORE', value:(Number(result?.score) || 0).toLocaleString('ja-JP') },
+      { label:'LEVEL', value:`${Number(result?.level) || 1}` },
+      { label:'COINS', value:`🪙${(Number(result?.coins) || 0).toLocaleString('ja-JP')}` },
+      { label:'CHAR', value:`${ch.emoji} ${ch.name}` },
+      { label:'BEST', value:(Number.isFinite(bestScore) ? bestScore : 0).toLocaleString('ja-JP') }
+    ];
+    resultSummary.innerHTML = '';
+    summaryRows.forEach(row=>{
+      const div = document.createElement('div');
+      div.className = 'resultSummaryRow';
+      const strong = document.createElement('strong');
+      strong.textContent = row.label;
+      const span = document.createElement('span');
+      span.textContent = row.value;
+      div.appendChild(strong);
+      div.appendChild(span);
+      resultSummary.appendChild(div);
+    });
+  }
+
+  if (resultItemList){
+    resultItemList.innerHTML = '';
+    const items = buildItemBreakdown();
+    items.forEach(entry=>{
+      const li = document.createElement('li');
+      li.className = 'resultItem';
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = `${entry.icon} ${entry.name}`;
+      const value = document.createElement('span');
+      value.className = 'value';
+      value.textContent = `${entry.count}個 ×${entry.base} = ${Number(entry.total || 0).toLocaleString('ja-JP')}pt`;
+      if (entry.bonus>0){
+        const bonus = document.createElement('small');
+        bonus.textContent = `ボーナス+${entry.bonus.toLocaleString('ja-JP')}`;
+        value.appendChild(bonus);
+      }else if (entry.base===0 && entry.note && entry.count>0){
+        const note = document.createElement('span');
+        note.className = 'note';
+        note.textContent = entry.note;
+        value.appendChild(note);
+      }
+      li.appendChild(label);
+      li.appendChild(value);
+      resultItemList.appendChild(li);
+    });
+  }
+
+  if (resultEnemyList){
+    resultEnemyList.innerHTML = '';
+    const enemyData = buildEnemyBreakdown();
+    const entries = enemyData.types;
+    if (!entries.length){
+      const li = document.createElement('li');
+      li.className = 'resultEmpty';
+      li.textContent = '敵データなし';
+      resultEnemyList.appendChild(li);
+    }else{
+      const allZero = entries.every(entry=>entry.count===0);
+      entries.forEach(entry=>{
+        const li = document.createElement('li');
+        if (!entry.count) li.classList.add('muted');
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = `${entry.icon} ${entry.name}`;
+        const value = document.createElement('span');
+        value.className = 'value';
+        value.textContent = `${entry.count}体 ×${entry.base} = ${Number(entry.total || 0).toLocaleString('ja-JP')}pt`;
+        if (entry.bonus>0){
+          const bonus = document.createElement('small');
+          bonus.textContent = `ボーナス+${entry.bonus.toLocaleString('ja-JP')}`;
+          value.appendChild(bonus);
+        }
+        li.appendChild(label);
+        li.appendChild(value);
+        resultEnemyList.appendChild(li);
+      });
+      if (allZero){
+        const note = document.createElement('li');
+        note.className = 'resultEmpty';
+        note.textContent = '敵を撃破していません';
+        resultEnemyList.appendChild(note);
+      }
+    }
+  }
+}
+
+function hideResultOverlay(){
+  if (resultOverlay){
+    resultOverlay.style.display = 'none';
+  }
+}
+
+function showResultOverlay(result){
+  if (!resultOverlay) return;
+  populateResultOverlay(result);
+  resultOverlay.style.display = 'flex';
+}
+
+if (resultClose){
+  resultClose.addEventListener('click', hideResultOverlay);
+}
+if (resultOverlay){
+  resultOverlay.addEventListener('click', (ev)=>{
+    if (ev.target === resultOverlay) hideResultOverlay();
+  });
+}
+if (resultReplay){
+  resultReplay.addEventListener('click', ()=>{
+    hideResultOverlay();
+    startGame();
+  });
 }
 
 // ====== スポーン ======
@@ -974,12 +1209,13 @@ function spawnItem(){
     score: isParfait ? 2 : 1
   });
 }
-const enemyTypeIcons = {
-  straight:'👾',
-  zigzag:'🐍',
-  dash:'💥',
-  hover:'🛸'
+const enemyTypeMeta = {
+  straight:{ icon:'👾', label:'直進型' },
+  zigzag:{ icon:'🐍', label:'蛇行型' },
+  dash:{ icon:'💥', label:'加速突進型' },
+  hover:{ icon:'🛸', label:'上下ホバー型' }
 };
+const enemyTypeIcons = Object.fromEntries(Object.entries(enemyTypeMeta).map(([type, meta])=>[type, meta.icon]));
 
 function pickEnemyType(lv){
   const r = Math.random();
@@ -1281,17 +1517,17 @@ function update(t){
         const cx = player.x+player.w/2, cy = player.y+player.h/2;
         const ex = en.x+en.w/2, ey = en.y+en.h/2;
         const hit = Math.hypot(cx-ex, cy-ey) <= 120;
-        if (hit){ awardEnemyDefeat(); return false; }
+        if (hit){ awardEnemyDefeat(en); return false; }
       } else if (type==='ncha'){
         const beamX = player.x + player.w - 6;
         const beamTop = player.y - 36;
         const beamBottom = player.y + player.h + 36;
         const hit = (en.x+en.w) >= beamX && en.x <= cv.width && en.y <= beamBottom && (en.y+en.h) >= beamTop;
-        if (hit){ awardEnemyDefeat(); return false; }
+        if (hit){ awardEnemyDefeat(en); return false; }
       } else {
         const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
         const hit = lanes.some(y=> en.y-6 <= y && y <= en.y+en.h+6);
-        if (hit){ awardEnemyDefeat(); return false; }
+        if (hit){ awardEnemyDefeat(en); return false; }
       }
     }
 
@@ -1300,7 +1536,7 @@ function update(t){
         const shot = ultProjectiles[i];
         if (!shot || shot.dead) continue;
         if (AABB(en, shot)){
-          awardEnemyDefeat();
+          awardEnemyDefeat(en);
           shot.hits--;
           if (shot.hits<=0) shot.dead=true;
           return false;
@@ -1310,7 +1546,7 @@ function update(t){
 
     for (let i=0;i<bullets.length;i++){
       if (AABB(en,bullets[i])){
-        awardEnemyDefeat();
+        awardEnemyDefeat(en);
         bullets[i].hitsLeft--;
         if (hasSlow){
           en.vx = Math.max(en.vx*0.6, 1.6);
@@ -1321,7 +1557,7 @@ function update(t){
     }
 
     if (AABB(player,en)){
-      if (now()<invUntil){ awardEnemyDefeat(); return false; }
+      if (now()<invUntil){ awardEnemyDefeat(en); return false; }
       const hasGuard = characters[currentCharKey].special?.includes('oneGuard');
       if (hasGuard && now() - guardReadyTime > 7000){
         guardReadyTime = now();
@@ -1425,6 +1661,7 @@ function draw(remain, st){
 
 // ====== 開始/終了 ======
 function startGame(){
+  hideResultOverlay();
   resetRunStats();
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
   coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
@@ -1454,6 +1691,7 @@ function endGame(){
   });
   const finalResult = { score, level, coins, char: currentCharKey };
   updateBestScore(finalResult.score);
+  showResultOverlay(finalResult);
   c.textAlign='start'; btnRestart.style.display='inline-block';
   setTimeout(()=>{ handleLeaderboardAfterGame(finalResult).catch(err=>console.error(err)); }, 200);
 }
