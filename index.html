@@ -39,6 +39,10 @@
   button.ghost{background:#6b7280}
   button.warn{background:#ef4444}
   button:disabled{opacity:.5}
+  .leaderboardList{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+  .leaderboardItem{background:#1f2937;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+  .leaderboardTitle{font-weight:600;color:#f9fafb;font-size:15px}
+  .leaderboardMeta{font-size:12px;color:rgba(229,231,235,.8);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px}
   .muted{opacity:.75}
   .controls{max-width:var(--maxw);margin:0 auto;line-height:1.6;text-align:left}
   #objective{
@@ -125,6 +129,7 @@
       <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
       <button id="gacha10" class="warn" disabled>10連(100)</button>
       <button id="collection" class="ghost">コレクション</button>
+      <button id="leaderboardBtn" class="ghost">ランキング</button>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
   </div>
@@ -187,6 +192,23 @@
     </div>
   </div>
 
+  <!-- ランキング -->
+  <div id="leaderboardOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>ランキング</h2>
+        <button id="leaderboardClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <p id="leaderboardStatus" class="howLead">読み込み中…</p>
+        <ol id="leaderboardList" class="leaderboardList"></ol>
+      </div>
+      <div class="footerBtns">
+        <button id="leaderboardRefresh" class="secondary">更新</button>
+      </div>
+    </div>
+  </div>
+
 
 <script>
 (()=>{
@@ -201,6 +223,7 @@ const btnUlt = document.getElementById('ultBtn');
 const btnGacha = document.getElementById('gachaOpen');
 const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
+const btnLeaderboard = document.getElementById('leaderboardBtn');
 const charInfo = document.getElementById('charInfo');
 const howOverlay = document.getElementById('howOverlay');
 const howClose = document.getElementById('howClose');
@@ -222,6 +245,168 @@ const colEquip = document.getElementById('colEquip');
 let colSelectedKey = null;
 colClose.onclick = ()=>{ colOv.style.display='none'; colSelectedKey=null; colEquip.disabled=true; };
 colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); colOv.style.display='none'; } };
+
+// ランキングUI
+const lbOverlay = document.getElementById('leaderboardOverlay');
+const lbClose = document.getElementById('leaderboardClose');
+const lbRefresh = document.getElementById('leaderboardRefresh');
+const lbStatus = document.getElementById('leaderboardStatus');
+const lbList = document.getElementById('leaderboardList');
+if (lbClose){ lbClose.onclick = ()=>{ lbOverlay.style.display='none'; }; }
+if (btnLeaderboard){ btnLeaderboard.onclick = ()=>{ openLeaderboardOverlay(); }; }
+if (lbRefresh){ lbRefresh.onclick = ()=>{ loadLeaderboard(true); }; }
+
+const PLAYER_NAME_KEY = 'psrun_player_name_v1';
+const DEFAULT_PLAYER_NAME = 'プレイヤー';
+
+function leaderboardUrl(){
+  const base = (typeof window !== 'undefined' && window.PSRUN_API_BASE)
+    ? String(window.PSRUN_API_BASE).trim().replace(/\/$/, '')
+    : 'https://howasaba-code.com/wp-json/psrun/v1';
+  return base.endsWith('/leaderboard') ? base : `${base}/leaderboard`;
+}
+
+function sanitizeName(raw){
+  if (!raw) return '';
+  return String(raw).replace(/[\u0000-\u001F\u007F<>]/g,'').trim().slice(0, 32);
+}
+
+function loadPlayerName(){
+  try{ return localStorage.getItem(PLAYER_NAME_KEY) || ''; }
+  catch{ return ''; }
+}
+
+function savePlayerName(name){
+  try{ localStorage.setItem(PLAYER_NAME_KEY, name); }
+  catch{}
+}
+
+function openLeaderboardOverlay(){
+  if (!lbOverlay) return;
+  lbOverlay.style.display='flex';
+  loadLeaderboard(true);
+}
+
+function describeCharLabel(key){
+  if (!key) return '-';
+  const ch = characters?.[key];
+  return ch ? `${ch.emoji} ${ch.name}` : key;
+}
+
+async function loadLeaderboard(showLoading){
+  if (!lbList || !lbStatus) return;
+  if (showLoading){
+    lbStatus.textContent = '読み込み中…';
+    lbStatus.style.display = 'block';
+  }
+  lbList.innerHTML = '';
+  try{
+    const res = await fetch(leaderboardUrl(), { method:'GET', headers:{ 'Accept':'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length===0){
+      lbStatus.textContent = 'No results yet';
+      lbStatus.style.display = 'block';
+      return;
+    }
+    lbStatus.textContent = '';
+    lbStatus.style.display = 'none';
+    data.slice(0, 20).forEach((entry, idx)=>{
+      const li = document.createElement('li');
+      li.className = 'leaderboardItem';
+      const title = document.createElement('div');
+      title.className = 'leaderboardTitle';
+      title.textContent = `#${idx+1} ${entry?.name ? String(entry.name) : '匿名'}`;
+      const meta = document.createElement('div');
+      meta.className = 'leaderboardMeta';
+
+      const scoreSpan = document.createElement('span');
+      scoreSpan.textContent = `Score: ${Number(entry?.score) || 0}`;
+      meta.appendChild(scoreSpan);
+
+      const levelSpan = document.createElement('span');
+      levelSpan.textContent = `Lv: ${Number(entry?.level) || 1}`;
+      meta.appendChild(levelSpan);
+
+      const coinsSpan = document.createElement('span');
+      coinsSpan.textContent = `Coins: ${Number(entry?.coins) || 0}`;
+      meta.appendChild(coinsSpan);
+
+      const charSpan = document.createElement('span');
+      charSpan.textContent = `Char: ${describeCharLabel(entry?.char)}`;
+      meta.appendChild(charSpan);
+
+      if (entry?.time){
+        const timeSpan = document.createElement('span');
+        timeSpan.textContent = `Time: ${String(entry.time)}`;
+        meta.appendChild(timeSpan);
+      }
+
+      li.appendChild(title);
+      li.appendChild(meta);
+      lbList.appendChild(li);
+    });
+  }catch(err){
+    console.error('Failed to load leaderboard', err);
+    lbStatus.textContent = 'ランキングを取得できませんでした。';
+    lbStatus.style.display = 'block';
+  }
+}
+
+async function submitLeaderboardScore(name, result){
+  const payload = {
+    name,
+    score: Math.max(0, Math.floor(Number(result?.score) || 0)),
+    level: Math.max(1, Math.floor(Number(result?.level) || 1)),
+    coins: Math.max(0, Math.floor(Number(result?.coins) || 0)),
+    char: result?.char || ''
+  };
+  try{
+    const res = await fetch(leaderboardUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await res.json().catch(()=> ({}));
+    return true;
+  }catch(err){
+    console.error('Failed to submit leaderboard', err);
+    if (lbStatus){
+      lbStatus.textContent = 'ランキングへの送信に失敗しました。';
+      lbStatus.style.display = 'block';
+    }
+    return false;
+  }
+}
+
+async function handleLeaderboardAfterGame(result){
+  if (lbOverlay){
+    lbOverlay.style.display = 'flex';
+  }
+  if (!result || result.score<=0){
+    await loadLeaderboard(true);
+    return;
+  }
+  const stored = loadPlayerName() || DEFAULT_PLAYER_NAME;
+  const input = prompt(`ランキングにスコア(${result.score})を登録します。名前を入力してください。`, stored);
+  if (input===null){
+    await loadLeaderboard(true);
+    return;
+  }
+  const name = sanitizeName(input);
+  if (!name){
+    alert('名前が空のため送信をスキップしました。');
+    await loadLeaderboard(true);
+    return;
+  }
+  savePlayerName(name);
+  const ok = await submitLeaderboardScore(name, result);
+  if (!ok){
+    alert('ランキングへの送信に失敗しました。通信状況をご確認ください。');
+  }
+  await loadLeaderboard(true);
+}
 
 function openHowto(initial=false){
   if (!howOverlay) return;
@@ -857,8 +1042,10 @@ function endGame(){
   c.fillStyle='#fff'; c.textAlign='center';
   c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
   c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}　コイン: 🪙${coins}`, cv.width/2, cv.height/2 + 10);
-  updateBestScore(score);
+  const finalResult = { score, level, coins, char: currentCharKey };
+  updateBestScore(finalResult.score);
   c.textAlign='start'; btnRestart.style.display='inline-block';
+  setTimeout(()=>{ handleLeaderboardAfterGame(finalResult).catch(err=>console.error(err)); }, 200);
 }
 
 // ====== ボタン ======
@@ -939,6 +1126,7 @@ function updateBestScore(latestScore){
 // ====== 初期HUD ======
 setHUD(GAME_TIME);
 updateCharInfo();
+loadLeaderboard(false);
 })();
 </script>
 </body>
