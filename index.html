@@ -9,6 +9,9 @@
   * { box-sizing: border-box; }
   body{margin:0;background:#eaf1f8;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#222;text-align:center}
   header{padding:12px 8px 4px}
+  #playerNameBar{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;font-size:14px}
+  #playerNameLabel{font-weight:600}
+  .smallBtn{padding:6px 12px;font-size:13px}
   h1{margin:0 0 6px;font-size:clamp(20px,4vw,28px)}
   #hud{
     font-size:clamp(13px,3.2vw,18px);
@@ -110,6 +113,10 @@
 <body>
   <header>
     <h1>パフェとイワシ RUN! – Character Gacha EX</h1>
+    <div id="playerNameBar">
+      <span id="playerNameLabel" class="muted">ユーザー名未設定</span>
+      <button id="editName" class="ghost smallBtn">ユーザー名を設定</button>
+    </div>
     <div id="hud" class="muted">読み込み中…</div>
     <div id="charInfo" class="muted">CHAR: -</div>
   </header>
@@ -207,7 +214,25 @@
         <ol id="rankList" class="rankList"></ol>
       </div>
       <div class="footerBtns">
-        <button id="rankClear" class="ghost">リセット</button>
+        <button id="rankRefresh" class="ghost">最新に更新</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ユーザー名設定 -->
+  <div id="nameOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>ユーザー名を設定</h2>
+        <button id="nameClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <p style="margin-top:0;font-size:14px;line-height:1.5">ランキングに表示するユーザー名を入力してください。2〜16文字、絵文字も利用できます。</p>
+        <input id="nameInput" type="text" maxlength="24" style="width:100%;padding:10px;border-radius:8px;border:1px solid #374151;font-size:16px" placeholder="例）パフェマスター" />
+        <p id="nameError" style="color:#f87171;font-size:13px;min-height:18px;margin:6px 0 0"></p>
+      </div>
+      <div class="footerBtns">
+        <button id="nameSave" class="secondary">保存</button>
       </div>
     </div>
   </div>
@@ -227,6 +252,8 @@ const btnGacha = document.getElementById('gachaOpen');
 const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
 const btnRanking = document.getElementById('ranking');
+const playerNameLabel = document.getElementById('playerNameLabel');
+const btnEditName = document.getElementById('editName');
 const charInfo = document.getElementById('charInfo');
 const howOverlay = document.getElementById('howOverlay');
 const howClose = document.getElementById('howClose');
@@ -253,7 +280,14 @@ colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); col
 const rankOv = document.getElementById('rankOverlay');
 const rankList = document.getElementById('rankList');
 const rankClose = document.getElementById('rankClose');
-const rankClear = document.getElementById('rankClear');
+const rankRefreshBtn = document.getElementById('rankRefresh');
+
+// ユーザー名 UI
+const nameOv = document.getElementById('nameOverlay');
+const nameClose = document.getElementById('nameClose');
+const nameInput = document.getElementById('nameInput');
+const nameError = document.getElementById('nameError');
+const nameSave = document.getElementById('nameSave');
 
 function openHowto(initial=false){
   if (!howOverlay) return;
@@ -349,8 +383,9 @@ function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==
 
 // 所持データ（localStorage）
 const STORE_KEY = 'psrun_char_collection_v1';
-const RANK_KEY = 'psrun_rankings_v1';
-const RANK_MAX = 10;
+const USERNAME_KEY = 'psrun_username_v1';
+const RANK_MAX = 20;
+const API_BASE = window.PSRUN_API_BASE || '';
 let collection = loadCollection();
 let currentCharKey = collection.current || 'parfen';
 if(!collection.owned[currentCharKey]) {
@@ -360,8 +395,13 @@ if(!collection.owned[currentCharKey]) {
   currentCharKey = 'parfen';
 }
 updateCharInfo();
-let rankings = loadRanking();
-renderRanking();
+let username = loadUsername();
+let rankings = [];
+let isRankingLoading = false;
+let rankingError = '';
+updateNameUI();
+if (!username) openNameModal();
+refreshLeaderboard();
 
 // ====== ガチャ：確率 & 天井 ======
 /*
@@ -470,20 +510,19 @@ btnCollection.onclick = ()=>{
   colOv.style.display='flex';
 };
 
+btnEditName.onclick = ()=>{ openNameModal(); };
+nameClose.onclick = ()=>{ closeNameModal(); };
+nameOv.addEventListener('click', (e)=>{ if(e.target===nameOv) closeNameModal(); });
+nameInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); saveUsernameFromInput(); } });
+nameSave.onclick = ()=> saveUsernameFromInput();
+
 btnRanking.onclick = ()=>{
   renderRanking();
   rankOv.style.display='flex';
+  refreshLeaderboard({ showSpinner:false });
 };
 rankClose.onclick = ()=>{ rankOv.style.display='none'; };
-rankClear.onclick = ()=>{
-  if (!rankings.length) return;
-  if (confirm('ランキングをリセットしますか？')) {
-    rankings = [];
-    saveRanking();
-    renderRanking();
-    refreshHUD();
-  }
-};
+rankRefreshBtn.onclick = ()=> refreshLeaderboard({ showSpinner:true });
 
 // ====== HUD / 便利 ======
 function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
@@ -804,6 +843,10 @@ function draw(remain, st){
 
 // ====== 開始/終了 ======
 function startGame(){
+  if (!username){
+    openNameModal();
+    return;
+  }
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
   coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
   items.length=0; enemies.length=0; bullets.length=0; powers.length=0;
@@ -833,6 +876,28 @@ function endGame(){
 btnStart.addEventListener('click', startGame);
 btnRestart.addEventListener('click', startGame);
 
+btnHow.addEventListener('click', ()=>{
+  alert(
+    '▶ 基本ルール\n' +
+    '・スタートで60秒ラン開始。敵を避けつつ🍨や🐟を集めてスコアを伸ばそう。\n' +
+    '・ダメージを受けるとライフ減。ゼロになるとゲーム終了。\n\n' +
+    '▶ 操作（タッチ・マウス共通）\n' +
+    '・画面左タップ：ジャンプ（対応キャラは二段ジャンプ可）。\n' +
+    '・画面右タップ：攻撃。右長押し or 右下「必殺」でゲージ100%時に必殺技。\n' +
+    '・キーボード：Space/↑＝ジャンプ、Z/X＝攻撃、C＝必殺技。\n\n' +
+    '▶ コインとガチャ\n' +
+    '・敵撃破やアイテムでコイン獲得。1回10コイン、10連100コイン。\n' +
+    '・30連でレジェンド保証 / 100連でミシック保証。\n\n' +
+    '▶ コレクション\n' +
+    '・引いたキャラは自動登録。重複で限界突破して性能が少しアップ。\n' +
+    '・装備したキャラの特性や必殺を活かしてハイスコアを狙おう！\n\n' +
+    '▶ Mythicキャラ\n' +
+    '・🌈オーロラ：吸引＋一度だけガード。必殺はレインボーレーザー。\n' +
+    '・🌀鰯王：二段ジャンプ＋貫通弾。必殺はトルネード攻撃。'
+  );
+});
+
+
 // ====== スポーンと攻撃トリガ ======
 function shootIfAuto(t){ /* 予備フック */ }
 
@@ -843,6 +908,20 @@ btnGacha10.onclick = ()=> doGacha(10);
 function renderRanking(){
   if (!rankList) return;
   rankList.innerHTML='';
+  if (isRankingLoading){
+    const loading=document.createElement('li');
+    loading.className='rankEmpty';
+    loading.textContent='ランキングを読み込み中…';
+    rankList.appendChild(loading);
+    return;
+  }
+  if (rankingError){
+    const err=document.createElement('li');
+    err.className='rankEmpty';
+    err.textContent=rankingError;
+    rankList.appendChild(err);
+    return;
+  }
   if (!rankings.length){
     const empty=document.createElement('li');
     empty.className='rankEmpty';
@@ -860,16 +939,16 @@ function renderRanking(){
     const no=document.createElement('span');
     no.className='rankNo';
     no.textContent=`${idx+1}`;
-    const name=document.createElement('span');
+    const user=document.createElement('span');
+    user.textContent=r.name || '???';
     const titleParts=[ch.emoji||'', ch.name||r.char].filter(Boolean);
     const displayName=titleParts.join(' ').trim() || '???';
-    name.textContent=displayName;
     head.appendChild(no);
-    head.appendChild(name);
+    head.appendChild(user);
     left.appendChild(head);
     const meta=document.createElement('div');
     meta.className='rankMeta';
-    meta.textContent=`${formatRankDate(r.time)} / レベル:${r.level} / コイン:🪙${r.coins}`;
+    meta.textContent=`${formatRankDate(r.time)} / キャラ:${displayName} / レベル:${r.level} / コイン:🪙${r.coins}`;
     left.appendChild(meta);
     const score=document.createElement('div');
     score.className='rankScore';
@@ -880,24 +959,50 @@ function renderRanking(){
   });
 }
 
-function recordRanking(entry){
+async function recordRanking(entry){
   if (!entry || typeof entry.score!=='number') return;
-  const safe = {
-    score: Math.max(0, Math.floor(entry.score)),
-    level: Math.max(1, Math.floor(entry.level||0)),
-    coins: Math.max(0, Math.floor(entry.coins||0)),
-    char: typeof entry.char==='string'?entry.char:currentCharKey,
-    time: typeof entry.time==='number' ? entry.time : Date.now()
-  };
-  rankings.push(safe);
-  rankings.sort((a,b)=>{
-    if (b.score!==a.score) return b.score-a.score;
-    return a.time-b.time;
+  if (!username){
+    rankingError='ユーザー名を設定してください。';
+    renderRanking();
+    return;
+  }
+  const safe = normalizeEntry({
+    score: entry.score,
+    level: entry.level,
+    coins: entry.coins,
+    char: entry.char,
+    name: username,
+    time: entry.time
   });
-  if (rankings.length>RANK_MAX) rankings = rankings.slice(0,RANK_MAX);
-  saveRanking();
+  rankings = mergeRankings([...rankings, safe]);
   renderRanking();
   refreshHUD();
+  try{
+    const res = await fetch(apiUrl('/api/leaderboard'), {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify({
+        name: safe.name,
+        score: safe.score,
+        level: safe.level,
+        coins: safe.coins,
+        char: safe.char
+      })
+    });
+    if (!res.ok) throw new Error(`bad status ${res.status}`);
+    const data = await res.json();
+    const list = Array.isArray(data?.leaderboard) ? data.leaderboard : data;
+    if (Array.isArray(list)){
+      rankings = mergeRankings(list);
+      rankingError='';
+      renderRanking();
+      refreshHUD();
+    }
+  }catch(err){
+    console.warn('Failed to submit score', err);
+    rankingError='スコア送信に失敗しました。ネットワークを確認してください。';
+    renderRanking();
+  }
 }
 
 // ====== ストレージ ======
@@ -915,32 +1020,134 @@ function loadPity(){
 }
 function savePity(){ try{ localStorage.setItem(pityKey, JSON.stringify(pity)); }catch{} }
 
-function loadRanking(){
+function loadUsername(){
   try{
-    const s = localStorage.getItem(RANK_KEY);
-    if (s){
-      const parsed = JSON.parse(s);
-      if (Array.isArray(parsed)){
-        return parsed.map(r=>{
-          const t = Number(r.time);
-          return {
-            score: Math.max(0, Math.floor(Number(r.score)||0)),
-            level: Math.max(1, Math.floor(Number(r.level)||0)),
-            coins: Math.max(0, Math.floor(Number(r.coins)||0)),
-            char: typeof r.char==='string'?r.char:'parfen',
-            time: Number.isFinite(t) ? t : Date.now()
-          };
-        }).sort((a,b)=>{
-          if (b.score!==a.score) return b.score-a.score;
-          return a.time-b.time;
-        }).slice(0,RANK_MAX);
-      }
+    const s = localStorage.getItem(USERNAME_KEY);
+    if (typeof s === 'string'){
+      return sanitizeUsername(s);
     }
   }catch{}
-  return [];
+  return '';
 }
-function saveRanking(){
-  try{ localStorage.setItem(RANK_KEY, JSON.stringify(rankings)); }catch{}
+
+function saveUsername(){
+  try{ localStorage.setItem(USERNAME_KEY, username); }catch{}
+}
+
+function updateNameUI(){
+  if (username){
+    playerNameLabel.textContent = `ユーザー名: ${username}`;
+    playerNameLabel.classList.remove('muted');
+    btnEditName.textContent = 'ユーザー名を変更';
+    btnStart.disabled = false;
+    btnRestart.disabled = false;
+  } else {
+    playerNameLabel.textContent = 'ユーザー名未設定';
+    playerNameLabel.classList.add('muted');
+    btnEditName.textContent = 'ユーザー名を設定';
+    btnStart.disabled = true;
+    btnRestart.disabled = true;
+  }
+}
+
+function openNameModal(){
+  nameInput.value = username;
+  nameError.textContent='';
+  nameOv.style.display='flex';
+  setTimeout(()=> nameInput.focus(), 50);
+}
+
+function closeNameModal(){
+  nameOv.style.display='none';
+}
+
+function saveUsernameFromInput(){
+  const sanitized = sanitizeUsername(nameInput.value);
+  const validation = validateUsername(sanitized);
+  if (validation){
+    nameError.textContent = validation;
+    return;
+  }
+  username = sanitized;
+  saveUsername();
+  updateNameUI();
+  rankingError='';
+  renderRanking();
+  refreshLeaderboard({ showSpinner:false });
+  closeNameModal();
+}
+
+function sanitizeUsername(raw){
+  if (typeof raw!=='string') return '';
+  return raw.replace(/[\s\uFEFF\u200B]+/g,' ').trim();
+}
+
+function validateUsername(name){
+  if (!name) return '2文字以上16文字以内で入力してください。';
+  if (name.length < 2) return '2文字以上で入力してください。';
+  if (name.length > 16) return '16文字以内で入力してください。';
+  return '';
+}
+
+function apiUrl(path){
+  if (!API_BASE) return path;
+  const base = API_BASE.endsWith('/') ? API_BASE.slice(0,-1) : API_BASE;
+  return `${base}${path}`;
+}
+
+async function refreshLeaderboard(opts){
+  if (isRankingLoading) return;
+  const showSpinner = opts?.showSpinner ?? (rankings.length === 0);
+  isRankingLoading = true;
+  rankingError = '';
+  if (showSpinner) renderRanking();
+  try{
+    const res = await fetch(apiUrl(`/api/leaderboard?limit=${RANK_MAX}`), { headers:{'Accept':'application/json'} });
+    if (!res.ok) throw new Error(`bad status ${res.status}`);
+    const data = await res.json();
+    const list = Array.isArray(data?.leaderboard) ? data.leaderboard : data;
+    if (Array.isArray(list)){
+      rankings = mergeRankings(list);
+      rankingError = '';
+    } else {
+      rankings = [];
+    }
+  }catch(err){
+    console.warn('Failed to load leaderboard', err);
+    rankingError = 'ランキングの取得に失敗しました。時間をおいて再度お試しください。';
+  }finally{
+    isRankingLoading = false;
+    renderRanking();
+    refreshHUD();
+  }
+}
+
+function normalizeEntry(entry){
+  const safeTime = Number(entry?.time);
+  const safeScore = Math.max(0, Math.floor(Number(entry?.score)||0));
+  const safeLevel = Math.max(1, Math.floor(Number(entry?.level)||0));
+  const safeCoins = Math.max(0, Math.floor(Number(entry?.coins)||0));
+  const safeChar = typeof entry?.char === 'string' ? entry.char : 'parfen';
+  const safeName = sanitizeUsername(entry?.name||'') || '???';
+  return {
+    score: safeScore,
+    level: safeLevel,
+    coins: safeCoins,
+    char: safeChar,
+    name: safeName,
+    time: Number.isFinite(safeTime) ? safeTime : Date.now()
+  };
+}
+
+function mergeRankings(list){
+  return list
+    .filter(r=> typeof r?.score === 'number')
+    .map(normalizeEntry)
+    .sort((a,b)=>{
+      if (b.score !== a.score) return b.score - a.score;
+      return a.time - b.time;
+    })
+    .slice(0, RANK_MAX);
 }
 function formatRankDate(ts){
   const d = new Date(ts||Date.now());
