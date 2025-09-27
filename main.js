@@ -22,6 +22,37 @@ const resultItemList = document.getElementById('resultItemList');
 const resultEnemyList = document.getElementById('resultEnemyList');
 const resultReplay = document.getElementById('resultReplay');
 
+// 自キャラ画像（スプライトシート）
+const PLAYER_SPRITE_PATH = 'assets/player-cube-sheet.png';
+const PLAYER_SPRITE_COLUMNS = 3;
+const PLAYER_SPRITE_ROWS = 2;
+const PLAYER_WALK_FRAMES = [0, 1, 2, 3];
+const PLAYER_JUMP_FRAMES = [4, 5];
+const PLAYER_WALK_FRAME_DURATION = 120; // ms per frame
+
+const playerSprite = {
+  image: new Image(),
+  loaded: false,
+  frameWidth: 0,
+  frameHeight: 0,
+};
+
+const playerAnimation = {
+  sequence: PLAYER_WALK_FRAMES,
+  sequenceIndex: 0,
+  frameElapsed: 0,
+  currentFrame: PLAYER_WALK_FRAMES[0],
+};
+
+let lastPlayerAnimTick = null;
+
+playerSprite.image.src = PLAYER_SPRITE_PATH;
+playerSprite.image.onload = ()=>{
+  playerSprite.loaded = true;
+  playerSprite.frameWidth = Math.floor(playerSprite.image.naturalWidth / PLAYER_SPRITE_COLUMNS);
+  playerSprite.frameHeight = Math.floor(playerSprite.image.naturalHeight / PLAYER_SPRITE_ROWS);
+};
+playerSprite.image.onerror = ()=>{ playerSprite.loaded = false; };
 // ガチャUI
 const ov = document.getElementById('gachaOverlay');
 const resWrap = document.getElementById('gachaResults');
@@ -110,6 +141,42 @@ let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
 const shootCD=250, powerMillis=INVINCIBILITY_DURATION, enemyBonus=3, itemLv=15;
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
+
+function resetPlayerAnimation(){
+  playerAnimation.sequence = PLAYER_WALK_FRAMES;
+  playerAnimation.sequenceIndex = 0;
+  playerAnimation.frameElapsed = 0;
+  playerAnimation.currentFrame = PLAYER_WALK_FRAMES[0];
+  lastPlayerAnimTick = null;
+}
+
+function updatePlayerAnimation(delta){
+  if (!Number.isFinite(delta) || delta < 0) delta = 0;
+
+  if (player.onGround){
+    if (playerAnimation.sequence !== PLAYER_WALK_FRAMES){
+      playerAnimation.sequence = PLAYER_WALK_FRAMES;
+      playerAnimation.sequenceIndex = 0;
+      playerAnimation.frameElapsed = 0;
+      playerAnimation.currentFrame = PLAYER_WALK_FRAMES[0];
+    }
+
+    playerAnimation.frameElapsed += delta;
+    const frameAdvance = Math.floor(playerAnimation.frameElapsed / PLAYER_WALK_FRAME_DURATION);
+    if (frameAdvance > 0){
+      playerAnimation.frameElapsed -= frameAdvance * PLAYER_WALK_FRAME_DURATION;
+      playerAnimation.sequenceIndex = (playerAnimation.sequenceIndex + frameAdvance) % playerAnimation.sequence.length;
+      playerAnimation.currentFrame = playerAnimation.sequence[playerAnimation.sequenceIndex];
+    }
+  } else {
+    if (playerAnimation.sequence !== PLAYER_JUMP_FRAMES){
+      playerAnimation.sequence = PLAYER_JUMP_FRAMES;
+      playerAnimation.sequenceIndex = 0;
+    }
+    playerAnimation.frameElapsed = 0;
+    playerAnimation.currentFrame = player.vy < 0 ? PLAYER_JUMP_FRAMES[0] : PLAYER_JUMP_FRAMES[1];
+  }
+}
 
 let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
 
@@ -808,6 +875,9 @@ function updateCharInfo(){
 function update(t){
   if(!gameOn) return;
   const elapsed=t-t0, remain=GAME_TIME-elapsed;
+  const delta = lastPlayerAnimTick===null ? 0 : t - lastPlayerAnimTick;
+  lastPlayerAnimTick = t;
+  updatePlayerAnimation(delta);
   if (remain<=0) return endGame();
 
   // レベル
@@ -1000,7 +1070,31 @@ function draw(remain, st){
 
   if (now()<invUntil){ c.strokeStyle='#f5c542'; c.lineWidth=4; c.strokeRect(player.x-2,player.y-2,player.w+4,player.h+4); }
   const blink = now()<hurtUntil && Math.floor(now()/60)%2===0;
-  if (!blink){ c.fillStyle=player.color; c.fillRect(player.x,player.y,player.w,player.h); }
+  if (!blink){
+    if (playerSprite.loaded && playerSprite.frameWidth && playerSprite.frameHeight){
+      const smoothingBackup = c.imageSmoothingEnabled;
+      c.imageSmoothingEnabled = true;
+      const frame = playerAnimation.currentFrame;
+      const frameCol = frame % PLAYER_SPRITE_COLUMNS;
+      const frameRow = Math.floor(frame / PLAYER_SPRITE_COLUMNS);
+      const sx = frameCol * playerSprite.frameWidth;
+      const sy = frameRow * playerSprite.frameHeight;
+      c.drawImage(
+        playerSprite.image,
+        sx,
+        sy,
+        playerSprite.frameWidth,
+        playerSprite.frameHeight,
+        player.x,
+        player.y,
+        player.w,
+        player.h
+      );
+      c.imageSmoothingEnabled = smoothingBackup;
+    } else {
+      c.fillStyle=player.color; c.fillRect(player.x,player.y,player.w,player.h);
+    }
+  }
 
   // 必殺描画
   if (now()<ultActiveUntil){
@@ -1083,6 +1177,7 @@ function startGame(){
   player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
   canDouble = characters[currentCharKey].special?.includes('doubleJump');
   guardReadyTime = 0;
+  resetPlayerAnimation();
   btnStart.style.display='none'; btnRestart.style.display='none';
   t0=now(); gameOn=true;
   lastItem=lastEnemy=lastPower=lastShot=t0;
