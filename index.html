@@ -41,9 +41,15 @@
   button:disabled{opacity:.5}
   .leaderboardList{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
   #leaderboardOverlay .leaderboardList{margin:0;}
-  .leaderboardItem{background:#1f2937;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
-  .leaderboardTitle{font-weight:600;color:#f9fafb;font-size:15px}
-  .leaderboardMeta{font-size:12px;color:rgba(229,231,235,.8);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px}
+  .leaderboardItem{background:#1f2937;border-radius:10px;padding:10px 12px;display:flex;text-align:left;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+  .leaderboardRow{display:flex;align-items:center;gap:10px;width:100%;flex-wrap:wrap;color:#f9fafb;font-size:14px}
+  .lbRank{font-weight:700;min-width:48px}
+  .lbName{flex:1;font-weight:600;word-break:break-word}
+  .lbScore{min-width:120px;text-align:right;font-variant-numeric:tabular-nums}
+  .lbDate{min-width:132px;text-align:right;font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
+  .leaderboardItem.selfEntry{box-shadow:0 0 0 2px rgba(250,204,21,.55)}
+  .leaderboardControls{display:flex;justify-content:flex-end;gap:8px;margin-bottom:4px}
+  #leaderboardJump{display:none}
   .muted{opacity:.75}
   .controls{max-width:var(--maxw);margin:0 auto;line-height:1.6;text-align:left}
   #objective{
@@ -87,12 +93,20 @@
     flex-direction:column;
     gap:12px;
   }
+  #leaderboardStatus{margin:0}
   .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .miniCard{
     border-radius:12px; padding:10px; text-align:center; min-height:84px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     box-shadow:inset 0 0 0 2px rgba(255,255,255,.08); cursor:pointer;
   }
+  .codexList{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .codexItem{display:flex;gap:10px;align-items:flex-start;background:#0f172a;border-radius:12px;padding:12px 14px;box-shadow:inset 0 0 0 1px rgba(148,163,184,.25)}
+  .codexIcon{font-size:28px;line-height:1}
+  .codexBody{display:flex;flex-direction:column;gap:4px}
+  .codexBody h3{margin:0;font-size:16px}
+  .codexBody p{margin:0;font-size:13px;line-height:1.6;opacity:.9}
+  .codexMeta{font-size:13px;opacity:.85;display:flex;flex-wrap:wrap;gap:10px}
   .howList{display:grid;gap:8px;margin:12px 0 0;padding-left:20px;line-height:1.6}
   .howList li::marker{color:#3b82f6;font-weight:700}
   .howLead{margin:8px 0 0;line-height:1.6}
@@ -137,6 +151,7 @@
       <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
       <button id="gacha10" class="warn" disabled>10連(100)</button>
       <button id="collection" class="ghost">コレクション</button>
+      <button id="codexBtn" class="ghost">図鑑</button>
       <button id="leaderboardBtn" class="ghost">ランキング</button>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
@@ -200,6 +215,19 @@
     </div>
   </div>
 
+  <!-- 図鑑 -->
+  <div id="codexOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>アイテム図鑑</h2>
+        <button id="codexClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody">
+        <ul id="codexList" class="codexList"></ul>
+      </div>
+    </div>
+  </div>
+
   <!-- ランキング -->
   <div id="leaderboardOverlay" class="overlay">
     <div class="cardWrap">
@@ -208,6 +236,9 @@
         <button id="leaderboardClose" class="ghost">閉じる</button>
       </div>
       <div class="cardBody">
+        <div class="leaderboardControls">
+          <button id="leaderboardJump" class="ghost">自分の順位へ</button>
+        </div>
         <p id="leaderboardStatus" class="howLead">読み込み中…</p>
         <ol id="leaderboardList" class="leaderboardList"></ol>
       </div>
@@ -231,6 +262,7 @@ const btnUlt = document.getElementById('ultBtn');
 const btnGacha = document.getElementById('gachaOpen');
 const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
+const btnCodex = document.getElementById('codexBtn');
 const btnLeaderboard = document.getElementById('leaderboardBtn');
 const charInfo = document.getElementById('charInfo');
 const howOverlay = document.getElementById('howOverlay');
@@ -254,12 +286,27 @@ let colSelectedKey = null;
 colClose.onclick = ()=>{ colOv.style.display='none'; colSelectedKey=null; colEquip.disabled=true; };
 colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); colOv.style.display='none'; } };
 
+// 図鑑UI
+const codexOverlay = document.getElementById('codexOverlay');
+const codexClose = document.getElementById('codexClose');
+const codexList = document.getElementById('codexList');
+if (btnCodex){
+  btnCodex.onclick = ()=>{
+    populateCodex();
+    if (codexOverlay) codexOverlay.style.display = 'flex';
+  };
+}
+if (codexClose){
+  codexClose.onclick = ()=>{ if (codexOverlay) codexOverlay.style.display='none'; };
+}
+
 // ランキングUI
 const lbOverlay = document.getElementById('leaderboardOverlay');
 const lbClose = document.getElementById('leaderboardClose');
 const lbRefresh = document.getElementById('leaderboardRefresh');
 const lbStatus = document.getElementById('leaderboardStatus');
 const lbList = document.getElementById('leaderboardList');
+const lbJump = document.getElementById('leaderboardJump');
 if (lbClose){ lbClose.onclick = ()=>{ lbOverlay.style.display='none'; }; }
 if (btnLeaderboard){ btnLeaderboard.onclick = ()=>{ openLeaderboardOverlay(); }; }
 if (lbRefresh){ lbRefresh.onclick = ()=>{ loadLeaderboard(true); }; }
@@ -301,8 +348,40 @@ function describeCharLabel(key){
   return ch ? `${ch.emoji} ${ch.name}` : key;
 }
 
+function formatLeaderboardDate(entry){
+  const raw = entry?.date ?? entry?.time ?? entry?.createdAt ?? entry?.created_at ?? entry?.updatedAt ?? entry?.updated_at;
+  if (raw === undefined || raw === null) return '-';
+  let dt = null;
+  if (typeof raw === 'number'){
+    dt = new Date(raw);
+  } else if (typeof raw === 'string'){
+    const trimmed = raw.trim();
+    if (!trimmed){
+      return '-';
+    }
+    if (/^\d+$/.test(trimmed)){
+      const num = Number(trimmed);
+      dt = new Date(trimmed.length <= 10 ? num*1000 : num);
+    } else {
+      dt = new Date(trimmed);
+    }
+  }
+  if (dt && !Number.isNaN(dt.getTime())){
+    try{
+      return dt.toLocaleString('ja-JP', {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit'
+      });
+    }catch{
+      return dt.toISOString().slice(0,16).replace('T',' ');
+    }
+  }
+  return String(raw);
+}
+
 async function loadLeaderboard(showLoading){
   if (!lbList || !lbStatus) return;
+  if (lbJump){ lbJump.style.display = 'none'; lbJump.onclick = null; }
   if (showLoading){
     lbStatus.textContent = '読み込み中…';
     lbStatus.style.display = 'block';
@@ -323,42 +402,79 @@ async function loadLeaderboard(showLoading){
     lbStatus.textContent = '';
     lbStatus.style.display = 'none';
 
-    entries.slice(0, 20).forEach((entry, idx)=>{
+    const limit = Math.min(50, entries.length);
+    const storedName = sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
+    const targetName = storedName || '';
+    let selfRank = -1;
 
+    const prepared = entries.slice(0, limit).map((entry, idx)=>{
+      const sanitized = sanitizeName(entry?.name || '');
+      const isSelf = !!targetName && sanitized === targetName;
+      if (isSelf && selfRank === -1) selfRank = idx+1;
+      return { entry, rank: idx+1, isSelf };
+    });
+
+    if (targetName && selfRank === -1){
+      for (let i = limit; i < entries.length; i++){
+        const entry = entries[i];
+        const sanitized = sanitizeName(entry?.name || '');
+        if (sanitized && sanitized === targetName){
+          selfRank = i+1;
+          prepared.push({ entry, rank: i+1, isSelf:true });
+          break;
+        }
+      }
+    }
+
+    let selfElement = null;
+    prepared.forEach(data=>{
+      const { entry, rank, isSelf } = data;
       const li = document.createElement('li');
       li.className = 'leaderboardItem';
-      const title = document.createElement('div');
-      title.className = 'leaderboardTitle';
-      title.textContent = `#${idx+1} ${entry?.name ? String(entry.name) : '匿名'}`;
-      const meta = document.createElement('div');
-      meta.className = 'leaderboardMeta';
+      li.dataset.rank = String(rank);
+      const row = document.createElement('div');
+      row.className = 'leaderboardRow';
+
+      const rankSpan = document.createElement('span');
+      rankSpan.className = 'lbRank';
+      rankSpan.textContent = `#${rank}`;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'lbName';
+      const rawName = entry?.name ? String(entry.name) : '匿名';
+      nameSpan.textContent = isSelf ? `${rawName}（自分）` : rawName;
 
       const scoreSpan = document.createElement('span');
-      scoreSpan.textContent = `Score: ${Number(entry?.score) || 0}`;
-      meta.appendChild(scoreSpan);
+      scoreSpan.className = 'lbScore';
+      scoreSpan.textContent = `Score: ${(Number(entry?.score) || 0).toLocaleString('ja-JP')}`;
 
-      const levelSpan = document.createElement('span');
-      levelSpan.textContent = `Lv: ${Number(entry?.level) || 1}`;
-      meta.appendChild(levelSpan);
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'lbDate';
+      dateSpan.textContent = formatLeaderboardDate(entry);
 
-      const coinsSpan = document.createElement('span');
-      coinsSpan.textContent = `Coins: ${Number(entry?.coins) || 0}`;
-      meta.appendChild(coinsSpan);
+      row.appendChild(rankSpan);
+      row.appendChild(nameSpan);
+      row.appendChild(scoreSpan);
+      row.appendChild(dateSpan);
 
-      const charSpan = document.createElement('span');
-      charSpan.textContent = `Char: ${describeCharLabel(entry?.char)}`;
-      meta.appendChild(charSpan);
-
-      if (entry?.time){
-        const timeSpan = document.createElement('span');
-        timeSpan.textContent = `Time: ${String(entry.time)}`;
-        meta.appendChild(timeSpan);
+      li.appendChild(row);
+      if (isSelf){
+        li.classList.add('selfEntry');
+        if (!selfElement) selfElement = li;
       }
-
-      li.appendChild(title);
-      li.appendChild(meta);
+      const charLabel = describeCharLabel(entry?.char);
+      li.title = `Lv:${Number(entry?.level)||1} / Coins:${Number(entry?.coins)||0} / Char:${charLabel}`;
       lbList.appendChild(li);
     });
+
+    if (lbJump && selfElement){
+      lbJump.style.display = 'inline-flex';
+      lbJump.textContent = selfRank>0 ? `自分の順位へ (#${selfRank})` : '自分の順位へ';
+      lbJump.onclick = ()=>{
+        selfElement.scrollIntoView({ behavior:'smooth', block:'center' });
+        selfElement.classList.add('selfEntry');
+      };
+    }
   }catch(err){
     console.error('Failed to load leaderboard', err);
     lbStatus.textContent = 'ランキングを取得できませんでした。';
@@ -392,6 +508,49 @@ function normalizeLeaderboardEntries(raw){
     if (nested.length) return nested;
   }
   return [];
+}
+
+function populateCodex(){
+  if (!codexList) return;
+  codexList.innerHTML='';
+  ITEM_CATALOG.forEach(item=>{
+    const li = document.createElement('li');
+    li.className = 'codexItem';
+
+    const icon = document.createElement('div');
+    icon.className = 'codexIcon';
+    icon.textContent = item.icon;
+
+    const body = document.createElement('div');
+    body.className = 'codexBody';
+
+    const title = document.createElement('h3');
+    title.textContent = `${item.icon} ${item.name}`;
+
+    const desc = document.createElement('p');
+    desc.textContent = item.description;
+
+    const meta = document.createElement('div');
+    meta.className = 'codexMeta';
+
+    const scoreSpan = document.createElement('span');
+    scoreSpan.textContent = `スコア: ${item.score}`;
+
+    const effectSpan = document.createElement('span');
+    effectSpan.textContent = `効果: ${item.effect}`;
+
+    meta.appendChild(scoreSpan);
+    meta.appendChild(effectSpan);
+
+    body.appendChild(title);
+    body.appendChild(desc);
+    body.appendChild(meta);
+
+    li.appendChild(icon);
+    li.appendChild(body);
+
+    codexList.appendChild(li);
+  });
 }
 
 
@@ -493,10 +652,11 @@ let ult=0, ultReady=false, ultActiveUntil=0;
 let coins=0; // ガチャ用
 let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
-const shootCD=250, powerMillis=6000, enemyBonus=3, itemLv=15;
+const shootCD=250, powerMillis=3000, enemyBonus=3, itemLv=15;
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
 let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
+let runStats = createRunStats();
 
 // ステージ
 const stages = [
@@ -511,6 +671,37 @@ function stageForLevel(lv){
   if (lv>=4)  return stages[1];
   return stages[0];
 }
+
+const ITEM_CATALOG = [
+  {
+    key:'parfait',
+    icon:'🍨',
+    name:'パフェデラックス',
+    description:'甘さたっぷりの必須スイーツ。食べるほどスコアとコインが増えていく。',
+    base:2,
+    score:'+2pt',
+    effect:'スコア+2／コイン+1／必殺ゲージ+10%'
+  },
+  {
+    key:'fish',
+    icon:'🐟',
+    name:'イワシキャッチ',
+    description:'キレのある塩味で集中力アップ。連続で拾ってコンボを狙おう。',
+    base:1,
+    score:'+1pt',
+    effect:'スコア+1／コイン+1／必殺ゲージ+6%'
+  },
+  {
+    key:'star',
+    icon:'⭐',
+    name:'スターブースト',
+    description:'黄金に輝く守護星。掴んだ瞬間、短時間の無敵とゲージ加速が発動する。',
+    base:0,
+    score:'スコアなし',
+    effect:'無敵3秒／必殺ゲージ+12%'
+  }
+];
+const itemCatalogMap = ITEM_CATALOG.reduce((map,item)=>{ map[item.key]=item; return map; }, {});
 
 // ====== キャラ定義 ======
 /*
@@ -706,6 +897,70 @@ const rand = (a,b)=> a + Math.random()*(b-a);
 const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
 const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
 
+function createRunStats(){
+  return {
+    items: {
+      parfait: { count:0, total:0 },
+      fish:    { count:0, total:0 },
+      star:    { count:0, total:0 }
+    },
+    enemies: { count:0, total:0 }
+  };
+}
+
+function resetRunStats(){
+  runStats = createRunStats();
+}
+
+function registerItemGain(key, gained){
+  if (!runStats || !runStats.items[key]) return;
+  runStats.items[key].count += 1;
+  runStats.items[key].total += gained;
+}
+
+function awardEnemyDefeat(){
+  score += enemyBonus;
+  coins += 2;
+  if (runStats?.enemies){
+    runStats.enemies.count += 1;
+    runStats.enemies.total += enemyBonus;
+  }
+}
+
+function buildScoreBreakdownLines(){
+  const lines = [];
+  const parfait = runStats?.items?.parfait || { count:0, total:0 };
+  const fish = runStats?.items?.fish || { count:0, total:0 };
+  const star = runStats?.items?.star || { count:0, total:0 };
+  const enemy = runStats?.enemies || { count:0, total:0 };
+
+  const formatLine = (info, data)=>{
+    const base = info?.base ?? 0;
+    const count = data.count || 0;
+    const total = data.total || 0;
+    const baseTotal = count * base;
+    const bonus = total - baseTotal;
+    let line = `${info.icon} ${info.name}: ${count}個 ×${base} = ${total.toLocaleString('ja-JP')}pt`;
+    if (bonus>0){
+      line += `（ボーナス+${bonus.toLocaleString('ja-JP')}）`;
+    }
+    return line;
+  };
+
+  const parfaitInfo = itemCatalogMap.parfait;
+  const fishInfo = itemCatalogMap.fish;
+  const starInfo = itemCatalogMap.star;
+
+  if (parfaitInfo) lines.push(formatLine(parfaitInfo, parfait));
+  if (fishInfo) lines.push(formatLine(fishInfo, fish));
+  if (starInfo){
+    const count = star.count || 0;
+    lines.push(`${starInfo.icon} ${starInfo.name}: ${count}個 ×0 = 0pt（無敵＆ゲージUP）`);
+  }
+  lines.push(`⚔ 敵撃破: ${enemy.count || 0}体 ×${enemyBonus} = ${(enemy.total || 0).toLocaleString('ja-JP')}pt`);
+  return lines;
+}
+
 // ====== スポーン ======
 function spawnItem(){
   const isParfait = Math.random()<0.5;
@@ -718,14 +973,66 @@ function spawnItem(){
     score: isParfait ? 2 : 1
   });
 }
-function spawnEnemy(){
+const enemyTypeIcons = {
+  straight:'👾',
+  zigzag:'🐍',
+  dash:'💥',
+  hover:'🛸'
+};
+
+function pickEnemyType(lv){
+  const r = Math.random();
+  if (lv < 3){
+    return r < 0.75 ? 'straight' : 'zigzag';
+  }
+  if (lv < 6){
+    if (r < 0.55) return 'straight';
+    if (r < 0.8) return 'zigzag';
+    return 'hover';
+  }
+  if (r < 0.4) return 'straight';
+  if (r < 0.65) return 'zigzag';
+  if (r < 0.85) return 'hover';
+  return 'dash';
+}
+
+function spawnEnemy(offset=0){
   const st = stageForLevel(level);
-  enemies.push({
-    x: cv.width+30,
-    y: cv.height - GROUND - 36,
-    w: 36, h: 36,
-    v: (2.7 + (level-1)*.35) * st.enemyMul
-  });
+  const baseSpeed = (2.7 + (level-1)*.35) * st.enemyMul;
+  const type = pickEnemyType(level);
+  const baseY = cv.height - GROUND - 36;
+  const enemy = {
+    x: cv.width+30 + offset,
+    y: baseY,
+    w: 36,
+    h: 36,
+    vx: baseSpeed,
+    type,
+    icon: enemyTypeIcons[type] || '👾',
+    spawnAt: now(),
+    phase: Math.random()*Math.PI*2,
+    baseY
+  };
+
+  if (type === 'zigzag'){
+    enemy.vx = baseSpeed*0.9;
+    enemy.amplitude = rand(28, 68);
+    enemy.frequency = rand(0.08, 0.14);
+    enemy.baseY = baseY - rand(10, 50);
+  } else if (type === 'dash'){
+    enemy.vx = baseSpeed*0.75;
+    enemy.maxV = baseSpeed*1.9;
+    enemy.accel = baseSpeed*0.045;
+    enemy.charge = rand(260, 460);
+    enemy.boosted = false;
+  } else if (type === 'hover'){
+    enemy.vx = baseSpeed*0.85;
+    enemy.hoverRange = rand(28, 92);
+    enemy.hoverSpeed = rand(0.02, 0.035);
+    enemy.baseY = baseY - rand(40, 120);
+  }
+
+  enemies.push(enemy);
 }
 function spawnPower(){
   powers.push({
@@ -858,11 +1165,18 @@ function update(t){
 
   // 生成間隔
   const itemIv  = clamp(1200 - (level-1)*100, 480, 1200);
-  const enemyIv = clamp(1650 - (level-1)*130, 600, 1650);
+  const enemyIv = clamp(1600 - (level-1)*120, 520, 1600);
   const powerIv = 6200;
 
   if(t-lastItem  > itemIv)  { spawnItem();  lastItem=t; }
-  if(t-lastEnemy > enemyIv) { spawnEnemy(); lastEnemy=t; }
+  if(t-lastEnemy > enemyIv) {
+    spawnEnemy();
+    const extraChance = clamp(0.06 + level*0.018, 0.06, 0.45);
+    if (Math.random()<extraChance){
+      spawnEnemy(rand(36, 120));
+    }
+    lastEnemy=t;
+  }
   if(t-lastPower > powerIv) { spawnPower(); lastPower=t; }
 
   // 物理
@@ -894,7 +1208,10 @@ function update(t){
     it.x -= it.v;
     if (AABB(player,it)){
       const mul = now()<scoreMulUntil ? 2 : 1;
-      score += it.score*mul; coins += 1 * mul;
+      const gained = it.score*mul;
+      score += gained; coins += 1 * mul;
+      const itemKey = it.char==='🍨' ? 'parfait' : 'fish';
+      registerItemGain(itemKey, gained);
       ult = clamp(ult + (it.char==='🍨'?10:6) * currentStats.ultRate, 0, 100);
       return false;
     }
@@ -904,7 +1221,12 @@ function update(t){
   // ⭐
   powers = powers.filter(pw=>{
     pw.x -= pw.v;
-    if (AABB(player,pw)){ invUntil=now()+Math.max(powerMillis,currentStats.inv); ult=Math.min(100,ult+12*currentStats.ultRate); return false; }
+    if (AABB(player,pw)){
+      registerItemGain('star', 0);
+      invUntil=now()+Math.max(powerMillis,currentStats.inv);
+      ult=Math.min(100,ult+12*currentStats.ultRate);
+      return false;
+    }
     return pw.x+pw.w>0;
   });
 
@@ -921,29 +1243,54 @@ function update(t){
   // 敵
   const hasSlow = characters[currentCharKey].special?.includes('slowEnemy');
   enemies = enemies.filter(en=>{
-    en.x -= en.v;
+    const spawnAt = en.spawnAt ?? (en.spawnAt = now());
+    if (!Number.isFinite(en.vx)) en.vx = en.v ?? 0;
+    if (!Number.isFinite(en.baseY)) en.baseY = en.y;
+    if (!Number.isFinite(en.phase)) en.phase = 0;
+
+    if (en.type === 'zigzag'){
+      const freq = en.frequency ?? 0.1;
+      en.phase += freq;
+      const amp = en.amplitude ?? 36;
+      en.y = en.baseY + Math.sin(en.phase) * amp;
+    } else if (en.type === 'hover'){
+      const speed = en.hoverSpeed ?? 0.028;
+      const range = en.hoverRange ?? 52;
+      en.phase += speed;
+      en.y = en.baseY + Math.sin(en.phase) * range;
+    } else if (en.type === 'dash'){
+      const charge = en.charge ?? 320;
+      if (!en.boosted && (t - spawnAt) >= charge){
+        en.boosted = true;
+      }
+      if (en.boosted){
+        const accel = en.accel ?? (en.vx*0.05);
+        const maxV = en.maxV ?? (en.vx*2.1);
+        en.vx = Math.min(maxV, en.vx + accel);
+      }
+    }
+
+    en.y = clamp(en.y, 18, cv.height - GROUND - en.h + 6);
+    en.x -= en.vx;
 
     // 必殺
     if (now()<ultActiveUntil){
       const type = characters[currentCharKey].ult;
       if (type==='storm'){
-        // 渦：半径120
         const cx = player.x+player.w/2, cy = player.y+player.h/2;
         const ex = en.x+en.w/2, ey = en.y+en.h/2;
         const hit = Math.hypot(cx-ex, cy-ey) <= 120;
-        if (hit){ score+=enemyBonus; coins+=2; return false; }
+        if (hit){ awardEnemyDefeat(); return false; }
       } else if (type==='ncha'){
-        // んちゃ砲：前方ビーム
         const beamX = player.x + player.w - 6;
         const beamTop = player.y - 36;
         const beamBottom = player.y + player.h + 36;
         const hit = (en.x+en.w) >= beamX && en.x <= cv.width && en.y <= beamBottom && (en.y+en.h) >= beamTop;
-        if (hit){ score+=enemyBonus; coins+=2; return false; }
+        if (hit){ awardEnemyDefeat(); return false; }
       } else {
-        // rainbow：3レーン
         const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
         const hit = lanes.some(y=> en.y-6 <= y && y <= en.y+en.h+6);
-        if (hit){ score+=enemyBonus; coins+=2; return false; }
+        if (hit){ awardEnemyDefeat(); return false; }
       }
     }
 
@@ -952,7 +1299,7 @@ function update(t){
         const shot = ultProjectiles[i];
         if (!shot || shot.dead) continue;
         if (AABB(en, shot)){
-          score+=enemyBonus; coins+=2;
+          awardEnemyDefeat();
           shot.hits--;
           if (shot.hits<=0) shot.dead=true;
           return false;
@@ -960,24 +1307,23 @@ function update(t){
       }
     }
 
-    // 弾ヒット（pierce対応）
     for (let i=0;i<bullets.length;i++){
       if (AABB(en,bullets[i])){
-        score+=enemyBonus; coins+=2;
+        awardEnemyDefeat();
         bullets[i].hitsLeft--;
-        if (hasSlow) en.v *= 0.6; // 一時的スロー（簡易）
+        if (hasSlow){
+          en.vx = Math.max(en.vx*0.6, 1.6);
+        }
         if (bullets[i].hitsLeft<=0) bullets.splice(i,1);
         return false;
       }
     }
 
-    // 体当たり
     if (AABB(player,en)){
-      if (now()<invUntil){ score+=enemyBonus; coins+=2; return false; }
-      // oneGuard（7秒CD）
+      if (now()<invUntil){ awardEnemyDefeat(); return false; }
       const hasGuard = characters[currentCharKey].special?.includes('oneGuard');
       if (hasGuard && now() - guardReadyTime > 7000){
-        guardReadyTime = now(); // ノーダメで守る
+        guardReadyTime = now();
         return false;
       }
       if (now()>hurtUntil){
@@ -985,7 +1331,7 @@ function update(t){
         if (lives===0){ endGame(); return false; }
       }
     }
-    return en.x+en.w>0;
+    return en.x+en.w>0 && en.y < cv.height;
   });
 
   ultProjectiles = ultProjectiles.filter(p=> !p.dead && now()<p.expires && p.x<cv.width+60 && p.y>-80 && p.y<cv.height+80 && p.hits>0);
@@ -1056,13 +1402,14 @@ function draw(remain, st){
   powers.forEach(pw=>{ c.font='26px serif'; c.fillText('⭐', pw.x, pw.y); });
 
   // 敵
-  enemies.forEach(en=>{ c.font='32px serif'; c.fillText('👾', en.x, en.y-4); });
+  enemies.forEach(en=>{ c.font='32px serif'; c.fillText(en.icon || '👾', en.x, en.y-4); });
 
   setHUD(remain);
 }
 
 // ====== 開始/終了 ======
 function startGame(){
+  resetRunStats();
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
   coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
   items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0;
@@ -1084,6 +1431,11 @@ function endGame(){
   c.fillStyle='#fff'; c.textAlign='center';
   c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
   c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}　コイン: 🪙${coins}`, cv.width/2, cv.height/2 + 10);
+  c.font='18px sans-serif';
+  const breakdown = buildScoreBreakdownLines();
+  breakdown.forEach((line, idx)=>{
+    c.fillText(line, cv.width/2, cv.height/2 + 46 + idx*24);
+  });
   const finalResult = { score, level, coins, char: currentCharKey };
   updateBestScore(finalResult.score);
   c.textAlign='start'; btnRestart.style.display='inline-block';
