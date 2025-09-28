@@ -148,10 +148,6 @@
       return collected.slice(0, maxEntries);
     }
 
-    if (paginationSucceeded){
-      return collected.slice(0, maxEntries);
-    }
-
     const attempts = [
       { limit: String(maxEntries) },
       { per_page: String(maxEntries) },
@@ -159,15 +155,34 @@
     ];
 
     for (const params of attempts){
+      if (collected.length >= maxEntries) break;
       try {
         const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
         const entries = normalizeLeaderboardEntries(raw);
-        if (entries.length){
-          return entries.slice(0, maxEntries);
+        if (!entries.length) continue;
+
+        const uniqueEntries = [];
+        entries.forEach(entry => {
+          const key = JSON.stringify(entry);
+          if (seenEntries.has(key)) return;
+          seenEntries.add(key);
+          uniqueEntries.push(entry);
+        });
+
+        if (!uniqueEntries.length) continue;
+
+        collected.push(...uniqueEntries);
+
+        if (!paginationSucceeded){
+          break;
         }
       } catch (err){
         lastError = err;
       }
+    }
+
+    if (collected.length){
+      return collected.slice(0, maxEntries);
     }
 
     if (lastError) throw lastError;
