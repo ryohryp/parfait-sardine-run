@@ -52,12 +52,14 @@
       if (!trimmed) return null;
       if (/^\d+$/.test(trimmed)){
         const num = Number(trimmed);
+
         return new Date(trimmed.length <= 10 ? num * 1000 : num);
       }
       const baseMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})([T\s])(\d{2}:\d{2}:\d{2})(\.\d+)?$/);
       if (baseMatch && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed)){
         const [, datePart,, timePart, frac = ''] = baseMatch;
         return new Date(`${datePart}T${timePart}${frac}+09:00`);
+
       }
       return new Date(trimmed);
     }
@@ -65,6 +67,7 @@
     const dt = parseDate(raw);
     if (dt && !Number.isNaN(dt.getTime())){
       try {
+
         return new Intl.DateTimeFormat('ja-JP', {
           timeZone: 'Asia/Tokyo',
           year: 'numeric', month: '2-digit', day: '2-digit',
@@ -73,10 +76,12 @@
         }).format(dt);
       } catch {
         return dt.toISOString().slice(0, 19).replace('T', ' ');
+
       }
     }
     return String(raw);
   }
+
 
   function readNumericField(entry, key, fallback){
     if (!entry || typeof entry !== 'object') return fallback;
@@ -95,6 +100,7 @@
     }
     return fallback;
   }
+
 
   function buildUrlWithParams(baseUrl, params){
     if (!params || !Object.keys(params).length) return baseUrl;
@@ -128,6 +134,7 @@
 
   async function fetchLeaderboardEntries(maxEntries){
     const base = leaderboardUrl();
+
     const strategies = [
       { sizeParam: 'per_page', pageParam: 'page' },
       { sizeParam: 'limit', pageParam: 'page' },
