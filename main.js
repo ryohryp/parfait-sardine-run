@@ -1,4 +1,125 @@
+﻿/* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
+
+// 1) プリロード対象（必要に応じて追加・パス調整）
+const PSR_ASSETS = [
+  "./assets/sprite/player.png",
+  "./assets/sprite/enemies.png",
+  "./assets/bg/layer1.png","./assets/bg/layer2.png",
+  "./assets/sfx/jump.ogg","./assets/sfx/hit.ogg",
+  "./assets/bgm/stage.ogg"
+];
+
+// 2) DOM参照
+const _elSplash = document.getElementById("splash");
+const _elFill   = document.querySelector(".splash-fill");
+const _elPct    = document.querySelector(".splash-percent");
+
+window.PSRUN_BOOT_READY = false;
+
+// 3) シンプルプリロード
+async function psrPreload(list){
+  let done = 0;
+  const update = () => {
+    const pct = Math.round((done/list.length)*100);
+    if (_elFill) _elFill.style.width = pct + "%";
+    if (_elPct)  _elPct.textContent  = pct + "%";
+  };
+  update();
+
+  const loadImage = (src)=> new Promise((res,rej)=>{
+    const img = new Image(); img.onload=()=>res(src); img.onerror=rej; img.src = src;
+  });
+  const loadAudio = (src)=> fetch(src).then(r=>r.ok ? r.blob() : Promise.reject(src)).catch(()=>null);
+
+  for(const src of list){
+    if(/\.(png|jpg|jpeg|webp|gif)$/i.test(src)) await loadImage(src);
+    else await loadAudio(src);
+    done++; update();
+  }
+}
+
+// 4) スプラッシュ終了 → ゲーム開始
+async function psrBoot(){
+  try {
+    await psrPreload(PSR_ASSETS);
+  } finally {
+    setTimeout(()=>{
+      if (_elSplash) _elSplash.style.animation = "psr_fadeOut 300ms ease forwards";
+      setTimeout(()=> _elSplash?.remove(), 320);
+      // ここであなたの開始処理を呼ぶ（ボタン操作で開始するため、ここでは自動起動しない）
+      window.PSRUN_BOOT_READY = true;
+    }, 200);
+  }
+}
+
+// 5) 画面遷移 & タイトル
+function screenFade(show=true){ document.getElementById('fade')?.classList.toggle('show', show); }
+function showStageTitle(text){
+  const el = document.getElementById('stageTitle'); if(!el) return;
+  el.textContent = text; el.classList.add('show'); setTimeout(()=> el.classList.remove('show'), 1600);
+}
+async function gotoStage(name, loader){
+  screenFade(true);
+  await loader?.();           // ここで敵/背景の差し替え等
+  showStageTitle(name);
+  setTimeout(()=> screenFade(false), 350);
+}
+
+// 6) VFXユーティリティ
+function cameraShake(mag=8, dur=140){
+  const root = document.documentElement;
+  const start = performance.now();
+  function tick(t){
+    const p = Math.min(1,(t-start)/dur);
+    const amp = (1-p) * mag;
+    root.style.transform = `translate(${(Math.random()*2-1)*amp}px, ${(Math.random()*2-1)*amp}px)`;
+    if(p<1) requestAnimationFrame(tick); else root.style.transform = "";
+  }
+  requestAnimationFrame(tick);
+}
+function spawnHitSpark(x,y){
+  const el = document.createElement('div');
+  el.className = 'vfx-spark';
+  el.style.left = x+'px'; el.style.top = y+'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=> el.remove());
+}
+function floatText(text,x,y,color="#ffec8b"){
+  const el = document.createElement('div');
+  el.className = 'float-txt';
+  el.textContent = text; el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=color;
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=> el.remove());
+}
+function boostFx(on){ document.getElementById('speedlines')?.classList.toggle('show', on); }
+
+// 7) 起動（DOMContentLoaded後でOK）
+document.addEventListener('DOMContentLoaded', psrBoot);
+
+/* ===== /PSR Presentation Layer ===== */
 (()=>{
+// ====== 開始/終了 ======
+window.PSRUN_START = function PSRUN_START(){
+  hideResultOverlay();
+  resetRunStats();
+  score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
+  coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
+  items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0;
+  player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+  canDouble = characters[currentCharKey].special?.includes('doubleJump');
+  guardReadyTime = 0;
+  resetPlayerAnimation();
+  btnStart.style.display='none'; btnRestart.style.display='none';
+  setStartScreenVisible(false);
+  t0=now(); gameOn=true;
+  lastItem=lastEnemy=lastPower=lastShot=t0;
+  currentStats = getEffectiveStats(currentCharKey);
+  setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
+  requestAnimationFrame(update);
+};
+
+function startGame(){ window.PSRUN_START(); }
+
 const PSR = window.PSR || {};
 const HowtoModule = PSR.Howto || null;
 const LeaderboardModule = PSR.Leaderboard || null;
@@ -610,6 +731,7 @@ function handlePreGameStart(){
 }
 
 function requestStart(mode='start'){
+  if (!window.PSRUN_BOOT_READY) return;
   if (gameOn) return;
   openPreGame(mode);
 }
@@ -1422,25 +1544,6 @@ function draw(remain, st){
   setHUD(remain);
 }
 
-// ====== 開始/終了 ======
-function startGame(){
-  hideResultOverlay();
-  resetRunStats();
-  score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
-  coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
-  items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0;
-  player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
-  canDouble = characters[currentCharKey].special?.includes('doubleJump');
-  guardReadyTime = 0;
-  resetPlayerAnimation();
-  btnStart.style.display='none'; btnRestart.style.display='none';
-  setStartScreenVisible(false);
-  t0=now(); gameOn=true;
-  lastItem=lastEnemy=lastPower=lastShot=t0;
-  currentStats = getEffectiveStats(currentCharKey);
-  setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
-  requestAnimationFrame(update);
-}
 function endGame(){
   if(!gameOn) return; gameOn=false;
   const st = stageForLevel(level);
@@ -1532,3 +1635,4 @@ updateCharInfo();
 setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
 })();
+

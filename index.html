@@ -5,14 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>パフェとイワシ RUN! – Character Gacha EX</title>
 <link rel="stylesheet" href="styles.css">
+
+<!-- === Presentation Enhancements (Splash / Meta) === -->
 <link rel="manifest" href="/parfait-sardine-run/manifest.webmanifest">
 <meta name="theme-color" content="#ff7ad9">
 
-<!-- iOS（Safari）向け：アイコン/フルスク/ステータスバー -->
+<!-- iOS PWA最適化 -->
 <link rel="apple-touch-icon" href="/parfait-sardine-run/icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="パフェRUN">
+<!-- === /Presentation Enhancements === -->
+
 
 </head>
 <script>
@@ -25,6 +29,21 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <body>
+  <!-- === Splash / Fade / Titles / Speedlines === -->
+  <div id="splash" class="splash" role="status" aria-live="polite">
+    <div class="splash-inner">
+      <img src="./icons/icon-192.png" alt="logo" class="splash-logo" />
+      <div class="splash-title">Parfait &amp; Sardine RUN!</div>
+      <div class="splash-bar"><span class="splash-fill" style="width:0%"></span></div>
+      <div class="splash-percent">0%</div>
+    </div>
+  </div>
+
+  <div id="fade" class="fade" aria-hidden="true"></div>
+  <div id="stageTitle" class="stage-title" aria-hidden="true"></div>
+  <div id="speedlines" class="speedlines" aria-hidden="true"></div>
+  <!-- === /Splash / Fade / Titles / Speedlines === -->
+
   <header>
     <h1>パフェとイワシ RUN! – Character Gacha EX</h1>
   </header>
@@ -282,5 +301,12 @@ if ('serviceWorker' in navigator) {
 <script src="js/leaderboard.js"></script>
 <script src="js/comments.js"></script>
 <script src="main.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js').catch(console.error);
+  });
+}
+</script>
 </body>
 </html>
