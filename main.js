@@ -404,6 +404,32 @@ const playerAnimation = {
   currentFrame: PLAYER_WALK_FRAMES[0],
 };
 
+// === モーダル/オーバーレイを .scene-wrap の外（body直下）へ退避 ===
+(function detachOverlaysFromScene(){
+  // .scene-wrap or #sceneWrap のどちらでも拾う
+  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
+  if (!wrap) return;
+
+  // 退避対象のID一覧（存在しないものはスキップ）
+  const IDS = [
+    'preGameOverlay',
+    'resultOverlay',
+    'gachaOverlay',
+    'colOverlay',
+    'codexOverlay',
+    'leaderboardOverlay',
+    'commentsOverlay'
+  ];
+
+  IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && wrap.contains(el)) {
+      document.body.appendChild(el); // ← body直下へ移動（参照は生きたまま）
+    }
+  });
+})();
+
+
 let lastPlayerAnimTick = null;
 
 playerSprite.image.src = PLAYER_SPRITE_PATH;
@@ -2235,9 +2261,51 @@ setHUD(GAME_TIME);
 updateCharInfo();
 setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
+
+// ===== モーダル可視状態 → bodyにフラグ付け ===== 
+(function setupModalOpenFlag(){
+  const BODY = document.body;
+  const TARGET_SELECTOR = '.modal, .overlay';
+  const raf = window.requestAnimationFrame?.bind(window) || ((cb) => setTimeout(cb, 16));
+  let scheduled = false;
+  function scheduleUpdate(){
+    if (scheduled) return;
+    scheduled = true;
+    raf(() => {
+      scheduled = false;
+      updateFlag();
+    });
+  }
+  function isElementOpen(el){
+    if (!el || !el.isConnected) return false;
+    const list = el.classList;
+    if (list.contains('is-hidden') || list.contains('isHidden')) return false;
+    if (el.hasAttribute('hidden')) return false;
+    const ariaHidden = el.getAttribute('aria-hidden');
+    if (ariaHidden && ariaHidden !== 'false') return false;
+    if (el.hasAttribute('open')) return true;
+    const style = getComputedStyle(el);
+    if (style.display === 'none') return false;
+    if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+    if (style.opacity === '0' && style.pointerEvents === 'none') return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    return true;
+  }
+  function updateFlag(){
+    const anyOpen = Array.from(document.querySelectorAll(TARGET_SELECTOR)).some(isElementOpen);
+    BODY.classList.toggle('modal-open', anyOpen);
+  }
+  updateFlag();
+  const mo = new MutationObserver(scheduleUpdate);
+  mo.observe(document.body, {
+    subtree: true,
+    attributes: true,
+    childList: true
+  });
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-open-overlay],[data-close-overlay]');
+    if (t) scheduleUpdate();
+  });
 })();
 
-
-
-
-
+})();

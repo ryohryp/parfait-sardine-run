@@ -490,14 +490,47 @@
 @keyframes psr_slideBg{ from{ background-position:0 0 } to{ background-position:200px 0 } }
 
 /* 画面ズーム用のラッパ。body直下に .scene-wrap を1つ被せる想定 */
-.scene-wrap { position: fixed; inset:0; transform-origin:center; will-change: transform; }
-.scene-wrap.zoomed { transition: transform .12s ease; transform: scale(1.04); }
-.vignette{
-  position:fixed; inset:0; pointer-events:none; z-index:3900;
-  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.35) 100%);
-  opacity:0; transition:opacity .08s ease;
+.scene-wrap{
+  position: fixed;
+  inset: 0;
+  z-index: 1;              /* ← ゲーム層は背面 */
+  transform-origin: center;
+  will-change: transform;
+  pointer-events: auto;    /* ← 通常は入力を受ける */
 }
-.vignette.show{ opacity:1; }
+.scene-wrap.zoomed{
+  transition: transform .12s ease;
+  transform: scale(1.04);
+}
+
+/* モーダル表示中はゲーム層のヒットテストを無効化 */
+body.modal-open .scene-wrap{ pointer-events: none; }
+
+/* モーダル/オーバーレイは常に最前面で操作可 */
+.modal,
+.overlay,
+#preGameOverlay,
+#resultOverlay,
+#gachaOverlay,
+#colOverlay,
+#codexOverlay,
+#leaderboardOverlay,
+#commentsOverlay{
+  position: fixed;
+  inset: 0;               /* 画面全体を覆う想定なら */
+  z-index: 9999;          /* ← ゲーム層より前 */
+  pointer-events: auto;   /* ← クリックを受け付ける */
+}
+
+/* ビネットは視覚効果のみ（操作は通す） */
+.vignette{
+  position: fixed; inset: 0;
+  pointer-events: none;   /* ← ここは触らせない */
+  z-index: 3900;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.35) 100%);
+  opacity: 0; transition: opacity .08s ease;
+}
+.vignette.show{ opacity: 1; }
 
 .combo{
   position:fixed; left:50%; top:18%; transform:translateX(-50%);
