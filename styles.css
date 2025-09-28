@@ -244,6 +244,11 @@
     .hudItem{padding:10px 14px;}
     #btns .secondaryBtns{padding:12px 8px;}
     #touchControls{padding:12px 14px;gap:10px;}
+    #touchControls .touchBtn{
+      padding:10px clamp(14px,5vw,20px);
+      font-size:clamp(14px,4.8vw,18px);
+      letter-spacing:.06em;
+    }
   }
 
   /* ガチャ & コレクション オーバーレイ */
