@@ -5,7 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>パフェとイワシ RUN! – Character Gacha EX</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="/parfait-sardine-run/manifest.webmanifest">
+<meta name="theme-color" content="#ff7ad9">
+
+<!-- iOS（Safari）向け：アイコン/フルスク/ステータスバー -->
+<link rel="apple-touch-icon" href="/parfait-sardine-run/icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="パフェRUN">
+
 </head>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js')
+      .catch(console.error);
+  });
+}
+</script>
+
 <body>
   <header>
     <h1>パフェとイワシ RUN! – Character Gacha EX</h1>

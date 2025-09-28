@@ -1,0 +1,14 @@
+{
+  "name": "パフェといわしRUN!",
+  "short_name": "パフェRUN",
+  "start_url": "/parfait-sardine-run/index.html?src=pwa",
+  "scope": "/parfait-sardine-run/",
+  "display": "fullscreen",
+  "background_color": "#101018",
+  "theme_color": "#ff7ad9",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/parfait-sardine-run/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/parfait-sardine-run/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
