@@ -149,6 +149,9 @@
       Math.min(20, Math.max(1, maxEntries)),
       Math.min(10, Math.max(1, maxEntries))
     ])).filter(size => size > 0).sort((a, b) => b - a);
+    const collected = [];
+    const seenEntries = new Set();
+    let paginationSucceeded = false;
     let lastError = null;
 
     function entryKey(entry){
@@ -163,8 +166,7 @@
     }
 
     async function tryStrategy(strategy, pageSize){
-      const collected = [];
-      const seen = new Set();
+      const seenThisStrategy = new Set();
       const maxPages = Math.max(10, Math.ceil(maxEntries / Math.max(1, pageSize)) + 2);
 
       for (let pageIndex = 0; pageIndex < maxPages && collected.length < maxEntries; pageIndex += 1){
@@ -195,8 +197,9 @@
         let added = 0;
         entries.forEach(entry => {
           const key = entryKey(entry);
-          if (seen.has(key)) return;
-          seen.add(key);
+          if (seenEntries.has(key)) return;
+          seenEntries.add(key);
+          seenThisStrategy.add(key);
           collected.push(entry);
           added += 1;
         });
@@ -210,7 +213,22 @@
         }
       }
 
-      return collected;
+      return seenThisStrategy.size > 0;
+    }
+
+    for (const strategy of strategies){
+      if (collected.length >= maxEntries) break;
+      for (const pageSize of candidateSizes){
+        if (collected.length >= maxEntries) break;
+        const succeeded = await tryStrategy(strategy, pageSize);
+        if (succeeded){
+          paginationSucceeded = true;
+          if (collected.length >= maxEntries) break;
+        }
+      }
+      if (paginationSucceeded && collected.length >= maxEntries){
+        break;
+      }
     }
 
     const attempts = [
@@ -219,31 +237,32 @@
       {}
     ];
 
-    for (const params of attempts){
-      if (collected.length >= maxEntries) break;
-      try {
-        const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
-        const entries = normalizeLeaderboardEntries(raw);
-        if (!entries.length) continue;
+    try {
+      for (const params of attempts){
+        if (collected.length >= maxEntries) break;
+        try {
+          const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
+          const entries = normalizeLeaderboardEntries(raw);
+          if (!entries.length) continue;
 
-        const uniqueEntries = [];
-        entries.forEach(entry => {
-          const key = JSON.stringify(entry);
-          if (seenEntries.has(key)) return;
-          seenEntries.add(key);
-          uniqueEntries.push(entry);
-        });
+          const uniqueEntries = [];
+          entries.forEach(entry => {
+            const key = entryKey(entry);
+            if (seenEntries.has(key)) return;
+            seenEntries.add(key);
+            uniqueEntries.push(entry);
+          });
 
-        if (!uniqueEntries.length) continue;
+          if (!uniqueEntries.length) continue;
 
-        collected.push(...uniqueEntries);
+          collected.push(...uniqueEntries);
 
-        if (!paginationSucceeded){
-          break;
+          if (!paginationSucceeded){
+            break;
+          }
+        } catch (err){
+          lastError = err;
         }
-      } catch (err){
-        lastError = err;
-
       }
     } catch (err){
       lastError = err;
