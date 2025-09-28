@@ -6,48 +6,47 @@
   #wrap{max-width:var(--maxw);margin:0 auto;padding:8px;position:relative}
   #hud{
     position:absolute;
-    top:clamp(8px,2.6vh,28px);
-    left:0;
+    top:clamp(8px,2.4vh,28px);
+    left:50%;
+    transform:translateX(-50%);
     width:100%;
+    max-width:var(--maxw);
     display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    padding:0 clamp(12px,3vw,36px);
+    flex-direction:column;
+    align-items:stretch;
+    gap:clamp(6px,1vh,12px);
+    padding:0 clamp(12px,4vw,36px);
     pointer-events:none;
     font-size:clamp(12px,2.6vw,16px);
     color:#0f172a;
-    gap:clamp(8px,1.4vw,18px);
   }
-  .hudSection{display:flex;flex-direction:column;gap:clamp(6px,1.2vh,12px);min-width:0}
-  .hudLeft,.hudRight{max-width:34vw}
-  .hudLeft{align-items:flex-start}
-  .hudRight{align-items:flex-end}
-  .hudBlock{
+  .hudRow{
+    width:100%;
+    display:flex;
+    align-items:stretch;
+    justify-content:space-between;
+    gap:clamp(10px,3vw,24px);
+    flex-wrap:wrap;
+  }
+  .hudItem{
+    flex:1 1 200px;
+    min-width:0;
     display:flex;
     flex-direction:column;
-    gap:2px;
-    padding:8px 12px;
-    border-radius:12px;
-    background:rgba(248,250,252,.86);
-    box-shadow:0 6px 18px rgba(15,23,42,.18);
+    gap:4px;
+    padding:10px clamp(14px,3vw,24px);
+    border-radius:18px;
+    background:rgba(248,250,252,.9);
+    box-shadow:0 10px 22px rgba(15,23,42,.18);
     backdrop-filter:blur(8px);
   }
-  .hudRight .hudBlock{align-items:flex-end;text-align:right}
+  .hudRowSecondary .hudItem{background:rgba(248,250,252,.82)}
   .hudLabel{font-size:clamp(10px,2.2vw,12px);letter-spacing:.08em;text-transform:uppercase;color:#2563eb;font-weight:600}
-  .hudValue{font-weight:600;font-variant-numeric:tabular-nums;font-size:clamp(14px,3vw,18px);color:#0f172a}
-  .hudHearts{font-size:clamp(22px,5vw,28px);line-height:1}
-  .hudSub{font-size:clamp(11px,2.4vw,13px);color:#475569;font-weight:600}
-  .hudCenter{align-items:center;justify-content:flex-start;text-align:center;gap:clamp(6px,1vh,12px)}
-  .hudScore{
-    background:rgba(15,23,42,.88);
-    color:#fff;
-    padding:10px clamp(22px,6vw,36px);
-    border-radius:999px;
-    box-shadow:0 8px 24px rgba(15,23,42,.35);
-  }
-  .hudScoreLabel{display:block;font-size:clamp(10px,2.2vw,12px);letter-spacing:.12em;text-transform:uppercase;opacity:.75}
-  .hudScoreValue{display:block;font-size:clamp(28px,8vw,50px);font-weight:700;letter-spacing:.06em;line-height:1}
-  .hudEffects{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(6px,2vw,14px);min-height:clamp(26px,5vh,38px)}
+  .hudValue{font-weight:600;font-variant-numeric:tabular-nums;font-size:clamp(16px,3.4vw,22px);color:#0f172a}
+  .hudHearts{font-size:clamp(24px,5.4vw,32px);line-height:1}
+  .hudSub,.hudGauge{font-size:clamp(11px,2.4vw,13px);color:#475569;font-weight:600}
+  .hudScoreValue{font-size:clamp(28px,7vw,46px);font-weight:700;letter-spacing:.04em;line-height:1}
+  .hudEffects{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(6px,2vw,14px);width:100%;min-height:clamp(26px,5vh,38px)}
   .hudEffects.isHidden{display:none}
   .hudEffect{
     display:inline-flex;
@@ -65,7 +64,29 @@
   .hudEffect .label{font-size:clamp(11px,2.6vw,13px)}
   .hudEffect .time{font-variant-numeric:tabular-nums}
   canvas{width:100%;height:auto;max-width:var(--maxw);background:linear-gradient(#9ed6ee,#fff7e6);border:2px solid #333;border-radius:12px;touch-action:none}
-  #btns{display:flex;gap:8px;justify-content:center;margin:10px 0;flex-wrap:wrap}
+  #btns{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    margin:18px auto 14px;
+    max-width:var(--maxw);
+  }
+  #btns .primaryBtns{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+  }
+  #btns .secondaryBtns{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding:12px 10px;
+    border-radius:16px;
+    background:rgba(15,23,42,.08);
+    scroll-snap-type:x mandatory;
+  }
+  #btns .secondaryBtns button{flex:0 0 auto;scroll-snap-align:center}
   button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
   button.secondary{background:#3b82f6}
   button.ghost{background:#6b7280}
@@ -117,85 +138,74 @@
   }
 
   #touchControls{
-    position:fixed;
-    inset:0;
+    position:sticky;
+    bottom:0;
+    width:100%;
+    max-width:var(--maxw);
+    margin:18px auto 0;
     display:flex;
-    align-items:flex-end;
-    justify-content:flex-end;
-    padding:0;
-    z-index:15;
+    justify-content:center;
+    gap:clamp(12px,4vw,22px);
+    padding:14px clamp(12px,4vw,24px);
+    background:rgba(15,23,42,.78);
+    border-radius:18px 18px 0 0;
+    box-shadow:0 -12px 28px rgba(15,23,42,.22);
     opacity:0;
-    transition:opacity .22s ease;
+    transform:translateY(16px);
+    transition:opacity .22s ease,transform .22s ease;
     pointer-events:none;
   }
-  #touchControls.isVisible{opacity:1;}
+  #touchControls.isVisible{opacity:1;transform:translateY(0);pointer-events:auto;}
   #touchControls .touchBtn{
-    position:absolute;
+    flex:1 1 0;
+    min-width:0;
     display:flex;
     align-items:center;
     justify-content:center;
-    pointer-events:auto;
     border:0;
-    border-radius:999px;
-    padding:0;
-    width:clamp(78px,18vw,122px);
-    height:clamp(78px,18vw,122px);
-    font-size:clamp(14px,4.2vw,18px);
+    border-radius:12px;
+    padding:14px clamp(16px,5vw,24px);
+    font-size:clamp(16px,4.6vw,20px);
     font-weight:700;
-    letter-spacing:.04em;
-    background:rgba(15,23,42,.85);
-    color:#fff;
-    box-shadow:0 12px 28px rgba(15,23,42,.35);
+    letter-spacing:.08em;
     text-transform:none;
-    transition:transform .18s ease,opacity .18s ease,box-shadow .18s ease;
+    background:rgba(15,23,42,.88);
+    color:#fff;
+    box-shadow:0 10px 24px rgba(15,23,42,.28);
+    cursor:pointer;
+    transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease;
   }
-  #touchControls #jumpBtn{
-    right:clamp(14px,5vw,32px);
-    bottom:clamp(6vh,10vh,96px);
-    background:rgba(34,197,94,.9);
-  }
-  #touchControls .touchUlt{
-    right:clamp(12px,4.6vw,28px);
-    bottom:clamp(28vh,34vh,240px);
-    background:linear-gradient(160deg,#f97316,#ec4899);
-  }
-  #touchControls .touchBtn:disabled{opacity:.45;transform:scale(.96);box-shadow:none}
-  #touchControls .touchUlt.isReady{box-shadow:0 16px 30px rgba(236,72,153,.45);transform:scale(1.04)}
+  #touchControls .touchBtn:active{transform:translateY(2px);}
+  #touchControls .touchJump{background:#22c55e;}
+  #touchControls .touchAttack{background:#3b82f6;}
+  #touchControls .touchUlt{background:linear-gradient(160deg,#f97316,#ec4899);}
+  #touchControls .touchBtn:disabled{opacity:.5;box-shadow:none;cursor:not-allowed;}
+  #touchControls .touchUlt.isReady{box-shadow:0 16px 30px rgba(236,72,153,.45);}
 
   @media (max-width: 768px){
     #wrap{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:12px 12px 20px;position:relative;}
     #hud{
       position:static;
-      flex-direction:column;
+      transform:none;
+      padding:0 10px;
       align-items:stretch;
-      justify-content:flex-start;
       gap:12px;
-      padding:0 8px;
     }
-    .hudSection{
-      display:flex;
-      flex-wrap:wrap;
-      flex-direction:row;
-      gap:8px;
-    }
-    .hudLeft,.hudRight{max-width:none;align-items:flex-start}
-    .hudRight .hudBlock{align-items:flex-start;text-align:left}
-    .hudBlock{flex:1 1 calc(50% - 8px);min-width:140px}
-    .hudCenter{order:-1;align-items:center;text-align:center}
-    .hudCenter .hudScore{width:100%;max-width:320px;margin:0 auto}
-    .hudEffects{justify-content:center}
+    .hudRow{flex-direction:column;gap:10px;}
+    .hudItem{flex:1 1 100%;}
+    #touchControls{border-radius:16px 16px 0 0;margin:12px auto 0;}
     #charInfo{
       position:static;
       align-self:flex-end;
-      margin:0 8px;
+      margin:0 10px;
     }
   }
 
   @media (max-width: 480px){
-    .hudSection{flex-direction:column;gap:6px}
-    .hudBlock{flex:1 1 100%;min-width:auto}
-    .hudCenter .hudScore{max-width:none}
     #wrap{gap:10px;padding:12px 10px 20px;}
+    .hudItem{padding:10px 14px;}
+    #btns .secondaryBtns{padding:12px 8px;}
+    #touchControls{padding:12px 14px;gap:10px;}
   }
 
   /* ガチャ & コレクション オーバーレイ */
