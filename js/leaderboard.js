@@ -54,7 +54,8 @@
         const num = Number(trimmed);
         dt = new Date(trimmed.length <= 10 ? num*1000 : num);
       } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)){
-        dt = new Date(`${trimmed.replace(' ', 'T')}Z`);
+        const [datePart, timePart] = trimmed.split(' ');
+        dt = new Date(`${datePart}T${timePart}+09:00`);
       } else {
         dt = new Date(trimmed);
       }
@@ -63,13 +64,147 @@
       try {
         return dt.toLocaleString('ja-JP', {
           year:'numeric', month:'2-digit', day:'2-digit',
-          hour:'2-digit', minute:'2-digit'
+          hour:'2-digit', minute:'2-digit', second:'2-digit',
+          timeZone: 'Asia/Tokyo'
         });
       } catch {
-        return dt.toISOString().slice(0,16).replace('T',' ');
+        return dt.toISOString().slice(0,19).replace('T',' ');
       }
     }
     return String(raw);
+  }
+
+  function buildUrlWithParams(baseUrl, params){
+    if (!params || !Object.keys(params).length) return baseUrl;
+    try {
+      const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : undefined;
+      const url = new URL(baseUrl, origin);
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        url.searchParams.set(key, value);
+      });
+      return url.toString();
+    } catch {
+      const query = Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+        .join('&');
+      if (!query) return baseUrl;
+      return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${query}`;
+    }
+  }
+
+  async function fetchLeaderboardPage(url){
+    const res = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    try {
+      return await res.json();
+    } catch (err){
+      throw new Error('Invalid leaderboard response');
+    }
+  }
+
+  async function fetchLeaderboardEntries(maxEntries){
+    const base = leaderboardUrl();
+    const strategies = [
+      { sizeParam: 'per_page', pageParam: 'page' },
+      { sizeParam: 'limit', pageParam: 'page' },
+      { sizeParam: 'perPage', pageParam: 'page' },
+      { sizeParam: 'limit', offsetParam: 'offset' },
+      { sizeParam: 'per_page', offsetParam: 'offset' }
+    ];
+    const candidateSizes = Array.from(new Set([
+      Math.min(100, Math.max(1, maxEntries)),
+      Math.min(50, Math.max(1, maxEntries)),
+      Math.min(40, Math.max(1, maxEntries)),
+      Math.min(20, Math.max(1, maxEntries)),
+      Math.min(10, Math.max(1, maxEntries))
+    ])).filter(size => size > 0).sort((a, b) => b - a);
+    let lastError = null;
+
+    function entryKey(entry){
+      const fallback = entry?.date ?? entry?.time ?? entry?.createdAt ?? entry?.created_at ?? entry?.updatedAt ?? entry?.updated_at ?? '';
+      return [
+        entry?.id ?? '',
+        entry?.rank ?? '',
+        entry?.name ?? '',
+        entry?.score ?? '',
+        fallback
+      ].join('|');
+    }
+
+    async function tryStrategy(strategy, pageSize){
+      const collected = [];
+      const seen = new Set();
+      const maxPages = Math.max(10, Math.ceil(maxEntries / Math.max(1, pageSize)) + 2);
+
+      for (let pageIndex = 0; pageIndex < maxPages && collected.length < maxEntries; pageIndex += 1){
+        const params = {};
+        if (strategy.sizeParam){
+          params[strategy.sizeParam] = String(pageSize);
+        }
+        if (strategy.pageParam){
+          params[strategy.pageParam] = String(pageIndex + 1);
+        }
+        if (strategy.offsetParam){
+          params[strategy.offsetParam] = String(pageIndex * pageSize);
+        }
+
+        let entries = [];
+        try {
+          const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
+          entries = normalizeLeaderboardEntries(raw);
+        } catch (err){
+          lastError = err;
+          break;
+        }
+
+        if (!entries.length){
+          break;
+        }
+
+        let added = 0;
+        entries.forEach(entry => {
+          const key = entryKey(entry);
+          if (seen.has(key)) return;
+          seen.add(key);
+          collected.push(entry);
+          added += 1;
+        });
+
+        if (entries.length < pageSize){
+          break;
+        }
+
+        if (added === 0){
+          break;
+        }
+      }
+
+      return collected;
+    }
+
+    for (const strategy of strategies){
+      for (const size of candidateSizes){
+        const entries = await tryStrategy(strategy, size);
+        if (entries.length){
+          return entries.slice(0, maxEntries);
+        }
+      }
+    }
+
+    try {
+      const raw = await fetchLeaderboardPage(base);
+      const entries = normalizeLeaderboardEntries(raw);
+      if (entries.length){
+        return entries.slice(0, maxEntries);
+      }
+    } catch (err){
+      lastError = err;
+    }
+
+    if (lastError) throw lastError;
+    return [];
   }
 
   function normalizeLeaderboardEntries(raw){
@@ -103,10 +238,7 @@
     }
     list.innerHTML = '';
     try {
-      const res = await fetch(leaderboardUrl(), { method:'GET', headers:{ 'Accept':'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const raw = await res.json();
-      const entries = normalizeLeaderboardEntries(raw);
+      const entries = await fetchLeaderboardEntries(100);
       if (!entries.length){
         status.textContent = 'No results yet';
         status.style.display = 'block';
@@ -115,7 +247,7 @@
       status.textContent = '';
       status.style.display = 'none';
 
-      const limit = Math.min(50, entries.length);
+      const limit = Math.min(100, entries.length);
       const storedName = Utils.sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
       const targetName = storedName || '';
       let selfRank = -1;
@@ -158,9 +290,17 @@
         const rawName = entry?.name ? String(entry.name) : '匿名';
         nameSpan.textContent = isSelf ? `${rawName}（自分）` : rawName;
 
+        const levelSpan = document.createElement('span');
+        levelSpan.className = 'lbLevel';
+        levelSpan.textContent = `Lv ${(Number(entry?.level) || 1).toLocaleString('ja-JP')}`;
+
+        const coinsSpan = document.createElement('span');
+        coinsSpan.className = 'lbCoins';
+        coinsSpan.textContent = `Coins ${(Number(entry?.coins) || 0).toLocaleString('ja-JP')}`;
+
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'lbScore';
-        scoreSpan.textContent = `Score: ${(Number(entry?.score) || 0).toLocaleString('ja-JP')}`;
+        scoreSpan.textContent = `Score ${(Number(entry?.score) || 0).toLocaleString('ja-JP')}`;
 
         const dateSpan = document.createElement('span');
         dateSpan.className = 'lbDate';
@@ -168,6 +308,8 @@
 
         row.appendChild(rankSpan);
         row.appendChild(nameSpan);
+        row.appendChild(levelSpan);
+        row.appendChild(coinsSpan);
         row.appendChild(scoreSpan);
         row.appendChild(dateSpan);
 
