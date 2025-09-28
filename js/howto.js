@@ -8,7 +8,9 @@
     start: document.getElementById('howStart'),
     lead: document.getElementById('howLead'),
     list: document.getElementById('howList'),
-    footer: document.getElementById('howFooterNote')
+    footer: document.getElementById('howFooterNote'),
+    objective: document.getElementById('objective'),
+    objectiveSlot: document.getElementById('howObjective')
   };
 
   const DEFAULT_COPY = {
@@ -84,6 +86,30 @@
     overlay.style.display = 'flex';
   }
 
+  function ensureObjectiveCopy(){
+    const { objective, objectiveSlot } = elements;
+    if (!objective || !objectiveSlot || objectiveSlot.dataset.bound === '1') return;
+
+    const clone = objective.cloneNode(true);
+    clone.removeAttribute('id');
+    const heading = clone.querySelector('h2');
+    if (heading){
+      const replacement = document.createElement('h3');
+      replacement.innerHTML = heading.innerHTML;
+      heading.replaceWith(replacement);
+    }
+    clone.classList.add('howObjectiveContent');
+    objectiveSlot.appendChild(clone);
+    objectiveSlot.dataset.bound = '1';
+  }
+
+  function collapseObjective(){
+    const { objective } = elements;
+    if (!objective) return;
+    objective.setAttribute('hidden', 'hidden');
+    objective.setAttribute('aria-hidden', 'true');
+  }
+
   function close(){
     if (elements.overlay){
       elements.overlay.style.display = 'none';
@@ -103,6 +129,7 @@
 
     render();
     loadCopy();
+    ensureObjectiveCopy();
 
     if (elements.button){
       elements.button.addEventListener('click', () => open(false));
@@ -115,17 +142,22 @@
     }
 
     const INTRO_KEY = 'psrun_intro_seen_v2';
-    let shouldOpen = true;
+    let isFirstVisit = true;
     try {
       if (localStorage.getItem(INTRO_KEY)){
-        shouldOpen = false;
+        isFirstVisit = false;
       } else {
         localStorage.setItem(INTRO_KEY, '1');
       }
     } catch {
-      shouldOpen = true;
+      isFirstVisit = true;
     }
-    if (shouldOpen){
+
+    if (!isFirstVisit){
+      collapseObjective();
+    }
+
+    if (isFirstVisit){
       open(true);
     }
   }
