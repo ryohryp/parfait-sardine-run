@@ -9,7 +9,9 @@ const c = cv.getContext('2d');
 const hud = document.getElementById('hud');
 const btnStart = document.getElementById('start');
 const btnRestart = document.getElementById('restart');
+const touchControls = document.getElementById('touchControls');
 const btnUlt = document.getElementById('ultBtn');
+const btnJump = document.getElementById('jumpBtn');
 const btnGacha = document.getElementById('gachaOpen');
 const btnGacha10 = document.getElementById('gacha10');
 const btnCollection = document.getElementById('collection');
@@ -20,7 +22,20 @@ const resultClose = document.getElementById('resultClose');
 const resultSummary = document.getElementById('resultSummary');
 const resultItemList = document.getElementById('resultItemList');
 const resultEnemyList = document.getElementById('resultEnemyList');
-const resultReplay = document.getElementById('resultReplay');
+const resultRetry = document.getElementById('resultRetry');
+const resultMenu = document.getElementById('resultMenu');
+const resultLeaderboardBtn = document.getElementById('resultLeaderboard');
+const resultCommentBtn = document.getElementById('resultComment');
+
+const preGameOverlay = document.getElementById('preGameOverlay');
+const preGameClose = document.getElementById('preGameClose');
+const preGameStart = document.getElementById('preGameStart');
+const preGameCharList = document.getElementById('preGameCharList');
+const preGameSummary = document.getElementById('preGameSummary');
+const preGameUlt = document.getElementById('preGameUlt');
+const preGameSpecial = document.getElementById('preGameSpecial');
+const preGameStats = document.getElementById('preGameStats');
+let preGameSelectedKey = null;
 
 // 自キャラ画像（スプライトシート）
 const PLAYER_SPRITE_PATH = 'assets/player-cube-sheet.png';
@@ -262,6 +277,21 @@ window.PSR.GameData.characters = characters;
 const rarOrder = ['C','R','E','L','M'];
 function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==='R'?'rar-r':'rar-c'; }
 
+const SPECIAL_LABELS = {
+  magnet: 'アイテム吸引',
+  oneGuard: '自動ガード',
+  doubleJump: '二段ジャンプ',
+  pierce: '貫通ショット',
+  airAttack: '空中攻撃'
+};
+
+const ULT_DETAILS = {
+  rainbow: { name: 'レインボーレーザー', description: '3ラインのレインボービームで前方広範囲を一掃。' },
+  storm:   { name: 'トルネードストーム', description: '渦巻く竜巻で一定時間、周囲の敵を巻き込み続ける。' },
+  ncha:    { name: 'んちゃフルバースト', description: '正面に極太ビームを放ち、貫通ダメージを与える。' },
+  yadon:   { name: 'ヤドン砲', description: '巨大な仲間を召喚し、複数ヒットする弾をばらまく。' }
+};
+
 // 所持データ（localStorage）
 const STORE_KEY = 'psrun_char_collection_v1';
 const BEST_SCORE_KEY = 'psrun_best_score_v1';
@@ -384,35 +414,197 @@ btnCollection.onclick = ()=>{
 };
 
 // ====== HUD / 便利 ======
-function hearts(n){ return '❤️'.repeat(n) + '♡'.repeat(3-n); }
+function hearts(n){
+  const count = Math.max(0, Math.min(3, Math.floor(n)));
+  return '❤️'.repeat(count) + '♡'.repeat(3-count);
+}
 function setHUD(remainMs){
   const sec = Math.max(0, Math.ceil(remainMs/1000));
-  const invActive = now()<invUntil;
   const st = stageForLevel(level).name;
   const ch = characters[currentCharKey];
   const own = collection.owned[currentCharKey];
-  const lb = own?.limit? own.limit : 0;
+  const lb = own?.limit ? own.limit : 0;
   const bestText = (Number.isFinite(bestScore) ? bestScore : 0).toLocaleString('ja-JP');
   const scoreText = score.toLocaleString('ja-JP');
   const coinText = coins.toLocaleString('ja-JP');
+  const nowTs = now();
+  const effects = [];
+  if (nowTs < invUntil){ effects.push({ icon:'🛡️', label:'無敵', remain: (invUntil - nowTs) / 1000 }); }
+  if (nowTs < autoShootUntil){ effects.push({ icon:'🤖', label:'連射', remain: (autoShootUntil - nowTs) / 1000 }); }
+  if (nowTs < bulletBoostUntil){ effects.push({ icon:'💥', label:'火力UP', remain: (bulletBoostUntil - nowTs) / 1000 }); }
+  if (nowTs < scoreMulUntil){ effects.push({ icon:'✖️2', label:'スコアUP', remain: (scoreMulUntil - nowTs) / 1000 }); }
+  if (gameOn && nowTs < ultActiveUntil){ effects.push({ icon:'🌈', label:'必殺', remain: (ultActiveUntil - nowTs) / 1000 }); }
+  const effectsHtml = effects.map(effect => {
+    const remainText = `${Math.max(0, effect.remain).toFixed(1)}s`;
+    return `<span class="hudEffect"><span class="icon">${effect.icon}</span><span class="label">${effect.label}</span><span class="time">${remainText}</span></span>`;
+  }).join('');
+  const effectsClass = effects.length ? 'hudEffects' : 'hudEffects isHidden';
+
   hud.innerHTML = `
-    <div class="hudRow">
-      <span class="hudItem"><strong>ステージ</strong><span class="value">${st}</span></span>
-      <span class="hudItem"><strong>レベル</strong><span class="value">${level}</span></span>
-      <span class="hudItem"><strong>残り</strong><span class="value">${sec}秒</span></span>
-      ${invActive ? '<span class="hudItem"><span class="hudTag">無敵中</span></span>' : ''}
+    <div class="hudSection hudLeft">
+      <div class="hudBlock">
+        <span class="hudLabel">ライフ</span>
+        <span class="hudValue hudHearts">${hearts(lives)}</span>
+      </div>
+      <div class="hudBlock">
+        <span class="hudLabel">必殺ゲージ</span>
+        <span class="hudValue">${Math.floor(ult)}%</span>
+      </div>
     </div>
-    <div class="hudRow">
-      <span class="hudItem hudHearts"><strong>ライフ</strong><span class="value">${hearts(lives)}</span></span>
-      <span class="hudItem"><strong>スコア</strong><span class="value">${scoreText}</span></span>
-      <span class="hudItem hudCoins"><strong>コイン</strong><span class="value">🪙${coinText}</span></span>
-      <span class="hudItem"><strong>必殺</strong><span class="value">${Math.floor(ult)}%</span></span>
-      <span class="hudItem"><strong>ベスト</strong><span class="value">${bestText}</span></span>
+    <div class="hudSection hudCenter">
+      <div class="hudScore">
+        <span class="hudScoreLabel">スコア</span>
+        <span class="hudScoreValue">${scoreText}</span>
+      </div>
+      <div class="${effectsClass}">${effectsHtml}</div>
+    </div>
+    <div class="hudSection hudRight">
+      <div class="hudBlock">
+        <span class="hudLabel">残り時間</span>
+        <span class="hudValue">${sec}秒</span>
+      </div>
+      <div class="hudBlock">
+        <span class="hudLabel">ステージ</span>
+        <span class="hudValue">${st}</span>
+        <span class="hudSub">Lv.${level}</span>
+      </div>
+      <div class="hudBlock">
+        <span class="hudLabel">コイン</span>
+        <span class="hudValue">🪙${coinText}</span>
+      </div>
+      <div class="hudBlock">
+        <span class="hudLabel">ベスト</span>
+        <span class="hudValue">${bestText}</span>
+      </div>
     </div>`;
+
   charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
-  btnUlt.style.display = ultReady ? 'block':'none';
+
+  if (touchControls){
+    touchControls.classList.toggle('isVisible', gameOn);
+  }
+  if (btnJump){
+    btnJump.disabled = !gameOn;
+  }
+  if (btnUlt){
+    const ready = gameOn && ultReady;
+    btnUlt.disabled = !ready;
+    btnUlt.classList.toggle('isReady', ready);
+  }
+
   btnGacha.disabled = coins < 10;
   btnGacha10.disabled = coins < 100;
+}
+
+function describeUlt(key){
+  if (!key){
+    return { title:'必殺技なし', text:'このキャラは必殺技を持たず、基礎能力で勝負します。' };
+  }
+  const entry = ULT_DETAILS[key];
+  if (entry){
+    return { title:`必殺技：${entry.name}`, text:entry.description };
+  }
+  return { title:`必殺技：${key}`, text:'固有必殺技を発動できます。' };
+}
+
+function buildPreGameList(){
+  if (!preGameCharList) return;
+  preGameCharList.innerHTML = '';
+  const ownedKeys = Object.keys(collection.owned || {}).filter(key => collection.owned[key]?.owned);
+  const sorted = ownedKeys
+    .map(key => characters[key])
+    .filter(Boolean)
+    .sort((a,b)=>{
+      const ra = rarOrder.indexOf(a.rar);
+      const rb = rarOrder.indexOf(b.rar);
+      if (ra !== rb) return ra - rb;
+      return a.name.localeCompare(b.name,'ja');
+    });
+  if (!sorted.length){
+    const empty = document.createElement('div');
+    empty.className = 'preGameEmpty';
+    empty.textContent = 'キャラを入手するとここに表示されます。';
+    preGameCharList.appendChild(empty);
+    return;
+  }
+  sorted.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preCharCard';
+    if (ch.key === preGameSelectedKey){ btn.classList.add('isSelected'); }
+    btn.innerHTML = `<span class="emoji">${ch.emoji}</span><span class="name">${ch.name}</span><span class="rar">[${ch.rar}]</span>`;
+    btn.addEventListener('click', ()=>{
+      preGameSelectedKey = ch.key;
+      [...preGameCharList.children].forEach(node => node.classList?.remove?.('isSelected'));
+      btn.classList.add('isSelected');
+      updatePreGameDetails();
+    });
+    preGameCharList.appendChild(btn);
+  });
+}
+
+function updatePreGameDetails(){
+  const key = preGameSelectedKey || currentCharKey;
+  const ch = characters[key];
+  if (!ch){ return; }
+  const stats = [
+    { label:'移動速度', value: `${Math.round(ch.move * 100)}%` },
+    { label:'ジャンプ力', value: `${Math.round(ch.jump * 100)}%` },
+    { label:'ショット', value: `${Math.round(ch.bullet * 100)}%` },
+    { label:'必殺充填', value: `${Math.round(ch.ultRate * 100)}%` }
+  ];
+  const specials = Array.isArray(ch.special) ? ch.special : [];
+  const ult = describeUlt(ch.ult);
+  if (preGameSummary){
+    preGameSummary.textContent = `${ch.emoji} ${ch.name}`;
+  }
+  if (preGameUlt){
+    preGameUlt.textContent = `${ult.title} – ${ult.text}`;
+  }
+  if (preGameSpecial){
+    if (specials.length){
+      preGameSpecial.innerHTML = specials.map(code => `<span>${SPECIAL_LABELS[code] || code}</span>`).join('');
+    } else {
+      preGameSpecial.innerHTML = '<span>特性なし</span>';
+    }
+  }
+  if (preGameStats){
+    preGameStats.innerHTML = stats.map(stat => `<li><span>${stat.label}</span><span class="value">${stat.value}</span></li>`).join('');
+  }
+}
+
+function openPreGame(mode='start'){
+  if (!preGameOverlay || !preGameStart){
+    startGame();
+    return;
+  }
+  preGameSelectedKey = currentCharKey;
+  preGameStart.textContent = mode === 'retry' ? 'リトライ開始' : 'ゲームスタート';
+  buildPreGameList();
+  updatePreGameDetails();
+  preGameOverlay.dataset.mode = mode;
+  preGameOverlay.style.display = 'flex';
+  setTimeout(()=>{ try { preGameStart.focus(); } catch {} }, 60);
+}
+
+function closePreGame(){
+  if (preGameOverlay){
+    preGameOverlay.style.display = 'none';
+  }
+  preGameSelectedKey = null;
+}
+
+function handlePreGameStart(){
+  if (preGameSelectedKey && preGameSelectedKey !== currentCharKey){
+    setCurrentChar(preGameSelectedKey);
+  }
+  closePreGame();
+  startGame();
+}
+
+function requestStart(mode='start'){
+  if (gameOn) return;
+  openPreGame(mode);
 }
 
 function refreshHUD(){
@@ -671,11 +863,55 @@ if (resultOverlay){
     if (ev.target === resultOverlay) hideResultOverlay();
   });
 }
-if (resultReplay){
-  resultReplay.addEventListener('click', ()=>{
+if (resultRetry){
+  resultRetry.addEventListener('click', ()=>{
     hideResultOverlay();
-    startGame();
+    openPreGame('retry');
   });
+}
+if (resultMenu){
+  resultMenu.addEventListener('click', ()=>{
+    hideResultOverlay();
+    btnStart.style.display = 'inline-block';
+    btnRestart.style.display = 'none';
+  });
+}
+if (resultLeaderboardBtn){
+  resultLeaderboardBtn.addEventListener('click', ()=>{
+    hideResultOverlay();
+    try { LeaderboardModule?.open?.(); }
+    catch (err){ console.error(err); }
+  });
+}
+if (resultCommentBtn){
+  resultCommentBtn.addEventListener('click', ()=>{
+    hideResultOverlay();
+    try { CommentsModule?.open?.(); }
+    catch (err){ console.error(err); }
+  });
+}
+
+if (preGameClose){
+  preGameClose.addEventListener('click', closePreGame);
+}
+if (preGameOverlay){
+  preGameOverlay.addEventListener('click', (ev)=>{
+    if (ev.target === preGameOverlay) closePreGame();
+  });
+}
+if (preGameStart){
+  preGameStart.addEventListener('click', handlePreGameStart);
+}
+if (btnJump){
+  btnJump.addEventListener('click', ()=>{ jump(); });
+  btnJump.addEventListener('touchstart', (ev)=>{ ev.preventDefault(); jump(); }, { passive:false });
+}
+if (btnUlt){
+  btnUlt.addEventListener('touchstart', (ev)=>{
+    if (btnUlt.disabled){ return; }
+    ev.preventDefault();
+    tryUlt();
+  }, { passive:false });
 }
 
 // ====== スポーン ======
@@ -1200,6 +1436,7 @@ function endGame(){
   });
   const finalResult = { score, level, coins, char: currentCharKey };
   updateBestScore(finalResult.score);
+  setHUD(0);
   showResultOverlay(finalResult);
   c.textAlign='start'; btnRestart.style.display='inline-block';
   setTimeout(()=>{
@@ -1212,8 +1449,8 @@ function endGame(){
 }
 
 // ====== ボタン ======
-btnStart.addEventListener('click', startGame);
-btnRestart.addEventListener('click', startGame);
+btnStart.addEventListener('click', ()=> requestStart('start'));
+btnRestart.addEventListener('click', ()=> requestStart('retry'));
 
 // ====== スポーンと攻撃トリガ ======
 function shootIfAuto(t){ /* 予備フック */ }
@@ -1265,7 +1502,7 @@ function updateBestScore(latestScore){
 LeaderboardModule?.init?.();
 CommentsModule?.init?.();
 HowtoModule?.init?.({
-  onStartGame: startGame,
+  onStartGame: () => requestStart('start'),
   isGameRunning: () => gameOn
 });
 

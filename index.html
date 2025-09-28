@@ -9,8 +9,6 @@
 <body>
   <header>
     <h1>パフェとイワシ RUN! – Character Gacha EX</h1>
-    <div id="hud" class="muted">読み込み中…</div>
-    <div id="charInfo" class="muted">CHAR: -</div>
   </header>
 
   <section id="objective">
@@ -24,6 +22,8 @@
   </section>
 
   <div id="wrap">
+    <div id="hud" class="hudOverlay">読み込み中…</div>
+    <div id="charInfo" class="muted">CHAR: -</div>
     <canvas id="cv" width="900" height="430"></canvas>
     <div id="btns">
       <button id="start">スタート</button>
@@ -39,7 +39,32 @@
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
   </div>
 
-  <button id="ultBtn" style="display:none">必殺</button>
+  <div id="touchControls">
+    <button id="jumpBtn" class="touchBtn" aria-label="ジャンプ">ジャンプ</button>
+    <button id="ultBtn" class="touchBtn touchUlt" aria-label="必殺">必殺</button>
+  </div>
+
+  <!-- プレゲーム：キャラ選択 -->
+  <div id="preGameOverlay" class="overlay">
+    <div class="cardWrap preGameCard">
+      <div class="cardHeader">
+        <h2>出撃準備</h2>
+        <button id="preGameClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody preGameBody">
+        <div class="preGameList" id="preGameCharList"></div>
+        <div class="preGameInfo">
+          <div class="preGameSummary" id="preGameSummary"></div>
+          <p class="preGameUlt" id="preGameUlt"></p>
+          <div class="preGameSpecial" id="preGameSpecial"></div>
+          <ul class="preGameStats" id="preGameStats"></ul>
+        </div>
+      </div>
+      <div class="footerBtns preGameActions">
+        <button id="preGameStart" class="secondary cta">ゲームスタート</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 遊び方 -->
   <div id="howOverlay" class="overlay">
@@ -123,8 +148,13 @@
           <ul id="resultEnemyList" class="resultList"></ul>
         </div>
       </div>
-      <div class="footerBtns">
-        <button id="resultReplay" class="secondary">もう一度プレイ</button>
+      <div class="footerBtns resultPrimary">
+        <button id="resultRetry" class="secondary cta">もう一度挑戦</button>
+        <button id="resultMenu" class="ghost cta">メニューに戻る</button>
+      </div>
+      <div class="footerBtns resultLinks">
+        <button id="resultLeaderboard" class="ghost">ランキングを見る</button>
+        <button id="resultComment" class="ghost">コメントする</button>
       </div>
     </div>
   </div>
