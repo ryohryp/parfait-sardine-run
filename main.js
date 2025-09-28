@@ -1,320 +1,20 @@
-﻿/* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
+﻿import './js/utils.js';
+import './js/howto.js';
+import './js/leaderboard.js';
+import './js/comments.js';
 
-// 1) プリロード対象（必要に応じて追加・パス調整）
-const PSR_ASSETS = [
-  './assets/sprite/player.png',
-  './assets/sprite/enemies.png',
-  './assets/bg/layer1.png',
-  './assets/bg/layer2.png',
-  './assets/sfx/jump.ogg',
-  './assets/sfx/hit.ogg',
-  './assets/bgm/stage.ogg'
-];
+import { showStageTitle, cameraShake, floatText, speedSE } from './js/presentation.js';
+import { G, BASE_JUMP, GROUND, GAME_TIME, INVINCIBILITY_DURATION, SHOOT_COOLDOWN as shootCD, POWER_DURATION as powerMillis, ENEMY_BONUS as enemyBonus, ITEM_LEVEL as itemLv } from './js/game-constants.js';
+import { ITEM_CATALOG } from './js/game-data/items.js';
+import { characters, rarOrder, rarClass, SPECIAL_LABELS, ULT_DETAILS } from './js/game-data/characters.js';
+import { stages, stageForLevel, stageBosses } from './js/game-data/stages.js';
 
-const PSR_VER = 'psr-preload-v20240929-01';
-const LOAD_TIMEOUT_MS = 10000;
-const IMG_PATTERN = /\.(png|jpe?g|webp|gif|svg)$/i;
-const AUDIO_PATTERN = /\.(ogg|mp3|wav|m4a|aac)$/i;
+// 先頭付近に置く（PSRUN_STARTより前）
+function now(){ return performance.now(); }
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+function rand(a, b){ return a + Math.random() * (b - a); }
+function AABB(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 
-function addBust(src){
-  if (!src) return src;
-  const hasQuery = src.includes('?');
-  const param = `v=${PSR_VER}`;
-  return src + (hasQuery ? '&' : '?') + param;
-}
-
-function withTimeout(promise, ms = LOAD_TIMEOUT_MS){
-  return new Promise(resolve => {
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (!settled){
-        settled = true;
-        resolve({ ok:false, reason:'timeout' });
-      }
-    }, ms);
-
-    promise.then(value => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve({ ok:true, value });
-    }).catch(reason => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve({ ok:false, reason });
-    });
-  });
-}
-
-function loadImage(src){
-  const url = addBust(src);
-  return withTimeout(new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(src);
-    img.onerror = () => reject(new Error(`img error: ${src}`));
-    img.src = url;
-  }));
-}
-
-function loadAudio(src){
-  const url = addBust(src);
-  return withTimeout(new Promise((resolve, reject) => {
-    const audio = new Audio();
-    const cleanup = () => {
-      audio.oncanplaythrough = null;
-      audio.onerror = null;
-    };
-    audio.preload = 'auto';
-    audio.oncanplaythrough = () => { cleanup(); resolve(src); };
-    audio.onerror = () => { cleanup(); reject(new Error(`audio error: ${src}`)); };
-    try {
-      audio.src = url;
-      audio.load();
-    } catch (err){
-      cleanup();
-      reject(err);
-    }
-  }));
-}
-
-function updateProgress(loaded, total){
-  const safeTotal = Math.max(1, Number(total) || 0);
-  const pct = Math.floor((Math.max(0, loaded) / safeTotal) * 100);
-  if (_elFill) _elFill.style.width = `${pct}%`;
-  const labelEl = _elPct || document.getElementById('splashLabel');
-  if (labelEl) labelEl.textContent = `${pct}%`;
-}
-// 2) DOM参照
-const _elSplash = document.getElementById("splash");
-const _elFill   = document.querySelector(".splash-fill");
-const _elPct    = document.querySelector(".splash-percent");
-
-window.PSRUN_BOOT_READY = false;
-
-// 3) シンプルプリロード
-async function psrPreload(list){
-  const assets = Array.isArray(list) ? list.filter(Boolean) : [];
-  if (!assets.length){
-    updateProgress(1, 1);
-    return;
-  }
-
-  let loaded = 0;
-  const total = assets.length;
-  updateProgress(0, total);
-
-  await Promise.all(assets.map(async (asset)=>{
-    const src = String(asset);
-    const loader = IMG_PATTERN.test(src) ? loadImage : (AUDIO_PATTERN.test(src) ? loadAudio : loadImage);
-    const result = await loader(src);
-    if (!result.ok){
-      console.warn('[PSR] preload miss:', src, result.reason);
-    }
-    loaded++;
-    updateProgress(loaded, total);
-    return result;
-  }));
-}
-
-// 4) スプラッシュ終了 → ゲーム開始
-async function psrBoot(){
-  try {
-    await psrPreload(PSR_ASSETS);
-  } finally {
-    setTimeout(()=>{
-      if (_elSplash) _elSplash.style.animation = "psr_fadeOut 300ms ease forwards";
-      setTimeout(()=> _elSplash?.remove(), 320);
-      // ここであなたの開始処理を呼ぶ（ボタン操作で開始するため、ここでは自動起動しない）
-      window.PSRUN_BOOT_READY = true;
-    }, 200);
-  }
-}
-
-// 5) 画面遷移 & タイトル
-function screenFade(show=true){ document.getElementById('fade')?.classList.toggle('show', show); }
-function showStageTitle(text){
-  const el = document.getElementById('stageTitle'); if(!el) return;
-  el.textContent = text; el.classList.add('show'); setTimeout(()=> el.classList.remove('show'), 1600);
-}
-async function gotoStage(name, loader){
-  screenFade(true);
-  await loader?.();           // ここで敵/背景の差し替え等
-  showStageTitle(name);
-  setTimeout(()=> screenFade(false), 350);
-}
-
-// 6) VFXユーティリティ
-function cameraShake(mag=8, dur=140){
-  const root = document.documentElement;
-  const start = performance.now();
-  function tick(t){
-    const p = Math.min(1,(t-start)/dur);
-    const amp = (1-p) * mag;
-    root.style.transform = `translate(${(Math.random()*2-1)*amp}px, ${(Math.random()*2-1)*amp}px)`;
-    if(p<1) requestAnimationFrame(tick); else root.style.transform = "";
-  }
-  requestAnimationFrame(tick);
-}
-function spawnHitSpark(x,y){
-  const el = document.createElement('div');
-  el.className = 'vfx-spark';
-  el.style.left = x+'px'; el.style.top = y+'px';
-  document.body.appendChild(el);
-  el.addEventListener('animationend',()=> el.remove());
-}
-function floatText(text,x,y,color="#ffec8b"){
-  const el = document.createElement('div');
-  el.className = 'float-txt';
-  el.textContent = text; el.style.left=x+'px'; el.style.top=y+'px'; el.style.color=color;
-  document.body.appendChild(el);
-  el.addEventListener('animationend',()=> el.remove());
-}
-function boostFx(on){ document.getElementById('speedlines')?.classList.toggle('show', on); }
-
-// ---- HitStop (SlowMo) + Zoom ----
-let _savedRaf = window.requestAnimationFrame;
-let _slowmoTimer = null;
-
-function hitStop(ms=120, zoom=true){
-  const wrap = document.getElementById('sceneWrap');
-  const vig  = document.getElementById('vignette');
-  if(zoom){
-    wrap?.classList.add('zoomed');
-    vig?.classList.add('show');
-  }
-
-  if(_slowmoTimer) clearTimeout(_slowmoTimer);
-  let last = 0;
-  window.requestAnimationFrame = (cb)=> _savedRaf((t)=>{
-    if(t - last < 50) return window.requestAnimationFrame(cb);
-    last = t; cb(t);
-  });
-
-  _slowmoTimer = setTimeout(()=>{
-    window.requestAnimationFrame = _savedRaf;
-    wrap?.classList.remove('zoomed');
-    vig?.classList.remove('show');
-  }, ms);
-}
-
-// ---- Combo / Fever ----
-let _comboCount = 0;
-let _comboTimer = null;
-const COMBO_WINDOW = 1400;
-const FEVER_THRESHOLD = 5;
-const elCombo = document.getElementById('combo');
-const elFever = document.getElementById('fever');
-
-function addCombo(){
-  _comboCount++;
-  showCombo(_comboCount);
-  if(_comboCount >= FEVER_THRESHOLD){
-    boostFx(true);
-    elFever?.classList.add('on');
-  }
-  if(_comboTimer) clearTimeout(_comboTimer);
-  _comboTimer = setTimeout(resetCombo, COMBO_WINDOW);
-}
-function resetCombo(){
-  _comboCount = 0;
-  elCombo?.classList.remove('show');
-  boostFx(false);
-  elFever?.classList.remove('on');
-}
-function showCombo(n){
-  if(!elCombo) return;
-  elCombo.textContent = n + " COMBO!";
-  elCombo.classList.add('show');
-  elCombo.animate([
-    {transform:'translate(-50%,0) scale(0.9)'},
-    {transform:'translate(-50%, -2px) scale(1.05)'}
-  ],{duration:120, easing:'ease-out'});
-}
-
-// ---- Pick-up pop ----
-function pickPop(x,y){
-  const el = document.createElement('div');
-  el.className = 'pick-pop';
-  el.style.left = x+'px';
-  el.style.top = y+'px';
-  document.body.appendChild(el);
-  el.addEventListener('animationend',()=> el.remove());
-}
-
-// ---- Boss intro ----
-function bossCutIn(text="BOSS APPROACHING..."){
-  const band = document.getElementById('bossBand');
-  const intro = document.getElementById('bossIntro');
-  if(!band || !intro) return;
-  intro.textContent = text;
-  band.style.display = 'block';
-  intro.classList.add('show');
-  screenFade(true);
-  hitStop(220, true);
-  cameraShake(6,200);
-  setTimeout(()=>{
-    intro.classList.remove('show');
-    band.style.display='none';
-    screenFade(false);
-  }, 1100);
-}
-
-// ---- Result parfait ----
-async function showResult(score=0){
-  const wrap = document.getElementById('result');
-  const L = document.getElementById('pfLayer');
-  const C = document.getElementById('pfCream');
-  const F = document.getElementById('pfFish');
-  const S = document.getElementById('resultScore');
-  if(!wrap||!L||!C||!F||!S) return;
-
-  wrap.classList.add('show');
-  hitStop(180,true);
-  await L.animate([{height:'0px'},{height:'60px'}],{duration:220, easing:'ease-out', fill:'forwards'}).finished;
-  pickPop(innerWidth/2, innerHeight/2+30);
-  await C.animate([{height:'0px'},{height:'32px'}],{duration:180, easing:'ease-out', fill:'forwards'}).finished;
-  spawnHitSpark(innerWidth/2, innerHeight/2-20);
-  await F.animate([
-    {opacity:0, transform:'translate(-50%, -6px) rotate(10deg)'},
-    {opacity:1, transform:'translate(-50%,0) rotate(20deg)'}
-  ],{duration:180, easing:'ease-out', fill:'forwards'}).finished;
-  cameraShake(6,160);
-  floatText('パフェ完成！', innerWidth/2-40, innerHeight/2-80);
-
-  const target = score|0;
-  let cur = 0;
-  const step = Math.max(1, Math.round(target/36));
-  function tick(){
-    cur = Math.min(target, cur+step);
-    S.textContent = 'SCORE: ' + cur.toLocaleString();
-    if(cur<target) requestAnimationFrame(tick);
-  }
-  tick();
-}
-
-// ---- Scene tone / speed SE ----
-function sceneTone(on){
-  const w = document.getElementById('sceneWrap');
-  if(on) w?.style.setProperty('filter','saturate(1.12) contrast(1.06)');
-  else w?.style.removeProperty('filter');
-}
-
-const _speedSE = typeof Audio !== 'undefined' ? new Audio('./assets/sfx/whoosh.ogg') : null;
-if(_speedSE) _speedSE.volume = .35;
-function speedSE(){
-  try{
-    if(_speedSE){
-      _speedSE.currentTime = 0;
-      _speedSE.play();
-    }
-  }catch{}
-}
-
-// 7) 起動（DOMContentLoaded後でOK）
-document.addEventListener('DOMContentLoaded', psrBoot);
-
-/* ===== /PSR Presentation Layer ===== */
 (()=>{
 // ====== 開始/終了 ======
 window.PSRUN_START = function PSRUN_START(){
@@ -514,10 +214,6 @@ function populateCodex(){
 
 
 // 物理 & ゲーム基本
-const G = 0.62, BASE_JUMP = -12.2, GROUND = 72;
-const GAME_TIME = 60000;
-const INVINCIBILITY_DURATION = 3000;
-
 let gameOn=false, t0=0;
 let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
 let score=0, level=1, lives=3, invUntil=0, hurtUntil=0;
@@ -525,7 +221,8 @@ let ult=0, ultReady=false, ultActiveUntil=0;
 let coins=0; // ガチャ用
 let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
-const shootCD=250, powerMillis=INVINCIBILITY_DURATION, enemyBonus=3, itemLv=15;
+let runStats; // ★ 追加：ラン集計の入れ物（resetRunStatsで初期化）
+
 const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
 function resetPlayerAnimation(){
@@ -567,200 +264,17 @@ function updatePlayerAnimation(delta){
 let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
 
 // ステージ
-const stages = [
-  { key:'meadow', name:'草原',  bg1:'#9ed6ee', bg2:'#fff7e6', ground:'#7fb10a', enemyMul:1.00 },
-  { key:'dunes',  name:'砂漠',  bg1:'#ffd28a', bg2:'#ffe9c7', ground:'#d2a659', enemyMul:1.10 },
-  { key:'sky',    name:'雪原',  bg1:'#c8e7ff', bg2:'#f6fbff', ground:'#b9d3e5', enemyMul:1.22 },
-  { key:'abyss',  name:'宇宙',  bg1:'#0b1833', bg2:'#1b2850', ground:'#0b1833', enemyMul:1.38 },
-];
-function stageForLevel(lv){
-  if (lv>=10) return stages[3];
-  if (lv>=7)  return stages[2];
-  if (lv>=4)  return stages[1];
-  return stages[0];
-}
-
-const stageBosses = {
-  meadow: {
-    key:'boss-meadow',
-    displayName:'Meadow Monarch',
-    icon:'🦌',
-    bodyColor:'#4ade80',
-    width:140,
-    height:110,
-    hp:14,
-    speed:2.4,
-    targetOffset:260,
-    floatRange:26,
-    floatSpeed:0.024,
-    attackInterval:2200,
-    projectileSpeed:3.0,
-    projectileGravity:0.08,
-    projectileSpread:0.18,
-    volley:3,
-    rewardScore:150,
-    rewardCoins:9,
-    spawnDelay:6500,
-    groundOffset:28
-  },
-  dunes: {
-    key:'boss-dunes',
-    displayName:'Dune Typhoon',
-    icon:'🦂',
-    bodyColor:'#f97316',
-    width:150,
-    height:118,
-    hp:18,
-    speed:2.6,
-    targetOffset:220,
-    floatRange:32,
-    floatSpeed:0.027,
-    attackInterval:2000,
-    projectileSpeed:3.4,
-    projectileGravity:0.10,
-    projectileSpread:0.22,
-    volley:4,
-    rewardScore:180,
-    rewardCoins:12,
-    spawnDelay:7000,
-    groundOffset:32
-  },
-  sky: {
-    key:'boss-sky',
-    displayName:'Stratos Ranger',
-    icon:'🦅',
-    bodyColor:'#60a5fa',
-    width:160,
-    height:120,
-    hp:24,
-    speed:2.8,
-    targetOffset:200,
-    floatRange:36,
-    floatSpeed:0.031,
-    attackInterval:1800,
-    projectileSpeed:3.8,
-    projectileGravity:0.11,
-    projectileSpread:0.26,
-    volley:4,
-    rewardScore:220,
-    rewardCoins:14,
-    spawnDelay:7600,
-    groundOffset:36
-  },
-  abyss: {
-    key:'boss-abyss',
-    displayName:'Abyss Sovereign',
-    icon:'🐙',
-    bodyColor:'#4338ca',
-    width:176,
-    height:128,
-    hp:32,
-    speed:3.0,
-    targetOffset:180,
-    floatRange:42,
-    floatSpeed:0.034,
-    attackInterval:1600,
-    projectileSpeed:4.2,
-    projectileGravity:0.13,
-    projectileSpread:0.30,
-    volley:5,
-    rewardScore:280,
-    rewardCoins:18,
-    spawnDelay:8200,
-    groundOffset:40
-  }
-};
-
 let bossState = null;
 let bossProjectiles = [];
 let defeatedBossStages = new Set();
 let bossNextSpawnAt = 0;
 let currentStageKey = stages[0].key;
 
-const ITEM_CATALOG = [
-  {
-    key:'parfait',
-    icon:'🍨',
-    name:'パフェデラックス',
-    description:'甘さたっぷりの必須スイーツ。食べるほどスコアとコインが増えていく。',
-    base:2,
-    score:'+2pt',
-    effect:'スコア+2／コイン+1／必殺ゲージ+10%'
-  },
-  {
-    key:'fish',
-    icon:'🐟',
-    name:'イワシキャッチ',
-    description:'キレのある塩味で集中力アップ。連続で拾ってコンボを狙おう。',
-    base:1,
-    score:'+1pt',
-    effect:'スコア+1／コイン+1／必殺ゲージ+6%'
-  },
-  {
-    key:'star',
-    icon:'⭐',
-    name:'スターブースト',
-    description:'黄金に輝く守護星。掴んだ瞬間、短時間の無敵とゲージ加速が発動する。',
-    base:0,
-    score:'スコアなし',
-    effect:'無敵3秒／必殺ゲージ+12%'
-  }
-];
-const itemCatalogMap = ITEM_CATALOG.reduce((map,item)=>{ map[item.key]=item; return map; }, {});
-let runStats = createRunStats();
-
-// ====== キャラ定義 ======
-/*
-  各値は倍率/ミリ秒。
-  special: ['magnet','oneGuard','doubleJump','pierce']
-  ult: 'rainbow' | 'storm' | 'ncha' | 'yadon' | null
-*/
-const characters = {
-  // Common
-  parfen:   { key:'parfen',   name:'🍓パフェン',    emoji:'🍓', rar:'C', move:1.00, jump:1.00, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:[],             ult:null },
-  iwassy:   { key:'iwassy',   name:'🐟イワッシー',  emoji:'🐟', rar:'C', move:1.00, jump:1.10, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:['airAttack'], ult:null },
-
-  // Rare
-  choco:    { key:'choco',    name:'🍫チョコパフェン', emoji:'🍫', rar:'R', move:1.00, jump:1.00, bullet:1.15, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:[],           ult:null },
-  missile:  { key:'missile',  name:'🚀ミサイル君',   emoji:'🚀', rar:'R', move:1.10, jump:1.00, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.05, special:[],           ult:null },
-
-  // Epic
-  ice:      { key:'ice',      name:'❄️アイス皇帝',  emoji:'❄️', rar:'E', move:1.00, jump:1.20, bullet:1.00, inv:INVINCIBILITY_DURATION, ultRate:1.00, special:['slowEnemy'], ult:null },
-
-  // Legendary
-  king:     { key:'king',     name:'👑キングパフェ', emoji:'👑', rar:'L', move:1.15, jump:1.10, bullet:1.10, inv:INVINCIBILITY_DURATION, ultRate:1.20, special:[], ult:'rainbow' },
-  ncha:     { key:'ncha',     name:'🤖んちゃマシン', emoji:'🤖', rar:'L', move:1.20, jump:1.05, bullet:1.25, inv:INVINCIBILITY_DURATION, ultRate:1.25, special:['pierce'], ult:'ncha' },
-
-  // Mythic
-  aurora:   { key:'aurora',   name:'🌈オーロラパフェ', emoji:'🌈', rar:'M', move:1.18, jump:1.12, bullet:1.15, inv:INVINCIBILITY_DURATION, ultRate:1.35, special:['magnet','oneGuard'], ult:'rainbow' },
-  iwashiK:  { key:'iwashiK',  name:'🌀トルネード鰯王', emoji:'🌀', rar:'M', move:1.15, jump:1.20, bullet:1.10, inv:INVINCIBILITY_DURATION, ultRate:1.30, special:['doubleJump','pierce'], ult:'storm' },
-  yadon:    { key:'yadon',    name:'🦛まったりヤドン', emoji:'🦛', rar:'M', move:0.98, jump:1.08, bullet:1.05, inv:INVINCIBILITY_DURATION, ultRate:1.45, special:['magnet'], ult:'yadon' },
-};
-
 window.PSR = window.PSR || {};
 window.PSR.GameData = window.PSR.GameData || {};
 window.PSR.GameData.characters = characters;
 
 // レア→カラー/順序
-const rarOrder = ['C','R','E','L','M'];
-function rarClass(r){ return r==='M'?'rar-m':r==='L'?'rar-l':r==='E'?'rar-e':r==='R'?'rar-r':'rar-c'; }
-
-const SPECIAL_LABELS = {
-  magnet: 'アイテム吸引',
-  oneGuard: '自動ガード',
-  doubleJump: '二段ジャンプ',
-  pierce: '貫通ショット',
-  airAttack: '空中攻撃'
-};
-
-const ULT_DETAILS = {
-  rainbow: { name: 'レインボーレーザー', description: '3ラインのレインボービームで前方広範囲を一掃。' },
-  storm:   { name: 'トルネードストーム', description: '渦巻く竜巻で一定時間、周囲の敵を巻き込み続ける。' },
-  ncha:    { name: 'んちゃフルバースト', description: '正面に極太ビームを放ち、貫通ダメージを与える。' },
-  yadon:   { name: 'ヤドン砲', description: '巨大な仲間を召喚し、複数ヒットする弾をばらまく。' }
-};
-
-// 所持データ（localStorage）
 const STORE_KEY = 'psrun_char_collection_v1';
 const BEST_SCORE_KEY = 'psrun_best_score_v1';
 let collection = loadCollection();
@@ -799,7 +313,7 @@ function doGacha(n){
   if (coins<cost) return;
   coins -= cost;
 
-  // 保障適用のため、結果配列を先にレアだけ決める
+  
   let rarities = [];
   for(let i=0;i<n;i++){
     let r = rollRarity();
@@ -1028,7 +542,8 @@ function updatePreGameDetails(){
     preGameSummary.textContent = `${ch.emoji} ${ch.name}`;
   }
   if (preGameUlt){
-    preGameUlt.textContent = `${ult.title} ? ${ult.text}`;
+    const ultInfo = describeUlt(ch.ult);
+    preGameUlt.textContent = `${ultInfo.title} - ${ultInfo.text}`; // 「 ? 」→「 - 」
   }
   if (preGameSpecial){
     if (specials.length){
@@ -1072,7 +587,12 @@ function handlePreGameStart(){
 }
 
 function requestStart(mode='start'){
-  if (!window.PSRUN_BOOT_READY) return;
+  // ブート未完了でも開始を許可。ただしログは出す。
+  if (!window.PSRUN_BOOT_READY) {
+    console.warn('[PSR] Boot not marked ready yet — proceeding to preGame anyway.');
+    // presentation.js 側が既に読み込まれている場合に備え、念のため強制ブートイベントも投げる
+    try { window.dispatchEvent(new Event('psr:forceBoot')); } catch {}
+  }
   if (gameOn) return;
   openPreGame(mode);
 }
@@ -1081,10 +601,10 @@ function refreshHUD(){
   const remain = gameOn ? (GAME_TIME - (now()-t0)) : 0;
   setHUD(remain);
 }
-const now = ()=>performance.now();
-const rand = (a,b)=> a + Math.random()*(b-a);
-const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
-const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
+//const now = ()=>performance.now();
+//const rand = (a,b)=> a + Math.random()*(b-a);
+//const AABB = (a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+//const clamp = (v,min,max)=> Math.max(min, Math.min(max,v));
 
 function createRunStats(){
   const itemStats = {};
@@ -1232,7 +752,7 @@ function populateResultOverlay(result){
     const summaryRows = [
       { label:'SCORE', value:(Number(result?.score) || 0).toLocaleString('ja-JP') },
       { label:'LEVEL', value:`${Number(result?.level) || 1}` },
-      { label:'COINS', value:`??${(Number(result?.coins) || 0).toLocaleString('ja-JP')}` },
+      { label:'COINS', value:`🪙${(Number(result?.coins) || 0).toLocaleString('ja-JP')}` },
       { label:'CHAR', value:`${ch.emoji} ${ch.name}` },
       { label:'BEST', value:(Number.isFinite(bestScore) ? bestScore : 0).toLocaleString('ja-JP') }
     ];
@@ -1471,7 +991,8 @@ function spawnPower(){
     x: cv.width+26,
     y: cv.height - GROUND - 44 - rand(0, 120),
     w: 26, h: 26,
-    v: 3.0 + (level-1)*.25
+    v: 3.0 + (level-1)*.25,
+    char: '⭐'          // ← 追加
   });
 }
 
@@ -1818,7 +1339,6 @@ function update(t){
   // アイテム（Mythic magnet）
   const hasMagnet = characters[currentCharKey].special?.includes('magnet');
   items = items.filter(it=>{
-    // 吸引
     if (hasMagnet){
       const dx = (player.x - it.x), dy = (player.y - it.y);
       const dist = Math.hypot(dx,dy);
@@ -1831,9 +1351,10 @@ function update(t){
       const mul = now()<scoreMulUntil ? 2 : 1;
       const gained = it.score*mul;
       score += gained; coins += 1 * mul;
-      const itemKey = it.char==='??' ? 'parfait' : 'fish';
+      // items フィルタ内
+      const itemKey = it.char === '🍨' ? 'parfait' : 'fish';  // '??' ではなく実際の絵文字で判定
       registerItemGain(itemKey, gained);
-      ult = clamp(ult + (it.char==='??'?10:6) * currentStats.ultRate, 0, 100);
+      ult = clamp(ult + (it.char === '🍨' ? 10 : 6) * currentStats.ultRate, 0, 100);
       return false;
     }
     return it.x+it.w>0;
@@ -2114,8 +1635,8 @@ function draw(remain, st){
     });
   }
 
-  // ?
-  powers.forEach(pw=>{ c.font='26px serif'; c.fillText('?', pw.x, pw.y); });
+  // スターピース(パワー)
+  powers.forEach(pw=>{ c.font='28px serif'; c.fillText(pw.char || '⭐', pw.x, pw.y); });
 
   if (bossState){
     const bodyColor = bossState.config.bodyColor || '#1e3a8a';
@@ -2207,8 +1728,8 @@ btnRestart.addEventListener('click', ()=> requestStart('retry'));
 function shootIfAuto(t){ /* 予備フック */ }
 
 // ====== ガチャボタン ======
-btnGacha.onclick = ()=> doGacha(1);
-btnGacha10.onclick = ()=> doGacha(10);
+if (btnGacha)   btnGacha.onclick   = ()=> doGacha(1);
+if (btnGacha10) btnGacha10.onclick = ()=> doGacha(10);
 
 // ====== ストレージ ======
 function loadCollection(){

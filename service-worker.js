@@ -1,4 +1,4 @@
-const CACHE_VERSION = "psr-v1.1.0";
+const CACHE_VERSION = "psr-v1.1.1";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const APP_SHELL = [
   "/parfait-sardine-run/",
