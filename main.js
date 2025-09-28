@@ -799,7 +799,7 @@ function doGacha(n){
   if (coins<cost) return;
   coins -= cost;
 
-  // 保障適用のため、結果配列を先にレアだけ決める
+  // 菫晞囿驕ｩ逕ｨ縺ｮ縺溘ａ縲∫ｵ先棡驟榊・繧貞・縺ｫ繝ｬ繧｢縺縺第ｱｺ繧√ｋ
   let rarities = [];
   for(let i=0;i<n;i++){
     let r = rollRarity();
@@ -1818,7 +1818,7 @@ function update(t){
   // アイテム（Mythic magnet）
   const hasMagnet = characters[currentCharKey].special?.includes('magnet');
   items = items.filter(it=>{
-    // 吸引
+    // 蜷ｸ蠑・
     if (hasMagnet){
       const dx = (player.x - it.x), dy = (player.y - it.y);
       const dist = Math.hypot(dx,dy);
