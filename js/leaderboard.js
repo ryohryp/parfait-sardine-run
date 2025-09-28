@@ -54,7 +54,8 @@
         const num = Number(trimmed);
         dt = new Date(trimmed.length <= 10 ? num*1000 : num);
       } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)){
-        dt = new Date(`${trimmed.replace(' ', 'T')}Z`);
+        const [datePart, timePart] = trimmed.split(' ');
+        dt = new Date(`${datePart}T${timePart}+09:00`);
       } else {
         dt = new Date(trimmed);
       }
@@ -63,13 +64,114 @@
       try {
         return dt.toLocaleString('ja-JP', {
           year:'numeric', month:'2-digit', day:'2-digit',
-          hour:'2-digit', minute:'2-digit'
+          hour:'2-digit', minute:'2-digit', second:'2-digit',
+          timeZone: 'Asia/Tokyo'
         });
       } catch {
-        return dt.toISOString().slice(0,16).replace('T',' ');
+        return dt.toISOString().slice(0,19).replace('T',' ');
       }
     }
     return String(raw);
+  }
+
+  function buildUrlWithParams(baseUrl, params){
+    if (!params || !Object.keys(params).length) return baseUrl;
+    try {
+      const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : undefined;
+      const url = new URL(baseUrl, origin);
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        url.searchParams.set(key, value);
+      });
+      return url.toString();
+    } catch {
+      const query = Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+        .join('&');
+      if (!query) return baseUrl;
+      return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${query}`;
+    }
+  }
+
+  async function fetchLeaderboardPage(url){
+    const res = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    try {
+      return await res.json();
+    } catch (err){
+      throw new Error('Invalid leaderboard response');
+    }
+  }
+
+  async function fetchLeaderboardEntries(maxEntries){
+    const base = leaderboardUrl();
+    const collected = [];
+    const perPage = Math.min(100, Math.max(1, maxEntries));
+    let page = 1;
+    let paginationSucceeded = false;
+    let lastError = null;
+    const seenPages = new Set();
+    const seenEntries = new Set();
+
+    while (collected.length < maxEntries && page <= 5){
+      const url = buildUrlWithParams(base, { page: String(page), per_page: String(perPage) });
+      try {
+        const raw = await fetchLeaderboardPage(url);
+        const entries = normalizeLeaderboardEntries(raw);
+        if (!entries.length){
+          paginationSucceeded = page > 1;
+          break;
+        }
+        const hash = JSON.stringify(entries);
+        if (seenPages.has(hash)){
+          break;
+        }
+        seenPages.add(hash);
+        const uniqueEntries = [];
+        entries.forEach(entry => {
+          const key = JSON.stringify(entry);
+          if (seenEntries.has(key)) return;
+          seenEntries.add(key);
+          uniqueEntries.push(entry);
+        });
+        collected.push(...uniqueEntries);
+        paginationSucceeded = true;
+      } catch (err){
+        lastError = err;
+        break;
+      }
+      page += 1;
+    }
+
+    if (collected.length >= maxEntries){
+      return collected.slice(0, maxEntries);
+    }
+
+    if (paginationSucceeded){
+      return collected.slice(0, maxEntries);
+    }
+
+    const attempts = [
+      { limit: String(maxEntries) },
+      { per_page: String(maxEntries) },
+      {}
+    ];
+
+    for (const params of attempts){
+      try {
+        const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
+        const entries = normalizeLeaderboardEntries(raw);
+        if (entries.length){
+          return entries.slice(0, maxEntries);
+        }
+      } catch (err){
+        lastError = err;
+      }
+    }
+
+    if (lastError) throw lastError;
+    return [];
   }
 
   function normalizeLeaderboardEntries(raw){
@@ -103,10 +205,7 @@
     }
     list.innerHTML = '';
     try {
-      const res = await fetch(leaderboardUrl(), { method:'GET', headers:{ 'Accept':'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const raw = await res.json();
-      const entries = normalizeLeaderboardEntries(raw);
+      const entries = await fetchLeaderboardEntries(100);
       if (!entries.length){
         status.textContent = 'No results yet';
         status.style.display = 'block';
@@ -115,7 +214,7 @@
       status.textContent = '';
       status.style.display = 'none';
 
-      const limit = Math.min(50, entries.length);
+      const limit = Math.min(100, entries.length);
       const storedName = Utils.sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
       const targetName = storedName || '';
       let selfRank = -1;
