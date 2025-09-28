@@ -63,7 +63,8 @@
       try {
         return dt.toLocaleString('ja-JP', {
           year:'numeric', month:'2-digit', day:'2-digit',
-          hour:'2-digit', minute:'2-digit'
+          hour:'2-digit', minute:'2-digit',
+          timeZone: 'Asia/Tokyo'
         });
       } catch {
         return dt.toISOString().slice(0,16).replace('T',' ');
@@ -115,7 +116,7 @@
       status.textContent = '';
       status.style.display = 'none';
 
-      const limit = Math.min(50, entries.length);
+      const limit = Math.min(100, entries.length);
       const storedName = Utils.sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
       const targetName = storedName || '';
       let selfRank = -1;
