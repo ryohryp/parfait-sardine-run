@@ -113,6 +113,7 @@
     border-radius:12px;
     box-shadow:0 8px 20px rgba(15,23,42,.3);
     pointer-events:none;
+
   }
 
   #touchControls{
@@ -160,6 +161,42 @@
   }
   #touchControls .touchBtn:disabled{opacity:.45;transform:scale(.96);box-shadow:none}
   #touchControls .touchUlt.isReady{box-shadow:0 16px 30px rgba(236,72,153,.45);transform:scale(1.04)}
+
+  @media (max-width: 768px){
+    #wrap{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:12px 12px 20px;position:relative;}
+    #hud{
+      position:static;
+      flex-direction:column;
+      align-items:stretch;
+      justify-content:flex-start;
+      gap:12px;
+      padding:0 8px;
+    }
+    .hudSection{
+      display:flex;
+      flex-wrap:wrap;
+      flex-direction:row;
+      gap:8px;
+    }
+    .hudLeft,.hudRight{max-width:none;align-items:flex-start}
+    .hudRight .hudBlock{align-items:flex-start;text-align:left}
+    .hudBlock{flex:1 1 calc(50% - 8px);min-width:140px}
+    .hudCenter{order:-1;align-items:center;text-align:center}
+    .hudCenter .hudScore{width:100%;max-width:320px;margin:0 auto}
+    .hudEffects{justify-content:center}
+    #charInfo{
+      position:static;
+      align-self:flex-end;
+      margin:0 8px;
+    }
+  }
+
+  @media (max-width: 480px){
+    .hudSection{flex-direction:column;gap:6px}
+    .hudBlock{flex:1 1 100%;min-width:auto}
+    .hudCenter .hudScore{max-width:none}
+    #wrap{gap:10px;padding:12px 10px 20px;}
+  }
 
   /* ガチャ & コレクション オーバーレイ */
   .overlay{
