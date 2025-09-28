@@ -51,8 +51,8 @@
   .hudHearts{font-size:1.15em;line-height:1}
   .hudSub,.hudGauge{font-size:.78em;color:#475569;font-weight:600}
   .hudScoreValue{font-size:1.32em;font-weight:700;letter-spacing:.04em;line-height:1}
-  .hudEffects{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(4px,1.6vw,12px);width:100%;min-height:0;padding-top:2px}
-  .hudEffects.isHidden{display:none}
+  .hudEffects{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:clamp(4px,1.6vw,12px);width:100%;min-height:clamp(28px,6vw,44px);padding-top:2px;pointer-events:none}
+  .hudEffects.isHidden{opacity:0;visibility:hidden}
   .hudEffect{
     display:inline-flex;
     align-items:center;
@@ -434,3 +434,58 @@
     #touchControls .touchUlt{bottom:clamp(34vh,40vh,268px)}
     #touchControls #jumpBtn{bottom:clamp(8vh,12vh,112px)}
   }
+
+  /* === Splash === */
+.splash{
+  position:fixed; inset:0; background:#101018; color:#fff; display:flex;
+  align-items:center; justify-content:center; z-index:9999;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.splash-inner{ text-align:center; animation:psr_fadeIn 600ms ease both; }
+.splash-logo{ width:96px; height:96px; animation:psr_bounce 1.2s ease-in-out infinite; }
+.splash-title{ margin-top:12px; font-weight:700; letter-spacing:.5px; }
+.splash-bar{ width:220px; height:8px; background:#2a2a33; border-radius:999px; margin:14px auto 6px; overflow:hidden; }
+.splash-fill{ display:block; height:100%; background:linear-gradient(90deg,#ff7ad9,#ffd36e); }
+.splash-percent{ font-size:12px; opacity:.8; }
+
+@keyframes psr_bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes psr_fadeIn { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+@keyframes psr_fadeOut { to{ opacity:0; transform:scale(1.03)} }
+
+/* === Screen Fade & Title === */
+.fade{ position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .35s ease; z-index:9000; }
+.fade.show{ opacity:1; }
+
+.stage-title{
+  position:fixed; inset:auto 0 30% 0; text-align:center; color:#fff; font-weight:800;
+  font-size:28px; text-shadow:0 2px 0 #0007; opacity:0; transform:translateY(12px);
+  transition:opacity .4s ease, transform .4s ease; z-index:9100;
+}
+.stage-title.show{ opacity:1; transform:none; }
+
+/* === VFX === */
+.vfx-spark{
+  position:fixed; width:18px; height:18px; left:0; top:0; pointer-events:none; z-index:5000;
+  background: radial-gradient(circle,#fff, #ffd36e 40%, transparent 60%);
+  animation:psr_spark .38s ease-out both;
+}
+@keyframes psr_spark{
+  from{ transform:scale(.6); opacity:.95; filter:blur(0px) }
+  to  { transform:scale(1.8); opacity:0;   filter:blur(1px) }
+}
+
+.float-txt{
+  position:fixed; font-weight:800; text-shadow:0 2px 0 #0008;
+  animation:psr_floatUp .7s ease-out both; pointer-events:none; z-index:5000;
+}
+@keyframes psr_floatUp{ from{ transform:translateY(0); opacity:1 } to{ transform:translateY(-24px); opacity:0 } }
+
+.speedlines{
+  pointer-events:none; position:fixed; inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 18px, #ffffff10 18px 22px);
+  opacity:0; transition:opacity .12s; z-index:4000;
+}
+.speedlines.show{ opacity:1; animation:psr_slideBg .5s linear infinite; }
+@keyframes psr_slideBg{ from{ background-position:0 0 } to{ background-position:200px 0 } }
+
