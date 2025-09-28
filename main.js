@@ -2,13 +2,89 @@
 
 // 1) プリロード対象（必要に応じて追加・パス調整）
 const PSR_ASSETS = [
-  "./assets/sprite/player.png",
-  "./assets/sprite/enemies.png",
-  "./assets/bg/layer1.png","./assets/bg/layer2.png",
-  "./assets/sfx/jump.ogg","./assets/sfx/hit.ogg",
-  "./assets/bgm/stage.ogg"
+  './assets/sprite/player.png',
+  './assets/sprite/enemies.png',
+  './assets/bg/layer1.png',
+  './assets/bg/layer2.png',
+  './assets/sfx/jump.ogg',
+  './assets/sfx/hit.ogg',
+  './assets/bgm/stage.ogg'
 ];
 
+const PSR_VER = 'psr-preload-v20240929-01';
+const LOAD_TIMEOUT_MS = 10000;
+const IMG_PATTERN = /\.(png|jpe?g|webp|gif|svg)$/i;
+const AUDIO_PATTERN = /\.(ogg|mp3|wav|m4a|aac)$/i;
+
+function addBust(src){
+  if (!src) return src;
+  const hasQuery = src.includes('?');
+  const param = `v=${PSR_VER}`;
+  return src + (hasQuery ? '&' : '?') + param;
+}
+
+function withTimeout(promise, ms = LOAD_TIMEOUT_MS){
+  return new Promise(resolve => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled){
+        settled = true;
+        resolve({ ok:false, reason:'timeout' });
+      }
+    }, ms);
+
+    promise.then(value => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ ok:true, value });
+    }).catch(reason => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ ok:false, reason });
+    });
+  });
+}
+
+function loadImage(src){
+  const url = addBust(src);
+  return withTimeout(new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(src);
+    img.onerror = () => reject(new Error(`img error: ${src}`));
+    img.src = url;
+  }));
+}
+
+function loadAudio(src){
+  const url = addBust(src);
+  return withTimeout(new Promise((resolve, reject) => {
+    const audio = new Audio();
+    const cleanup = () => {
+      audio.oncanplaythrough = null;
+      audio.onerror = null;
+    };
+    audio.preload = 'auto';
+    audio.oncanplaythrough = () => { cleanup(); resolve(src); };
+    audio.onerror = () => { cleanup(); reject(new Error(`audio error: ${src}`)); };
+    try {
+      audio.src = url;
+      audio.load();
+    } catch (err){
+      cleanup();
+      reject(err);
+    }
+  }));
+}
+
+function updateProgress(loaded, total){
+  const safeTotal = Math.max(1, Number(total) || 0);
+  const pct = Math.floor((Math.max(0, loaded) / safeTotal) * 100);
+  if (_elFill) _elFill.style.width = `${pct}%`;
+  const labelEl = _elPct || document.getElementById('splashLabel');
+  if (labelEl) labelEl.textContent = `${pct}%`;
+}
 // 2) DOM参照
 const _elSplash = document.getElementById("splash");
 const _elFill   = document.querySelector(".splash-fill");
@@ -18,24 +94,27 @@ window.PSRUN_BOOT_READY = false;
 
 // 3) シンプルプリロード
 async function psrPreload(list){
-  let done = 0;
-  const update = () => {
-    const pct = Math.round((done/list.length)*100);
-    if (_elFill) _elFill.style.width = pct + "%";
-    if (_elPct)  _elPct.textContent  = pct + "%";
-  };
-  update();
-
-  const loadImage = (src)=> new Promise((res,rej)=>{
-    const img = new Image(); img.onload=()=>res(src); img.onerror=rej; img.src = src;
-  });
-  const loadAudio = (src)=> fetch(src).then(r=>r.ok ? r.blob() : Promise.reject(src)).catch(()=>null);
-
-  for(const src of list){
-    if(/\.(png|jpg|jpeg|webp|gif)$/i.test(src)) await loadImage(src);
-    else await loadAudio(src);
-    done++; update();
+  const assets = Array.isArray(list) ? list.filter(Boolean) : [];
+  if (!assets.length){
+    updateProgress(1, 1);
+    return;
   }
+
+  let loaded = 0;
+  const total = assets.length;
+  updateProgress(0, total);
+
+  await Promise.all(assets.map(async (asset)=>{
+    const src = String(asset);
+    const loader = IMG_PATTERN.test(src) ? loadImage : (AUDIO_PATTERN.test(src) ? loadAudio : loadImage);
+    const result = await loader(src);
+    if (!result.ok){
+      console.warn('[PSR] preload miss:', src, result.reason);
+    }
+    loaded++;
+    updateProgress(loaded, total);
+    return result;
+  }));
 }
 
 // 4) スプラッシュ終了 → ゲーム開始
@@ -93,6 +172,145 @@ function floatText(text,x,y,color="#ffec8b"){
 }
 function boostFx(on){ document.getElementById('speedlines')?.classList.toggle('show', on); }
 
+// ---- HitStop (SlowMo) + Zoom ----
+let _savedRaf = window.requestAnimationFrame;
+let _slowmoTimer = null;
+
+function hitStop(ms=120, zoom=true){
+  const wrap = document.getElementById('sceneWrap');
+  const vig  = document.getElementById('vignette');
+  if(zoom){
+    wrap?.classList.add('zoomed');
+    vig?.classList.add('show');
+  }
+
+  if(_slowmoTimer) clearTimeout(_slowmoTimer);
+  let last = 0;
+  window.requestAnimationFrame = (cb)=> _savedRaf((t)=>{
+    if(t - last < 50) return window.requestAnimationFrame(cb);
+    last = t; cb(t);
+  });
+
+  _slowmoTimer = setTimeout(()=>{
+    window.requestAnimationFrame = _savedRaf;
+    wrap?.classList.remove('zoomed');
+    vig?.classList.remove('show');
+  }, ms);
+}
+
+// ---- Combo / Fever ----
+let _comboCount = 0;
+let _comboTimer = null;
+const COMBO_WINDOW = 1400;
+const FEVER_THRESHOLD = 5;
+const elCombo = document.getElementById('combo');
+const elFever = document.getElementById('fever');
+
+function addCombo(){
+  _comboCount++;
+  showCombo(_comboCount);
+  if(_comboCount >= FEVER_THRESHOLD){
+    boostFx(true);
+    elFever?.classList.add('on');
+  }
+  if(_comboTimer) clearTimeout(_comboTimer);
+  _comboTimer = setTimeout(resetCombo, COMBO_WINDOW);
+}
+function resetCombo(){
+  _comboCount = 0;
+  elCombo?.classList.remove('show');
+  boostFx(false);
+  elFever?.classList.remove('on');
+}
+function showCombo(n){
+  if(!elCombo) return;
+  elCombo.textContent = n + " COMBO!";
+  elCombo.classList.add('show');
+  elCombo.animate([
+    {transform:'translate(-50%,0) scale(0.9)'},
+    {transform:'translate(-50%, -2px) scale(1.05)'}
+  ],{duration:120, easing:'ease-out'});
+}
+
+// ---- Pick-up pop ----
+function pickPop(x,y){
+  const el = document.createElement('div');
+  el.className = 'pick-pop';
+  el.style.left = x+'px';
+  el.style.top = y+'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=> el.remove());
+}
+
+// ---- Boss intro ----
+function bossCutIn(text="BOSS APPROACHING..."){
+  const band = document.getElementById('bossBand');
+  const intro = document.getElementById('bossIntro');
+  if(!band || !intro) return;
+  intro.textContent = text;
+  band.style.display = 'block';
+  intro.classList.add('show');
+  screenFade(true);
+  hitStop(220, true);
+  cameraShake(6,200);
+  setTimeout(()=>{
+    intro.classList.remove('show');
+    band.style.display='none';
+    screenFade(false);
+  }, 1100);
+}
+
+// ---- Result parfait ----
+async function showResult(score=0){
+  const wrap = document.getElementById('result');
+  const L = document.getElementById('pfLayer');
+  const C = document.getElementById('pfCream');
+  const F = document.getElementById('pfFish');
+  const S = document.getElementById('resultScore');
+  if(!wrap||!L||!C||!F||!S) return;
+
+  wrap.classList.add('show');
+  hitStop(180,true);
+  await L.animate([{height:'0px'},{height:'60px'}],{duration:220, easing:'ease-out', fill:'forwards'}).finished;
+  pickPop(innerWidth/2, innerHeight/2+30);
+  await C.animate([{height:'0px'},{height:'32px'}],{duration:180, easing:'ease-out', fill:'forwards'}).finished;
+  spawnHitSpark(innerWidth/2, innerHeight/2-20);
+  await F.animate([
+    {opacity:0, transform:'translate(-50%, -6px) rotate(10deg)'},
+    {opacity:1, transform:'translate(-50%,0) rotate(20deg)'}
+  ],{duration:180, easing:'ease-out', fill:'forwards'}).finished;
+  cameraShake(6,160);
+  floatText('パフェ完成！', innerWidth/2-40, innerHeight/2-80);
+
+  const target = score|0;
+  let cur = 0;
+  const step = Math.max(1, Math.round(target/36));
+  function tick(){
+    cur = Math.min(target, cur+step);
+    S.textContent = 'SCORE: ' + cur.toLocaleString();
+    if(cur<target) requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ---- Scene tone / speed SE ----
+function sceneTone(on){
+  const w = document.getElementById('sceneWrap');
+  if(on) w?.style.setProperty('filter','saturate(1.12) contrast(1.06)');
+  else w?.style.removeProperty('filter');
+}
+
+const _speedSE = typeof Audio !== 'undefined' ? new Audio('./assets/sfx/whoosh.ogg') : null;
+if(_speedSE) _speedSE.volume = .35;
+function speedSE(){
+  try{
+    if(_speedSE){
+      _speedSE.currentTime = 0;
+      _speedSE.play();
+    }
+  }catch{}
+}
+
 // 7) 起動（DOMContentLoaded後でOK）
 document.addEventListener('DOMContentLoaded', psrBoot);
 
@@ -104,7 +322,11 @@ window.PSRUN_START = function PSRUN_START(){
   resetRunStats();
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
   coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
-  items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0;
+  items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0; bossProjectiles.length=0;
+  bossState = null;
+  defeatedBossStages = new Set();
+  currentStageKey = stageForLevel(level).key;
+  bossNextSpawnAt = 0;
   player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
   canDouble = characters[currentCharKey].special?.includes('doubleJump');
   guardReadyTime = 0;
@@ -181,6 +403,32 @@ const playerAnimation = {
   frameElapsed: 0,
   currentFrame: PLAYER_WALK_FRAMES[0],
 };
+
+// === モーダル/オーバーレイを .scene-wrap の外（body直下）へ退避 ===
+(function detachOverlaysFromScene(){
+  // .scene-wrap or #sceneWrap のどちらでも拾う
+  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
+  if (!wrap) return;
+
+  // 退避対象のID一覧（存在しないものはスキップ）
+  const IDS = [
+    'preGameOverlay',
+    'resultOverlay',
+    'gachaOverlay',
+    'colOverlay',
+    'codexOverlay',
+    'leaderboardOverlay',
+    'commentsOverlay'
+  ];
+
+  IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && wrap.contains(el)) {
+      document.body.appendChild(el); // ← body直下へ移動（参照は生きたまま）
+    }
+  });
+})();
+
 
 let lastPlayerAnimTick = null;
 
@@ -320,10 +568,10 @@ let items=[], enemies=[], bullets=[], powers=[], ultProjectiles=[];
 
 // ステージ
 const stages = [
-  { name:'草原',  bg1:'#9ed6ee', bg2:'#fff7e6', ground:'#7fb10a', enemyMul:1.00 },
-  { name:'砂漠',  bg1:'#ffd28a', bg2:'#ffe9c7', ground:'#d2a659', enemyMul:1.10 },
-  { name:'雪原',  bg1:'#c8e7ff', bg2:'#f6fbff', ground:'#b9d3e5', enemyMul:1.22 },
-  { name:'宇宙',  bg1:'#0b1833', bg2:'#1b2850', ground:'#0b1833', enemyMul:1.38 },
+  { key:'meadow', name:'草原',  bg1:'#9ed6ee', bg2:'#fff7e6', ground:'#7fb10a', enemyMul:1.00 },
+  { key:'dunes',  name:'砂漠',  bg1:'#ffd28a', bg2:'#ffe9c7', ground:'#d2a659', enemyMul:1.10 },
+  { key:'sky',    name:'雪原',  bg1:'#c8e7ff', bg2:'#f6fbff', ground:'#b9d3e5', enemyMul:1.22 },
+  { key:'abyss',  name:'宇宙',  bg1:'#0b1833', bg2:'#1b2850', ground:'#0b1833', enemyMul:1.38 },
 ];
 function stageForLevel(lv){
   if (lv>=10) return stages[3];
@@ -331,6 +579,103 @@ function stageForLevel(lv){
   if (lv>=4)  return stages[1];
   return stages[0];
 }
+
+const stageBosses = {
+  meadow: {
+    key:'boss-meadow',
+    displayName:'Meadow Monarch',
+    icon:'🦌',
+    bodyColor:'#4ade80',
+    width:140,
+    height:110,
+    hp:14,
+    speed:2.4,
+    targetOffset:260,
+    floatRange:26,
+    floatSpeed:0.024,
+    attackInterval:2200,
+    projectileSpeed:3.0,
+    projectileGravity:0.08,
+    projectileSpread:0.18,
+    volley:3,
+    rewardScore:150,
+    rewardCoins:9,
+    spawnDelay:6500,
+    groundOffset:28
+  },
+  dunes: {
+    key:'boss-dunes',
+    displayName:'Dune Typhoon',
+    icon:'🦂',
+    bodyColor:'#f97316',
+    width:150,
+    height:118,
+    hp:18,
+    speed:2.6,
+    targetOffset:220,
+    floatRange:32,
+    floatSpeed:0.027,
+    attackInterval:2000,
+    projectileSpeed:3.4,
+    projectileGravity:0.10,
+    projectileSpread:0.22,
+    volley:4,
+    rewardScore:180,
+    rewardCoins:12,
+    spawnDelay:7000,
+    groundOffset:32
+  },
+  sky: {
+    key:'boss-sky',
+    displayName:'Stratos Ranger',
+    icon:'🦅',
+    bodyColor:'#60a5fa',
+    width:160,
+    height:120,
+    hp:24,
+    speed:2.8,
+    targetOffset:200,
+    floatRange:36,
+    floatSpeed:0.031,
+    attackInterval:1800,
+    projectileSpeed:3.8,
+    projectileGravity:0.11,
+    projectileSpread:0.26,
+    volley:4,
+    rewardScore:220,
+    rewardCoins:14,
+    spawnDelay:7600,
+    groundOffset:36
+  },
+  abyss: {
+    key:'boss-abyss',
+    displayName:'Abyss Sovereign',
+    icon:'🐙',
+    bodyColor:'#4338ca',
+    width:176,
+    height:128,
+    hp:32,
+    speed:3.0,
+    targetOffset:180,
+    floatRange:42,
+    floatSpeed:0.034,
+    attackInterval:1600,
+    projectileSpeed:4.2,
+    projectileGravity:0.13,
+    projectileSpread:0.30,
+    volley:5,
+    rewardScore:280,
+    rewardCoins:18,
+    spawnDelay:8200,
+    groundOffset:40
+  }
+};
+
+let bossState = null;
+let bossProjectiles = [];
+let defeatedBossStages = new Set();
+let bossNextSpawnAt = 0;
+let currentStageKey = stages[0].key;
 
 const ITEM_CATALOG = [
   {
@@ -602,12 +947,8 @@ function setHUD(remainMs){
     touchControls.classList.toggle('isVisible', gameOn);
     touchControls.setAttribute('aria-hidden', gameOn ? 'false' : 'true');
   }
-  if (btnJump){
-    btnJump.disabled = !gameOn;
-  }
-  if (btnAttack){
-    btnAttack.disabled = !gameOn;
-  }
+  if (btnJump){ btnJump.disabled = !gameOn; }
+  if (btnAttack){ btnAttack.disabled = !gameOn; }
   if (btnUlt){
     const ready = gameOn && ultReady;
     btnUlt.disabled = !ready;
@@ -687,7 +1028,7 @@ function updatePreGameDetails(){
     preGameSummary.textContent = `${ch.emoji} ${ch.name}`;
   }
   if (preGameUlt){
-    preGameUlt.textContent = `${ult.title} – ${ult.text}`;
+    preGameUlt.textContent = `${ult.title} ? ${ult.text}`;
   }
   if (preGameSpecial){
     if (specials.length){
@@ -813,13 +1154,14 @@ function buildEnemyBreakdown(){
     const data = enemyStats.types?.[type] || { count:0, total:0 };
     const count = data.count || 0;
     const total = Number(data.total || 0);
-    const bonus = Math.max(0, total - enemyBonus * count);
+    const baseScore = meta?.base ?? enemyBonus;
+    const bonus = Math.max(0, total - baseScore * count);
     breakdown.push({
       type,
       icon: meta.icon,
       name: meta.label,
       count,
-      base: enemyBonus,
+      base: baseScore,
       total,
       bonus
     });
@@ -829,14 +1171,17 @@ function buildEnemyBreakdown(){
     if (seen.has(type)) return;
     const count = data.count || 0;
     const total = Number(data.total || 0);
-    const bonus = Math.max(0, total - enemyBonus * count);
-    const label = type === 'other' ? 'その他' : `その他 (${type})`;
+    const meta = enemyTypeMeta[type];
+    const baseScore = meta?.base ?? enemyBonus;
+    const bonus = Math.max(0, total - baseScore * count);
+    const label = meta?.label || (type === 'other' ? 'Other' : `Other (${type})`);
+    const icon = meta?.icon || enemyTypeIcons[type] || '?';
     breakdown.push({
       type,
-      icon: enemyTypeIcons[type] || '⚔',
+      icon,
       name: label,
       count,
-      base: enemyBonus,
+      base: baseScore,
       total,
       bonus
     });
@@ -887,7 +1232,7 @@ function populateResultOverlay(result){
     const summaryRows = [
       { label:'SCORE', value:(Number(result?.score) || 0).toLocaleString('ja-JP') },
       { label:'LEVEL', value:`${Number(result?.level) || 1}` },
-      { label:'COINS', value:`🪙${(Number(result?.coins) || 0).toLocaleString('ja-JP')}` },
+      { label:'COINS', value:`??${(Number(result?.coins) || 0).toLocaleString('ja-JP')}` },
       { label:'CHAR', value:`${ch.emoji} ${ch.name}` },
       { label:'BEST', value:(Number.isFinite(bestScore) ? bestScore : 0).toLocaleString('ja-JP') }
     ];
@@ -952,7 +1297,7 @@ function populateResultOverlay(result){
         label.textContent = `${entry.icon} ${entry.name}`;
         const value = document.createElement('span');
         value.className = 'value';
-        value.textContent = `${entry.count}体 ×${entry.base} = ${Number(entry.total || 0).toLocaleString('ja-JP')}pt`;
+        value.textContent = `${entry.count}個 ×${entry.base} = ${Number(entry.total || 0).toLocaleString('ja-JP')}pt`;
         if (entry.bonus>0){
           const bonus = document.createElement('small');
           bonus.textContent = `ボーナス+${entry.bonus.toLocaleString('ja-JP')}`;
@@ -1058,8 +1403,12 @@ function spawnItem(){
 const enemyTypeMeta = {
   straight:{ icon:'👾', label:'直進型' },
   zigzag:{ icon:'🐍', label:'蛇行型' },
-  dash:{ icon:'💥', label:'加速突進型' },
-  hover:{ icon:'🛸', label:'上下ホバー型' }
+  dash:{ icon:'💥', label:'突進型' },
+  hover:{ icon:'🛸', label:'浮遊型' },
+  'boss-meadow':{ icon: stageBosses.meadow.icon || '👑', label:'Boss - Meadow Monarch', base: stageBosses.meadow.rewardScore || enemyBonus },
+  'boss-dunes': { icon: stageBosses.dunes.icon || '👑', label:'Boss - Dune Typhoon', base: stageBosses.dunes.rewardScore || enemyBonus },
+  'boss-sky':   { icon: stageBosses.sky.icon || '👑', label:'Boss - Stratos Ranger', base: stageBosses.sky.rewardScore || enemyBonus },
+  'boss-abyss': { icon: stageBosses.abyss.icon || '👑', label:'Boss - Abyss Sovereign', base: stageBosses.abyss.rewardScore || enemyBonus }
 };
 const enemyTypeIcons = Object.fromEntries(Object.entries(enemyTypeMeta).map(([type, meta])=>[type, meta.icon]));
 
@@ -1091,7 +1440,7 @@ function spawnEnemy(offset=0){
     h: 36,
     vx: baseSpeed,
     type,
-    icon: enemyTypeIcons[type] || '👾',
+    icon: enemyTypeIcons[type] || '??',
     spawnAt: now(),
     phase: Math.random()*Math.PI*2,
     baseY
@@ -1123,6 +1472,157 @@ function spawnPower(){
     y: cv.height - GROUND - 44 - rand(0, 120),
     w: 26, h: 26,
     v: 3.0 + (level-1)*.25
+  });
+}
+
+function spawnBossForStage(stageKey, t){
+  const config = stageBosses[stageKey];
+  if (!config) return;
+  bossProjectiles.length = 0;
+  const baseY = Math.min(cv.height - GROUND - config.height, Math.max(24, cv.height - GROUND - config.height - config.groundOffset));
+  bossState = {
+    stageKey,
+    config,
+    x: cv.width + config.width + 40,
+    y: baseY,
+    baseY,
+    w: config.width,
+    h: config.height,
+    vx: config.speed,
+    targetX: Math.max(cv.width - (config.targetOffset || (config.width + 200)), cv.width * 0.34),
+    state:'enter',
+    hp: config.hp,
+    maxHp: config.hp,
+    floatPhase: Math.random()*Math.PI*2,
+    nextAttack: t + config.attackInterval,
+    hitFlashUntil:0,
+    opacity:1,
+    defeatedAt:0,
+    contactCooldown:0
+  };
+  showStageTitle(config.displayName + ' appears!');
+  speedSE();
+}
+
+function bossFireVolley(boss, time){
+  const config = boss.config;
+  const count = Math.max(1, config.volley || 3);
+  const speed = config.projectileSpeed || 3;
+  const baseX = boss.x + boss.w * 0.15;
+  const launchY = boss.y + boss.h * 0.65;
+  const targetX = player.x + player.w * 0.5;
+  const distanceX = Math.max(32, Math.abs(baseX - targetX));
+  const travelFrames = Math.max(12, distanceX / speed);
+  for (let i=0; i<count; i++){
+    const offset = i - (count - 1)/2;
+    const laneOffset = offset * (player.h * 0.22);
+    const desiredY = player.y + player.h * 0.7 + laneOffset;
+    const targetY = clamp(desiredY, player.y + 12, cv.height - GROUND - 18);
+    const vy = (targetY - launchY) / travelFrames;
+    bossProjectiles.push({
+      x: baseX,
+      y: launchY,
+      w: 30,
+      h: 30,
+      vx: speed,
+      vy,
+      gravity: 0,
+      createdAt: time
+    });
+  }
+}
+
+
+function awardBossDefeat(config){
+  const rewardScore = Number(config.rewardScore || 150);
+  const rewardCoins = Number(config.rewardCoins || 10);
+  score += rewardScore;
+  coins += rewardCoins;
+  if (runStats?.enemies){
+    runStats.enemies.totalCount += 1;
+    runStats.enemies.totalScore += rewardScore;
+    const key = config.key || 'boss';
+    if (!runStats.enemies.types[key]){
+      runStats.enemies.types[key] = { count:0, total:0 };
+    }
+    runStats.enemies.types[key].count += 1;
+    runStats.enemies.types[key].total += rewardScore;
+  }
+}
+
+function damageBoss(amount){
+  if (!bossState || bossState.state === 'defeated') return;
+  const dmg = Number.isFinite(amount) ? amount : 1;
+  bossState.hp = Math.max(0, bossState.hp - dmg);
+  bossState.hitFlashUntil = now() + 140;
+  if (bossState.hp <= 0){
+    bossState.state = 'defeated';
+    bossState.defeatedAt = now();
+    bossProjectiles.length = 0;
+    defeatedBossStages.add(bossState.stageKey);
+    awardBossDefeat(bossState.config);
+    floatText('BOSS DOWN!', bossState.x + bossState.w/2 - 54, bossState.y - 16, '#fde68a');
+    cameraShake(10, 320);
+  }
+}
+
+function updateBoss(t){
+  if (!bossState) return;
+  const config = bossState.config;
+  if (bossState.state === 'enter'){
+    bossState.x -= bossState.vx;
+    if (bossState.x <= bossState.targetX){
+      bossState.x = bossState.targetX;
+      bossState.state = 'battle';
+      bossState.nextAttack = t + config.attackInterval;
+      bossState.floatPhase = Math.random()*Math.PI*2;
+    }
+  } else if (bossState.state === 'battle'){
+    bossState.floatPhase += config.floatSpeed || 0.02;
+    bossState.y = bossState.baseY + Math.sin(bossState.floatPhase) * (config.floatRange || 28);
+    if (t >= bossState.nextAttack){
+      bossFireVolley(bossState, t);
+      bossState.nextAttack = t + config.attackInterval;
+    }
+  } else if (bossState.state === 'defeated'){
+    bossState.opacity = Math.max(0, bossState.opacity - 0.025);
+    bossState.y -= 1.2;
+    if (bossState.opacity <= 0){
+      bossState = null;
+      bossProjectiles.length = 0;
+    }
+  }
+}
+
+function updateBossProjectiles(){
+  if (!bossProjectiles.length) return;
+  bossProjectiles = bossProjectiles.filter((shot)=>{
+    shot.x -= shot.vx;
+    shot.y += shot.vy;
+    if (shot.gravity) shot.vy += shot.gravity;
+    if (shot.y > cv.height + 120 || shot.x + shot.w < -80 || shot.y + shot.h < -120){
+      return false;
+    }
+    if (AABB(player, shot)){
+      if (now() < invUntil){
+        return false;
+      }
+      const hasGuard = characters[currentCharKey].special?.includes('oneGuard');
+      if (hasGuard && now() - guardReadyTime > 7000){
+        guardReadyTime = now();
+        return false;
+      }
+      if (now() > hurtUntil){
+        lives = Math.max(0, lives-1);
+        hurtUntil = now()+900;
+        if (lives === 0){
+          endGame();
+          return false;
+        }
+      }
+      return false;
+    }
+    return true;
   });
 }
 
@@ -1171,7 +1671,7 @@ function tryUlt(){
         vy: spread*0.28,
         gravity: 0.08,
         hits: 2,
-        char: '🦛',
+        char: '??',
         expires: now()+2800,
         dead: false,
       });
@@ -1198,7 +1698,7 @@ window.addEventListener('keydown', e=>{
   if (e.key==='c' || e.key==='C') tryUlt();
 });
 
-// タッチ（左＝ジャンプ、右＝攻撃 or 長押しで必殺）
+// タッチ（左右分割：ジャンプ/アタック or 長押しで必殺）
 let pressTimer=null, pressedRight=false;
 cv.addEventListener('touchstart', e=>{
   e.preventDefault();
@@ -1261,13 +1761,31 @@ function update(t){
   level = Math.max(1, Math.floor(score/itemLv)+1);
   const st = stageForLevel(level);
 
+  if (st.key && st.key !== currentStageKey){
+    currentStageKey = st.key;
+    bossNextSpawnAt = 0;
+  }
+  const stageBoss = stageBosses[st.key];
+  if (!bossState && stageBoss && !defeatedBossStages.has(st.key)){
+    if (!bossNextSpawnAt){
+      bossNextSpawnAt = t + stageBoss.spawnDelay;
+    } else if (t >= bossNextSpawnAt){
+      spawnBossForStage(st.key, t);
+      bossNextSpawnAt = 0;
+    }
+  }
+  if (bossState){
+    updateBoss(t);
+  }
+  const bossBattleActive = bossState && bossState.state !== 'defeated';
+
   // 生成間隔
   const itemIv  = clamp(1200 - (level-1)*100, 480, 1200);
   const enemyIv = clamp(1600 - (level-1)*120, 520, 1600);
   const powerIv = 11000;
 
   if(t-lastItem  > itemIv)  { spawnItem();  lastItem=t; }
-  if(t-lastEnemy > enemyIv) {
+  if(!bossBattleActive && t-lastEnemy > enemyIv) {
     spawnEnemy();
     const extraChance = clamp(0.06 + level*0.018, 0.06, 0.45);
     if (Math.random()<extraChance){
@@ -1289,6 +1807,11 @@ function update(t){
   // 弾
   bullets = bullets.filter(b=> {
     b.x += b.v;
+    if (bossState && bossState.state !== 'defeated' && AABB(bossState, b)){
+      damageBoss(1);
+      b.hitsLeft -= 1;
+      if (b.hitsLeft <= 0) return false;
+    }
     return (b.x < cv.width+24) && b.hitsLeft>0;
   });
 
@@ -1308,15 +1831,15 @@ function update(t){
       const mul = now()<scoreMulUntil ? 2 : 1;
       const gained = it.score*mul;
       score += gained; coins += 1 * mul;
-      const itemKey = it.char==='🍨' ? 'parfait' : 'fish';
+      const itemKey = it.char==='??' ? 'parfait' : 'fish';
       registerItemGain(itemKey, gained);
-      ult = clamp(ult + (it.char==='🍨'?10:6) * currentStats.ultRate, 0, 100);
+      ult = clamp(ult + (it.char==='??'?10:6) * currentStats.ultRate, 0, 100);
       return false;
     }
     return it.x+it.w>0;
   });
 
-  // ⭐
+  // ?
   powers = powers.filter(pw=>{
     pw.x -= pw.v;
     if (AABB(player,pw)){
@@ -1327,6 +1850,8 @@ function update(t){
     }
     return pw.x+pw.w>0;
   });
+
+  updateBossProjectiles();
 
   // 必殺投射体（ヤドン砲）
   ultProjectiles.forEach(p=>{
@@ -1390,6 +1915,24 @@ function update(t){
         const hit = lanes.some(y=> en.y-6 <= y && y <= en.y+en.h+6);
         if (hit){ awardEnemyDefeat(en); return false; }
       }
+      if (bossBattleActive){
+        if (type==='storm'){
+          const cx = player.x+player.w/2, cy = player.y+player.h/2;
+          const bx = bossState.x + bossState.w/2;
+          const by = bossState.y + bossState.h/2;
+          if (Math.hypot(cx-bx, cy-by) <= 120){ damageBoss(0.5); }
+        } else if (type==='ncha'){
+          const beamX = player.x + player.w - 6;
+          const beamTop = player.y - 36;
+          const beamBottom = player.y + player.h + 36;
+          const hitBoss = (bossState.x+bossState.w) >= beamX && bossState.x <= cv.width && bossState.y <= beamBottom && (bossState.y+bossState.h) >= beamTop;
+          if (hitBoss){ damageBoss(0.8); }
+        } else {
+          const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
+          const hitBoss = lanes.some(y=> bossState.y-12 <= y && y <= bossState.y+bossState.h+12);
+          if (hitBoss){ damageBoss(0.6); }
+        }
+      }
     }
 
     if (characters[currentCharKey].ult==='yadon'){
@@ -1401,6 +1944,17 @@ function update(t){
           shot.hits--;
           if (shot.hits<=0) shot.dead=true;
           return false;
+        }
+      }
+      if (bossBattleActive && bossState){
+        for (let i=0;i<ultProjectiles.length;i++){
+          const proj = ultProjectiles[i];
+          if (!proj || proj.dead) continue;
+          if (AABB(bossState, proj)){
+            damageBoss(1.4);
+            proj.hits--;
+            if (proj.hits<=0) proj.dead = true;
+          }
         }
       }
     }
@@ -1431,6 +1985,31 @@ function update(t){
     }
     return en.x+en.w>0 && en.y < cv.height;
   });
+
+  if (bossState && bossState.state !== 'defeated'){
+    const touchAt = now();
+    if (touchAt > (bossState.contactCooldown || 0) && AABB(player, bossState)){
+      if (touchAt < invUntil){
+        damageBoss(2);
+        bossState.contactCooldown = touchAt + 400;
+      } else {
+        const hasGuard = characters[currentCharKey].special?.includes('oneGuard');
+        if (hasGuard && touchAt - guardReadyTime > 7000){
+          guardReadyTime = touchAt;
+          damageBoss(1);
+          bossState.contactCooldown = touchAt + 800;
+        } else if (touchAt > hurtUntil){
+          lives = Math.max(0, lives-1);
+          hurtUntil = touchAt + 900;
+          bossState.contactCooldown = touchAt + 900;
+          if (lives === 0){
+            endGame();
+            return;
+          }
+        }
+      }
+    }
+  }
 
   ultProjectiles = ultProjectiles.filter(p=> !p.dead && now()<p.expires && p.x<cv.width+60 && p.y>-80 && p.y<cv.height+80 && p.hits>0);
 
@@ -1535,17 +2114,65 @@ function draw(remain, st){
     });
   }
 
-  // ⭐
-  powers.forEach(pw=>{ c.font='26px serif'; c.fillText('⭐', pw.x, pw.y); });
+  // ?
+  powers.forEach(pw=>{ c.font='26px serif'; c.fillText('?', pw.x, pw.y); });
+
+  if (bossState){
+    const bodyColor = bossState.config.bodyColor || '#1e3a8a';
+    const displayIcon = bossState.config.icon || '??';
+    c.save();
+    c.globalAlpha = (typeof bossState.opacity === 'number') ? bossState.opacity : 1;
+    c.fillStyle = bodyColor;
+    c.fillRect(bossState.x, bossState.y, bossState.w, bossState.h);
+    c.fillStyle = '#fff';
+    c.font = '48px serif';
+    c.textAlign = 'center';
+    c.fillText(displayIcon, bossState.x + bossState.w/2, bossState.y + bossState.h/2 + 18);
+    c.restore();
+
+    const barWidth = 260;
+    const barHeight = 12;
+    const hpRatio = bossState.maxHp ? Math.max(0, bossState.hp / bossState.maxHp) : 0;
+    const barX = cv.width/2 - barWidth/2;
+    const barY = 64;
+    c.save();
+    c.fillStyle = 'rgba(0,0,0,0.45)';
+    c.fillRect(barX, barY, barWidth, barHeight);
+    c.fillStyle = '#f87171';
+    c.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+    c.strokeStyle = '#fde68a';
+    c.lineWidth = 2;
+    c.strokeRect(barX, barY, barWidth, barHeight);
+    c.fillStyle = '#fff';
+    c.font = '12px sans-serif';
+    c.textAlign = 'center';
+    c.fillText(`${bossState.config.displayName} HP ${Math.max(0, Math.ceil(bossState.hp))}/${bossState.maxHp}`, barX + barWidth/2, barY - 6);
+    c.restore();
+    c.textAlign = 'start';
+  }
+
+  if (bossProjectiles.length){
+    c.save();
+    c.fillStyle = 'rgba(248,113,113,0.85)';
+    bossProjectiles.forEach(shot=>{
+      c.beginPath();
+      c.ellipse(shot.x + shot.w/2, shot.y + shot.h/2, shot.w/2, shot.h/2, 0, 0, Math.PI*2);
+      c.fill();
+    });
+    c.restore();
+  }
 
   // 敵
-  enemies.forEach(en=>{ c.font='32px serif'; c.fillText(en.icon || '👾', en.x, en.y-4); });
+  enemies.forEach(en=>{ c.font='32px serif'; c.fillText(en.icon || '??', en.x, en.y-4); });
 
   setHUD(remain);
 }
 
 function endGame(){
   if(!gameOn) return; gameOn=false;
+  bossState = null;
+  bossProjectiles.length = 0;
+  bossNextSpawnAt = 0;
   const st = stageForLevel(level);
   draw(0, st);
   c.fillStyle='rgba(0,0,0,.55)'; c.fillRect(0,0,cv.width,cv.height);
@@ -1634,5 +2261,51 @@ setHUD(GAME_TIME);
 updateCharInfo();
 setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
+
+// ===== モーダル可視状態 → bodyにフラグ付け ===== 
+(function setupModalOpenFlag(){
+  const BODY = document.body;
+  const TARGET_SELECTOR = '.modal, .overlay';
+  const raf = window.requestAnimationFrame?.bind(window) || ((cb) => setTimeout(cb, 16));
+  let scheduled = false;
+  function scheduleUpdate(){
+    if (scheduled) return;
+    scheduled = true;
+    raf(() => {
+      scheduled = false;
+      updateFlag();
+    });
+  }
+  function isElementOpen(el){
+    if (!el || !el.isConnected) return false;
+    const list = el.classList;
+    if (list.contains('is-hidden') || list.contains('isHidden')) return false;
+    if (el.hasAttribute('hidden')) return false;
+    const ariaHidden = el.getAttribute('aria-hidden');
+    if (ariaHidden && ariaHidden !== 'false') return false;
+    if (el.hasAttribute('open')) return true;
+    const style = getComputedStyle(el);
+    if (style.display === 'none') return false;
+    if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+    if (style.opacity === '0' && style.pointerEvents === 'none') return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    return true;
+  }
+  function updateFlag(){
+    const anyOpen = Array.from(document.querySelectorAll(TARGET_SELECTOR)).some(isElementOpen);
+    BODY.classList.toggle('modal-open', anyOpen);
+  }
+  updateFlag();
+  const mo = new MutationObserver(scheduleUpdate);
+  mo.observe(document.body, {
+    subtree: true,
+    attributes: true,
+    childList: true
+  });
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-open-overlay],[data-close-overlay]');
+    if (t) scheduleUpdate();
+  });
 })();
 
+})();
