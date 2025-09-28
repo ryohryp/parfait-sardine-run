@@ -93,6 +93,145 @@ function floatText(text,x,y,color="#ffec8b"){
 }
 function boostFx(on){ document.getElementById('speedlines')?.classList.toggle('show', on); }
 
+// ---- HitStop (SlowMo) + Zoom ----
+let _savedRaf = window.requestAnimationFrame;
+let _slowmoTimer = null;
+
+function hitStop(ms=120, zoom=true){
+  const wrap = document.getElementById('sceneWrap');
+  const vig  = document.getElementById('vignette');
+  if(zoom){
+    wrap?.classList.add('zoomed');
+    vig?.classList.add('show');
+  }
+
+  if(_slowmoTimer) clearTimeout(_slowmoTimer);
+  let last = 0;
+  window.requestAnimationFrame = (cb)=> _savedRaf((t)=>{
+    if(t - last < 50) return window.requestAnimationFrame(cb);
+    last = t; cb(t);
+  });
+
+  _slowmoTimer = setTimeout(()=>{
+    window.requestAnimationFrame = _savedRaf;
+    wrap?.classList.remove('zoomed');
+    vig?.classList.remove('show');
+  }, ms);
+}
+
+// ---- Combo / Fever ----
+let _comboCount = 0;
+let _comboTimer = null;
+const COMBO_WINDOW = 1400;
+const FEVER_THRESHOLD = 5;
+const elCombo = document.getElementById('combo');
+const elFever = document.getElementById('fever');
+
+function addCombo(){
+  _comboCount++;
+  showCombo(_comboCount);
+  if(_comboCount >= FEVER_THRESHOLD){
+    boostFx(true);
+    elFever?.classList.add('on');
+  }
+  if(_comboTimer) clearTimeout(_comboTimer);
+  _comboTimer = setTimeout(resetCombo, COMBO_WINDOW);
+}
+function resetCombo(){
+  _comboCount = 0;
+  elCombo?.classList.remove('show');
+  boostFx(false);
+  elFever?.classList.remove('on');
+}
+function showCombo(n){
+  if(!elCombo) return;
+  elCombo.textContent = n + " COMBO!";
+  elCombo.classList.add('show');
+  elCombo.animate([
+    {transform:'translate(-50%,0) scale(0.9)'},
+    {transform:'translate(-50%, -2px) scale(1.05)'}
+  ],{duration:120, easing:'ease-out'});
+}
+
+// ---- Pick-up pop ----
+function pickPop(x,y){
+  const el = document.createElement('div');
+  el.className = 'pick-pop';
+  el.style.left = x+'px';
+  el.style.top = y+'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=> el.remove());
+}
+
+// ---- Boss intro ----
+function bossCutIn(text="BOSS APPROACHING..."){
+  const band = document.getElementById('bossBand');
+  const intro = document.getElementById('bossIntro');
+  if(!band || !intro) return;
+  intro.textContent = text;
+  band.style.display = 'block';
+  intro.classList.add('show');
+  screenFade(true);
+  hitStop(220, true);
+  cameraShake(6,200);
+  setTimeout(()=>{
+    intro.classList.remove('show');
+    band.style.display='none';
+    screenFade(false);
+  }, 1100);
+}
+
+// ---- Result parfait ----
+async function showResult(score=0){
+  const wrap = document.getElementById('result');
+  const L = document.getElementById('pfLayer');
+  const C = document.getElementById('pfCream');
+  const F = document.getElementById('pfFish');
+  const S = document.getElementById('resultScore');
+  if(!wrap||!L||!C||!F||!S) return;
+
+  wrap.classList.add('show');
+  hitStop(180,true);
+  await L.animate([{height:'0px'},{height:'60px'}],{duration:220, easing:'ease-out', fill:'forwards'}).finished;
+  pickPop(innerWidth/2, innerHeight/2+30);
+  await C.animate([{height:'0px'},{height:'32px'}],{duration:180, easing:'ease-out', fill:'forwards'}).finished;
+  spawnHitSpark(innerWidth/2, innerHeight/2-20);
+  await F.animate([
+    {opacity:0, transform:'translate(-50%, -6px) rotate(10deg)'},
+    {opacity:1, transform:'translate(-50%,0) rotate(20deg)'}
+  ],{duration:180, easing:'ease-out', fill:'forwards'}).finished;
+  cameraShake(6,160);
+  floatText('パフェ完成！', innerWidth/2-40, innerHeight/2-80);
+
+  const target = score|0;
+  let cur = 0;
+  const step = Math.max(1, Math.round(target/36));
+  function tick(){
+    cur = Math.min(target, cur+step);
+    S.textContent = 'SCORE: ' + cur.toLocaleString();
+    if(cur<target) requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ---- Scene tone / speed SE ----
+function sceneTone(on){
+  const w = document.getElementById('sceneWrap');
+  if(on) w?.style.setProperty('filter','saturate(1.12) contrast(1.06)');
+  else w?.style.removeProperty('filter');
+}
+
+const _speedSE = typeof Audio !== 'undefined' ? new Audio('./assets/sfx/whoosh.ogg') : null;
+if(_speedSE) _speedSE.volume = .35;
+function speedSE(){
+  try{
+    if(_speedSE){
+      _speedSE.currentTime = 0;
+      _speedSE.play();
+    }
+  }catch{}
+}
+
 // 7) 起動（DOMContentLoaded後でOK）
 document.addEventListener('DOMContentLoaded', psrBoot);
 

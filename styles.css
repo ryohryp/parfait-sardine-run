@@ -489,3 +489,75 @@
 .speedlines.show{ opacity:1; animation:psr_slideBg .5s linear infinite; }
 @keyframes psr_slideBg{ from{ background-position:0 0 } to{ background-position:200px 0 } }
 
+/* 画面ズーム用のラッパ。body直下に .scene-wrap を1つ被せる想定 */
+.scene-wrap { position: fixed; inset:0; transform-origin:center; will-change: transform; }
+.scene-wrap.zoomed { transition: transform .12s ease; transform: scale(1.04); }
+.vignette{
+  position:fixed; inset:0; pointer-events:none; z-index:3900;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.35) 100%);
+  opacity:0; transition:opacity .08s ease;
+}
+.vignette.show{ opacity:1; }
+
+.combo{
+  position:fixed; left:50%; top:18%; transform:translateX(-50%);
+  color:#fff; font-weight:900; font-size:28px; text-shadow:0 2px 0 #000a;
+  opacity:0; transition:opacity .12s ease, transform .12s ease; z-index:5200;
+}
+.combo.show{ opacity:1; transform:translate(-50%, -2px) scale(1.04); }
+.fever{
+  position:fixed; inset:0; pointer-events:none; z-index:3800;
+  background: radial-gradient(circle at center, rgba(255,180,0,.10) 0%, transparent 60%);
+  mix-blend-mode: screen; opacity:0; transition:opacity .12s ease;
+}
+.fever.on{ opacity:.6; }
+
+.pick-pop{
+  position:fixed; width:20px; height:20px; pointer-events:none; z-index:5000;
+  background: radial-gradient(circle,#fff 0 40%, rgba(255,255,255,.0) 60%);
+  animation:pick .5s ease-out both;
+}
+@keyframes pick{
+  0%{ transform:scale(.5); opacity:.0; filter:blur(2px) }
+  30%{ transform:scale(1.2); opacity:1; filter:blur(0) }
+  100%{ transform:translateY(-24px) scale(1.0); opacity:0 }
+}
+
+.boss-intro{
+  position:fixed; left:0; right:0; top:34%; text-align:center; z-index:9300;
+  font-weight:900; color:#fff; font-size:32px; letter-spacing:2px; text-shadow:0 3px 0 #000a;
+  opacity:0; transform:translateY(12px); transition:opacity .22s ease, transform .22s ease;
+}
+.boss-intro.show{ opacity:1; transform:none; }
+.boss-band{
+  position:fixed; inset:45% 0 auto 0; height:60px; background:#ff2a2a; z-index:9200;
+  transform:translateY(-50%); box-shadow:0 2px 0 #000a; opacity:.95;
+}
+.boss-band::after{
+  content:""; position:absolute; inset:0; background:repeating-linear-gradient(45deg,rgba(0,0,0,.1) 0 12px, transparent 12px 24px);
+}
+
+.result-wrap{
+  position:fixed; inset:0; background:#101018; color:#fff; z-index:9998; display:none;
+  align-items:center; justify-content:center; flex-direction:column; text-align:center;
+}
+.result-wrap.show{ display:flex; animation:psr_fadeIn .18s ease both; }
+.parfait{
+  width:110px; height:160px; position:relative; margin-bottom:10px;
+  filter: drop-shadow(0 6px 0 #0006);
+}
+.parfait .layer{
+  position:absolute; left:10px; right:10px; height:0; bottom:10px;
+  background:#f4d6c5; border:3px solid #000; border-radius:10px; overflow:hidden;
+}
+.parfait .cream{
+  position:absolute; left:14px; right:14px; bottom:70px; height:0;
+  background:#fff; border:3px solid #000; border-radius:12px 12px 6px 6px / 14px 14px 6px 6px;
+}
+.parfait .fish{
+  position:absolute; width:70px; height:24px; left:50%; transform:translateX(-50%) rotate(20deg);
+  bottom:110px; background:linear-gradient(#7fb0d6, #3c6a8b); border:3px solid #000; border-radius:14px;
+  opacity:0;
+}
+.result-score{ font-weight:900; font-size:26px; text-shadow:0 2px 0 #0008; }
+

@@ -29,6 +29,7 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <body>
+  <div class="scene-wrap" id="sceneWrap">
   <!-- === Splash / Fade / Titles / Speedlines === -->
   <div id="splash" class="splash" role="status" aria-live="polite">
     <div class="splash-inner">
@@ -293,6 +294,22 @@ if ('serviceWorker' in navigator) {
         <ul id="commentList" class="commentList"></ul>
       </div>
     </div>
+  </div>
+
+
+  </div><!-- /scene-wrap -->
+  <div class="vignette" id="vignette"></div>
+  <div class="combo" id="combo"></div>
+  <div class="fever" id="fever"></div>
+  <div class="boss-band" id="bossBand" style="display:none"></div>
+  <div class="boss-intro" id="bossIntro">BOSS APPROACHING...</div>
+  <div class="result-wrap" id="result">
+    <div class="parfait" aria-label="完成パフェ">
+      <div class="layer" id="pfLayer"></div>
+      <div class="cream" id="pfCream"></div>
+      <div class="fish" id="pfFish"></div>
+    </div>
+    <div class="result-score" id="resultScore">SCORE: 0</div>
   </div>
 
 
