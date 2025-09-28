@@ -1,4 +1,4 @@
-const CACHE_VERSION = "psr-v1.0.0";
+const CACHE_VERSION = "psr-v1.1.0";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const APP_SHELL = [
   "/parfait-sardine-run/",
@@ -18,39 +18,61 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data === 'PSR_SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k.startsWith("static-") && k !== STATIC_CACHE)
-          .map((k) => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((k) => k.startsWith("static-") && k !== STATIC_CACHE)
+        .map((k) => caches.delete(k))
+    );
+
+    await self.clients.claim();
+
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clientList) {
+      client.postMessage('PSR_RELOAD');
+    }
+  })());
 });
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
 
-  // 画像・音・JS・CSSはキャッシュ優先
+  // 1) ナビゲーション(HTML)は Network-First
+  const isHTML = req.mode === "navigate" ||
+                 (req.headers.get("accept") || "").includes("text/html");
+  if (isHTML) {
+    event.respondWith(
+      fetch(req).then(res => {
+        const resClone = res.clone();
+        caches.open(STATIC_CACHE).then(c => c.put(req, resClone));
+        return res;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // 2) それ以外（画像/音/JS/CSS）は Cache-First
   if (req.method === "GET") {
     event.respondWith(
-      caches.match(req).then((cached) => {
+      caches.match(req).then(cached => {
         if (cached) return cached;
-        return fetch(req).then((res) => {
-          // 同一オリジンのみキャッシュ
-          try {
-            const url = new URL(req.url);
-            const sameOrigin = url.origin === self.origin || url.origin === location.origin;
-            if (sameOrigin && res && res.status === 200 && res.type === "basic") {
-              const resClone = res.clone();
-              caches.open(STATIC_CACHE).then((cache) => cache.put(req, resClone));
-            }
-          } catch (_) {}
+        return fetch(req).then(res => {
+          const url = new URL(req.url);
+          const sameOrigin = url.origin === location.origin;
+          if (sameOrigin && res.status === 200 && res.type === "basic") {
+            const clone = res.clone();
+            caches.open(STATIC_CACHE).then(c => c.put(req, clone));
+          }
           return res;
-        }).catch(() => cached || Response.error());
+        });
       })
     );
   }

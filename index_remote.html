@@ -19,9 +19,16 @@
 
 
 </head>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js')
+      .catch(console.error);
+  });
+}
+</script>
 
 <body>
-  <div class="scene-wrap" id="sceneWrap">
   <!-- === Splash / Fade / Titles / Speedlines === -->
   <div id="splash" class="splash" role="status" aria-live="polite">
     <div class="splash-inner">
@@ -134,7 +141,7 @@
       </div>
       <div class="footerBtns preGameActions">
         <button id="preGameStart" class="secondary cta">ゲームスタート</button>
-  </div>
+      </div>
     </div>
   </div>
 
@@ -289,78 +296,17 @@
   </div>
 
 
-  </div><!-- /scene-wrap -->
-  <div class="vignette" id="vignette"></div>
-  <div class="combo" id="combo"></div>
-  <div class="fever" id="fever"></div>
-  <div class="boss-band" id="bossBand" style="display:none"></div>
-  <div class="boss-intro" id="bossIntro">BOSS APPROACHING...</div>
-  <div class="result-wrap" id="result">
-    <div class="parfait" aria-label="完成パフェ">
-      <div class="layer" id="pfLayer"></div>
-      <div class="cream" id="pfCream"></div>
-      <div class="fish" id="pfFish"></div>
-    </div>
-    <div class="result-score" id="resultScore">SCORE: 0</div>
-  </div>
-
-
 <script src="js/utils.js"></script>
 <script src="js/howto.js"></script>
 <script src="js/leaderboard.js"></script>
 <script src="js/comments.js"></script>
 <script src="main.js"></script>
 <script>
-(function(){
-  const params = new URLSearchParams(location.search);
-  const dev = params.has('dev'); // ?dev を付けたら開発モーチE
-
-  function showUpdateToast(){
-    if (document.getElementById('psr-update-toast')) return;
-    const el = document.createElement('div');
-    el.id = 'psr-update-toast';
-    el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 14px;border-radius:999px;z-index:99999;box-shadow:0 4px 12px #0006;cursor:pointer;';
-    el.textContent = '新しいバ�Eジョンがあります:更新';
-    el.addEventListener('click', () => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.waiting?.postMessage('PSR_SKIP_WAITING');
-      });
-    });
-    document.body.appendChild(el);
-  }
-
-  function setupUpdateHooks(reg){
-    function listenWaiting(sw){
-      if (!sw) return;
-      sw.addEventListener('statechange', () => {
-        if (sw.state === 'installed') showUpdateToast();
-      });
-    }
-
-    if (reg.waiting) showUpdateToast();
-    if (reg.installing) listenWaiting(reg.installing);
-    reg.addEventListener('updatefound', () => listenWaiting(reg.installing));
-  }
-
-  if ('serviceWorker' in navigator){
-    if (dev){
-      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((reg) => reg.unregister()));
-      console.log('[PWA] dev mode: SW unregistered');
-    } else {
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data === 'PSR_RELOAD') location.reload();
-      });
-
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js')
-          .then((reg) => {
-            setupUpdateHooks(reg);
-          })
-          .catch(console.error);
-      });
-    }
-  }
-})();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js').catch(console.error);
+  });
+}
 </script>
 </body>
 </html>
