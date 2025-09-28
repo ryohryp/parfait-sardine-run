@@ -42,37 +42,65 @@
   function formatDate(entry){
     const raw = entry?.date ?? entry?.time ?? entry?.createdAt ?? entry?.created_at ?? entry?.updatedAt ?? entry?.updated_at;
     if (raw === undefined || raw === null) return '-';
-    let dt = null;
-    if (typeof raw === 'number'){
-      dt = new Date(raw);
-    } else if (typeof raw === 'string'){
-      const trimmed = raw.trim();
-      if (!trimmed){
-        return '-';
+
+    function parseDate(value){
+      if (typeof value === 'number'){
+        return new Date(value < 1e12 ? value * 1000 : value);
       }
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (!trimmed) return null;
       if (/^\d+$/.test(trimmed)){
         const num = Number(trimmed);
-        dt = new Date(trimmed.length <= 10 ? num*1000 : num);
-      } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)){
-        const [datePart, timePart] = trimmed.split(' ');
-        dt = new Date(`${datePart}T${timePart}+09:00`);
-      } else {
-        dt = new Date(trimmed);
+
+        return new Date(trimmed.length <= 10 ? num * 1000 : num);
       }
+      const baseMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})([T\s])(\d{2}:\d{2}:\d{2})(\.\d+)?$/);
+      if (baseMatch && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed)){
+        const [, datePart,, timePart, frac = ''] = baseMatch;
+        return new Date(`${datePart}T${timePart}${frac}+09:00`);
+
+      }
+      return new Date(trimmed);
     }
+
+    const dt = parseDate(raw);
     if (dt && !Number.isNaN(dt.getTime())){
       try {
-        return dt.toLocaleString('ja-JP', {
-          year:'numeric', month:'2-digit', day:'2-digit',
-          hour:'2-digit', minute:'2-digit', second:'2-digit',
-          timeZone: 'Asia/Tokyo'
-        });
+
+        return new Intl.DateTimeFormat('ja-JP', {
+          timeZone: 'Asia/Tokyo',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false
+        }).format(dt);
       } catch {
-        return dt.toISOString().slice(0,19).replace('T',' ');
+        return dt.toISOString().slice(0, 19).replace('T', ' ');
+
       }
     }
     return String(raw);
   }
+
+
+  function readNumericField(entry, key, fallback){
+    if (!entry || typeof entry !== 'object') return fallback;
+    const direct = entry[key];
+    if (direct !== undefined && direct !== null && direct !== ''){
+      const num = Number(direct);
+      if (!Number.isNaN(num)) return num;
+    }
+    const meta = entry.meta || entry.fields || entry.extra || entry.attributes;
+    if (meta && typeof meta === 'object'){
+      const nested = meta[key];
+      if (nested !== undefined && nested !== null && nested !== ''){
+        const num = Number(nested);
+        if (!Number.isNaN(num)) return num;
+      }
+    }
+    return fallback;
+  }
+
 
   function buildUrlWithParams(baseUrl, params){
     if (!params || !Object.keys(params).length) return baseUrl;
@@ -106,46 +134,83 @@
 
   async function fetchLeaderboardEntries(maxEntries){
     const base = leaderboardUrl();
-    const collected = [];
-    const perPage = Math.min(100, Math.max(1, maxEntries));
-    let page = 1;
-    let paginationSucceeded = false;
-    let lastError = null;
-    const seenPages = new Set();
-    const seenEntries = new Set();
 
-    while (collected.length < maxEntries && page <= 5){
-      const url = buildUrlWithParams(base, { page: String(page), per_page: String(perPage) });
-      try {
-        const raw = await fetchLeaderboardPage(url);
-        const entries = normalizeLeaderboardEntries(raw);
-        if (!entries.length){
-          paginationSucceeded = page > 1;
-          break;
-        }
-        const hash = JSON.stringify(entries);
-        if (seenPages.has(hash)){
-          break;
-        }
-        seenPages.add(hash);
-        const uniqueEntries = [];
-        entries.forEach(entry => {
-          const key = JSON.stringify(entry);
-          if (seenEntries.has(key)) return;
-          seenEntries.add(key);
-          uniqueEntries.push(entry);
-        });
-        collected.push(...uniqueEntries);
-        paginationSucceeded = true;
-      } catch (err){
-        lastError = err;
-        break;
-      }
-      page += 1;
+    const strategies = [
+      { sizeParam: 'per_page', pageParam: 'page' },
+      { sizeParam: 'limit', pageParam: 'page' },
+      { sizeParam: 'perPage', pageParam: 'page' },
+      { sizeParam: 'limit', offsetParam: 'offset' },
+      { sizeParam: 'per_page', offsetParam: 'offset' }
+    ];
+    const candidateSizes = Array.from(new Set([
+      Math.min(100, Math.max(1, maxEntries)),
+      Math.min(50, Math.max(1, maxEntries)),
+      Math.min(40, Math.max(1, maxEntries)),
+      Math.min(20, Math.max(1, maxEntries)),
+      Math.min(10, Math.max(1, maxEntries))
+    ])).filter(size => size > 0).sort((a, b) => b - a);
+    let lastError = null;
+
+    function entryKey(entry){
+      const fallback = entry?.date ?? entry?.time ?? entry?.createdAt ?? entry?.created_at ?? entry?.updatedAt ?? entry?.updated_at ?? '';
+      return [
+        entry?.id ?? '',
+        entry?.rank ?? '',
+        entry?.name ?? '',
+        entry?.score ?? '',
+        fallback
+      ].join('|');
     }
 
-    if (collected.length >= maxEntries){
-      return collected.slice(0, maxEntries);
+    async function tryStrategy(strategy, pageSize){
+      const collected = [];
+      const seen = new Set();
+      const maxPages = Math.max(10, Math.ceil(maxEntries / Math.max(1, pageSize)) + 2);
+
+      for (let pageIndex = 0; pageIndex < maxPages && collected.length < maxEntries; pageIndex += 1){
+        const params = {};
+        if (strategy.sizeParam){
+          params[strategy.sizeParam] = String(pageSize);
+        }
+        if (strategy.pageParam){
+          params[strategy.pageParam] = String(pageIndex + 1);
+        }
+        if (strategy.offsetParam){
+          params[strategy.offsetParam] = String(pageIndex * pageSize);
+        }
+
+        let entries = [];
+        try {
+          const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
+          entries = normalizeLeaderboardEntries(raw);
+        } catch (err){
+          lastError = err;
+          break;
+        }
+
+        if (!entries.length){
+          break;
+        }
+
+        let added = 0;
+        entries.forEach(entry => {
+          const key = entryKey(entry);
+          if (seen.has(key)) return;
+          seen.add(key);
+          collected.push(entry);
+          added += 1;
+        });
+
+        if (entries.length < pageSize){
+          break;
+        }
+
+        if (added === 0){
+          break;
+        }
+      }
+
+      return collected;
     }
 
     const attempts = [
@@ -178,7 +243,10 @@
         }
       } catch (err){
         lastError = err;
+
       }
+    } catch (err){
+      lastError = err;
     }
 
     if (collected.length){
@@ -272,9 +340,20 @@
         const rawName = entry?.name ? String(entry.name) : '匿名';
         nameSpan.textContent = isSelf ? `${rawName}（自分）` : rawName;
 
+        const levelValue = Math.max(1, Math.floor(readNumericField(entry, 'level', 1)));
+        const levelSpan = document.createElement('span');
+        levelSpan.className = 'lbLevel';
+        levelSpan.textContent = `Lv ${levelValue.toLocaleString('ja-JP')}`;
+
+        const coinValue = Math.max(0, Math.floor(readNumericField(entry, 'coins', 0)));
+        const coinsSpan = document.createElement('span');
+        coinsSpan.className = 'lbCoins';
+        coinsSpan.textContent = `Coins ${coinValue.toLocaleString('ja-JP')}`;
+
+        const scoreValue = Math.max(0, Math.floor(Number(entry?.score) || 0));
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'lbScore';
-        scoreSpan.textContent = `Score: ${(Number(entry?.score) || 0).toLocaleString('ja-JP')}`;
+        scoreSpan.textContent = `Score: ${scoreValue.toLocaleString('ja-JP')}`;
 
         const dateSpan = document.createElement('span');
         dateSpan.className = 'lbDate';
@@ -282,6 +361,8 @@
 
         row.appendChild(rankSpan);
         row.appendChild(nameSpan);
+        row.appendChild(levelSpan);
+        row.appendChild(coinsSpan);
         row.appendChild(scoreSpan);
         row.appendChild(dateSpan);
 
@@ -291,7 +372,7 @@
           if (!selfElement) selfElement = li;
         }
         const charLabel = describeCharLabel(entry?.char);
-        li.title = `Lv:${Number(entry?.level)||1} / Coins:${Number(entry?.coins)||0} / Char:${charLabel}`;
+        li.title = `Lv:${levelValue.toLocaleString('ja-JP')} / Coins:${coinValue.toLocaleString('ja-JP')} / Char:${charLabel}`;
         list.appendChild(li);
       });
 
