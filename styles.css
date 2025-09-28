@@ -38,6 +38,8 @@
   .leaderboardRow{display:flex;align-items:center;gap:10px;width:100%;flex-wrap:wrap;color:#f9fafb;font-size:14px}
   .lbRank{font-weight:700;min-width:48px}
   .lbName{flex:1;font-weight:600;word-break:break-word}
+  .lbLevel{min-width:72px;text-align:right;font-variant-numeric:tabular-nums}
+  .lbCoins{min-width:98px;text-align:right;font-variant-numeric:tabular-nums}
   .lbScore{min-width:120px;text-align:right;font-variant-numeric:tabular-nums}
   .lbDate{min-width:132px;text-align:right;font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
   .leaderboardItem.selfEntry{box-shadow:0 0 0 2px rgba(250,204,21,.55)}
