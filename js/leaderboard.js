@@ -213,33 +213,44 @@
       return collected;
     }
 
-    let bestEntries = [];
-    for (const strategy of strategies){
-      for (const size of candidateSizes){
-        const entries = await tryStrategy(strategy, size);
-        if (entries.length > bestEntries.length){
-          bestEntries = entries;
-        }
-        const minExpected = Math.min(maxEntries, size);
-        const canPaginate = !!(strategy.pageParam || strategy.offsetParam);
-        if (entries.length >= maxEntries || entries.length >= minExpected || (!canPaginate && entries.length)){
-          return entries.slice(0, maxEntries);
-        }
-      }
-    }
+    const attempts = [
+      { limit: String(maxEntries) },
+      { per_page: String(maxEntries) },
+      {}
+    ];
 
-    if (bestEntries.length){
-      return bestEntries.slice(0, maxEntries);
-    }
+    for (const params of attempts){
+      if (collected.length >= maxEntries) break;
+      try {
+        const raw = await fetchLeaderboardPage(buildUrlWithParams(base, params));
+        const entries = normalizeLeaderboardEntries(raw);
+        if (!entries.length) continue;
 
-    try {
-      const raw = await fetchLeaderboardPage(base);
-      const entries = normalizeLeaderboardEntries(raw);
-      if (entries.length){
-        return entries.slice(0, maxEntries);
+        const uniqueEntries = [];
+        entries.forEach(entry => {
+          const key = JSON.stringify(entry);
+          if (seenEntries.has(key)) return;
+          seenEntries.add(key);
+          uniqueEntries.push(entry);
+        });
+
+        if (!uniqueEntries.length) continue;
+
+        collected.push(...uniqueEntries);
+
+        if (!paginationSucceeded){
+          break;
+        }
+      } catch (err){
+        lastError = err;
+
       }
     } catch (err){
       lastError = err;
+    }
+
+    if (collected.length){
+      return collected.slice(0, maxEntries);
     }
 
     if (lastError) throw lastError;
