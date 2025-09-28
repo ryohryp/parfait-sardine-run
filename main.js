@@ -9,8 +9,10 @@ const c = cv.getContext('2d');
 const hud = document.getElementById('hud');
 const btnStart = document.getElementById('start');
 const btnRestart = document.getElementById('restart');
+const startScreen = document.getElementById('startScreen');
 const touchControls = document.getElementById('touchControls');
 const btnUlt = document.getElementById('ultBtn');
+const btnAttack = document.getElementById('attackBtn');
 const btnJump = document.getElementById('jumpBtn');
 const btnGacha = document.getElementById('gachaOpen');
 const btnGacha10 = document.getElementById('gacha10');
@@ -441,50 +443,49 @@ function setHUD(remainMs){
   const effectsClass = effects.length ? 'hudEffects' : 'hudEffects isHidden';
 
   hud.innerHTML = `
-    <div class="hudSection hudLeft">
-      <div class="hudBlock">
+    <div class="hudRow hudRowPrimary">
+      <div class="hudItem hudLife">
         <span class="hudLabel">ライフ</span>
         <span class="hudValue hudHearts">${hearts(lives)}</span>
+        <span class="hudGauge">必殺 ${Math.floor(ult)}%</span>
       </div>
-      <div class="hudBlock">
-        <span class="hudLabel">必殺ゲージ</span>
-        <span class="hudValue">${Math.floor(ult)}%</span>
-      </div>
-    </div>
-    <div class="hudSection hudCenter">
-      <div class="hudScore">
-        <span class="hudScoreLabel">スコア</span>
-        <span class="hudScoreValue">${scoreText}</span>
-      </div>
-      <div class="${effectsClass}">${effectsHtml}</div>
-    </div>
-    <div class="hudSection hudRight">
-      <div class="hudBlock">
+      <div class="hudItem hudTime">
         <span class="hudLabel">残り時間</span>
         <span class="hudValue">${sec}秒</span>
       </div>
-      <div class="hudBlock">
+      <div class="hudItem hudScore">
+        <span class="hudLabel">スコア</span>
+        <span class="hudValue hudScoreValue">${scoreText}</span>
+      </div>
+    </div>
+    <div class="hudRow hudRowSecondary">
+      <div class="hudItem hudStage">
         <span class="hudLabel">ステージ</span>
         <span class="hudValue">${st}</span>
         <span class="hudSub">Lv.${level}</span>
       </div>
-      <div class="hudBlock">
+      <div class="hudItem hudCoins">
         <span class="hudLabel">コイン</span>
         <span class="hudValue">🪙${coinText}</span>
       </div>
-      <div class="hudBlock">
+      <div class="hudItem hudBest">
         <span class="hudLabel">ベスト</span>
         <span class="hudValue">${bestText}</span>
       </div>
-    </div>`;
+    </div>
+    <div class="${effectsClass}">${effectsHtml}</div>`;
 
   charInfo.textContent = `CHAR: ${ch.emoji} ${ch.name} [${ch.rar}]  LB:${lb}`;
 
   if (touchControls){
     touchControls.classList.toggle('isVisible', gameOn);
+    touchControls.setAttribute('aria-hidden', gameOn ? 'false' : 'true');
   }
   if (btnJump){
     btnJump.disabled = !gameOn;
+  }
+  if (btnAttack){
+    btnAttack.disabled = !gameOn;
   }
   if (btnUlt){
     const ready = gameOn && ultReady;
@@ -494,6 +495,12 @@ function setHUD(remainMs){
 
   btnGacha.disabled = coins < 10;
   btnGacha10.disabled = coins < 100;
+}
+
+function setStartScreenVisible(show){
+  if (!startScreen) return;
+  startScreen.classList.toggle('isHidden', !show);
+  startScreen.setAttribute('aria-hidden', show ? 'false' : 'true');
 }
 
 function describeUlt(key){
@@ -1053,6 +1060,16 @@ function tryUlt(){
 }
 
 // PCキー
+function bindActionButton(button, handler){
+  if (!button) return;
+  const activate = e => {
+    e.preventDefault();
+    handler();
+  };
+  button.addEventListener('pointerdown', activate);
+  button.addEventListener('click', e => e.preventDefault());
+}
+
 window.addEventListener('keydown', e=>{
   if (e.code==='Space' || e.code==='ArrowUp') jump();
   if (e.key==='z'||e.key==='x'||e.key==='Z'||e.key==='X') shoot();
@@ -1074,7 +1091,9 @@ cv.addEventListener('touchstart', e=>{
   }
 },{passive:false});
 cv.addEventListener('touchend', ()=>{ pressedRight=false; clearTimeout(pressTimer); }, {passive:true});
-btnUlt.addEventListener('click', tryUlt);
+bindActionButton(btnJump, jump);
+bindActionButton(btnAttack, shoot);
+bindActionButton(btnUlt, tryUlt);
 
 // ====== キャラ適用 ======
 let currentStats = getEffectiveStats(currentCharKey);
@@ -1415,6 +1434,7 @@ function startGame(){
   guardReadyTime = 0;
   resetPlayerAnimation();
   btnStart.style.display='none'; btnRestart.style.display='none';
+  setStartScreenVisible(false);
   t0=now(); gameOn=true;
   lastItem=lastEnemy=lastPower=lastShot=t0;
   currentStats = getEffectiveStats(currentCharKey);
@@ -1438,6 +1458,7 @@ function endGame(){
   updateBestScore(finalResult.score);
   setHUD(0);
   showResultOverlay(finalResult);
+  setStartScreenVisible(true);
   c.textAlign='start'; btnRestart.style.display='inline-block';
   setTimeout(()=>{
     try {
@@ -1508,5 +1529,6 @@ HowtoModule?.init?.({
 
 setHUD(GAME_TIME);
 updateCharInfo();
+setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
 })();

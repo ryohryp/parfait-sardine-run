@@ -22,26 +22,68 @@
   </section>
 
   <div id="wrap">
-    <div id="hud" class="hudOverlay">読み込み中…</div>
+    <div id="hud" class="hudOverlay">
+      <div class="hudRow hudRowPrimary">
+        <div class="hudItem hudLife">
+          <span class="hudLabel">ライフ</span>
+          <span class="hudValue hudHearts">-</span>
+          <span class="hudGauge">必殺 0%</span>
+        </div>
+        <div class="hudItem hudTime">
+          <span class="hudLabel">残り時間</span>
+          <span class="hudValue">-</span>
+        </div>
+        <div class="hudItem hudScore">
+          <span class="hudLabel">スコア</span>
+          <span class="hudValue hudScoreValue">-</span>
+        </div>
+      </div>
+      <div class="hudRow hudRowSecondary">
+        <div class="hudItem hudStage">
+          <span class="hudLabel">ステージ</span>
+          <span class="hudValue">-</span>
+          <span class="hudSub">Lv.-</span>
+        </div>
+        <div class="hudItem hudCoins">
+          <span class="hudLabel">コイン</span>
+          <span class="hudValue">-</span>
+        </div>
+        <div class="hudItem hudBest">
+          <span class="hudLabel">ベスト</span>
+          <span class="hudValue">-</span>
+        </div>
+      </div>
+      <div class="hudEffects isHidden"></div>
+    </div>
     <div id="charInfo" class="muted">CHAR: -</div>
     <canvas id="cv" width="900" height="430"></canvas>
+    <div id="startScreen" class="startScreen" aria-hidden="false">
+      <div class="startScreenInner">
+        <p class="startScreenTitle">走る準備はいい？</p>
+        <div class="primaryBtns">
+          <button id="start">スタート</button>
+          <button id="restart" class="secondary" style="display:none">リスタート</button>
+          <button id="howto" class="ghost">遊び方</button>
+        </div>
+      </div>
+    </div>
+    <div id="touchControls" class="actionBar" aria-hidden="true">
+      <button id="jumpBtn" class="touchBtn touchJump" aria-label="ジャンプ">ジャンプ</button>
+      <button id="attackBtn" class="touchBtn touchAttack" aria-label="攻撃">攻撃</button>
+      <button id="ultBtn" class="touchBtn touchUlt" aria-label="必殺技">必殺技</button>
+    </div>
+
     <div id="btns">
-      <button id="start">スタート</button>
-      <button id="restart" class="secondary" style="display:none">リスタート</button>
-      <button id="howto" class="ghost">遊び方</button>
-      <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
-      <button id="gacha10" class="warn" disabled>10連(100)</button>
-      <button id="collection" class="ghost">コレクション</button>
-      <button id="codexBtn" class="ghost">図鑑</button>
-      <button id="leaderboardBtn" class="ghost">ランキング</button>
-      <button id="commentBtn" class="ghost">コメント</button>
+      <div class="secondaryBtns" aria-label="サブメニュー">
+        <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
+        <button id="gacha10" class="warn" disabled>10連(100)</button>
+        <button id="collection" class="ghost">コレクション</button>
+        <button id="codexBtn" class="ghost">図鑑</button>
+        <button id="leaderboardBtn" class="ghost">ランキング</button>
+        <button id="commentBtn" class="ghost">コメント</button>
+      </div>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
-  </div>
-
-  <div id="touchControls">
-    <button id="jumpBtn" class="touchBtn" aria-label="ジャンプ">ジャンプ</button>
-    <button id="ultBtn" class="touchBtn touchUlt" aria-label="必殺">必殺</button>
   </div>
 
   <!-- プレゲーム：キャラ選択 -->
