@@ -9,6 +9,7 @@ const c = cv.getContext('2d');
 const hud = document.getElementById('hud');
 const btnStart = document.getElementById('start');
 const btnRestart = document.getElementById('restart');
+const startScreen = document.getElementById('startScreen');
 const touchControls = document.getElementById('touchControls');
 const btnUlt = document.getElementById('ultBtn');
 const btnAttack = document.getElementById('attackBtn');
@@ -494,6 +495,12 @@ function setHUD(remainMs){
 
   btnGacha.disabled = coins < 10;
   btnGacha10.disabled = coins < 100;
+}
+
+function setStartScreenVisible(show){
+  if (!startScreen) return;
+  startScreen.classList.toggle('isHidden', !show);
+  startScreen.setAttribute('aria-hidden', show ? 'false' : 'true');
 }
 
 function describeUlt(key){
@@ -1427,6 +1434,7 @@ function startGame(){
   guardReadyTime = 0;
   resetPlayerAnimation();
   btnStart.style.display='none'; btnRestart.style.display='none';
+  setStartScreenVisible(false);
   t0=now(); gameOn=true;
   lastItem=lastEnemy=lastPower=lastShot=t0;
   currentStats = getEffectiveStats(currentCharKey);
@@ -1450,6 +1458,7 @@ function endGame(){
   updateBestScore(finalResult.score);
   setHUD(0);
   showResultOverlay(finalResult);
+  setStartScreenVisible(true);
   c.textAlign='start'; btnRestart.style.display='inline-block';
   setTimeout(()=>{
     try {
@@ -1520,5 +1529,6 @@ HowtoModule?.init?.({
 
 setHUD(GAME_TIME);
 updateCharInfo();
+setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
 })();

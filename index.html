@@ -57,6 +57,16 @@
     </div>
     <div id="charInfo" class="muted">CHAR: -</div>
     <canvas id="cv" width="900" height="430"></canvas>
+    <div id="startScreen" class="startScreen" aria-hidden="false">
+      <div class="startScreenInner">
+        <p class="startScreenTitle">走る準備はいい？</p>
+        <div class="primaryBtns">
+          <button id="start">スタート</button>
+          <button id="restart" class="secondary" style="display:none">リスタート</button>
+          <button id="howto" class="ghost">遊び方</button>
+        </div>
+      </div>
+    </div>
     <div id="touchControls" class="actionBar" aria-hidden="true">
       <button id="jumpBtn" class="touchBtn touchJump" aria-label="ジャンプ">ジャンプ</button>
       <button id="attackBtn" class="touchBtn touchAttack" aria-label="攻撃">攻撃</button>
@@ -64,11 +74,6 @@
     </div>
 
     <div id="btns">
-      <div class="primaryBtns">
-        <button id="start">スタート</button>
-        <button id="restart" class="secondary" style="display:none">リスタート</button>
-        <button id="howto" class="ghost">遊び方</button>
-      </div>
       <div class="secondaryBtns" aria-label="サブメニュー">
         <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
         <button id="gacha10" class="warn" disabled>10連(100)</button>
