@@ -1481,25 +1481,31 @@ function spawnBossForStage(stageKey, t){
 function bossFireVolley(boss, time){
   const config = boss.config;
   const count = Math.max(1, config.volley || 3);
-  const baseX = boss.x + boss.w * 0.25;
-  const baseY = boss.y + boss.h * 0.45;
-  const spread = config.projectileSpread || 0.2;
   const speed = config.projectileSpeed || 3;
+  const baseX = boss.x + boss.w * 0.15;
+  const launchY = boss.y + boss.h * 0.65;
+  const targetX = player.x + player.w * 0.5;
+  const distanceX = Math.max(32, Math.abs(baseX - targetX));
+  const travelFrames = Math.max(12, distanceX / speed);
   for (let i=0; i<count; i++){
     const offset = i - (count - 1)/2;
-    const vy = offset * spread * speed;
+    const laneOffset = offset * (player.h * 0.22);
+    const desiredY = player.y + player.h * 0.7 + laneOffset;
+    const targetY = clamp(desiredY, player.y + 12, cv.height - GROUND - 18);
+    const vy = (targetY - launchY) / travelFrames;
     bossProjectiles.push({
       x: baseX,
-      y: baseY + offset * 10,
+      y: launchY,
       w: 30,
       h: 30,
       vx: speed,
       vy,
-      gravity: config.projectileGravity || 0,
+      gravity: 0,
       createdAt: time
     });
   }
 }
+
 
 function awardBossDefeat(config){
   const rewardScore = Number(config.rewardScore || 150);
@@ -2102,7 +2108,7 @@ function draw(remain, st){
     const barHeight = 12;
     const hpRatio = bossState.maxHp ? Math.max(0, bossState.hp / bossState.maxHp) : 0;
     const barX = cv.width/2 - barWidth/2;
-    const barY = 24;
+    const barY = 64;
     c.save();
     c.fillStyle = 'rgba(0,0,0,0.45)';
     c.fillRect(barX, barY, barWidth, barHeight);
