@@ -4,6 +4,12 @@
   header{padding:12px 8px 4px}
   h1{margin:0 0 6px;font-size:clamp(20px,4vw,28px)}
   #wrap{max-width:var(--maxw);margin:0 auto;padding:8px;position:relative}
+  .playArea{
+    position:relative;
+    max-width:var(--maxw);
+    margin:0 auto;
+    padding-top:clamp(110px,18vh,150px);
+  }
   #hud{
     position:absolute;
     top:clamp(6px,1.8vh,20px);
@@ -146,7 +152,7 @@
   .howObjective strong{color:#fbbf24}
   #charInfo{
     position:absolute;
-    top:clamp(70px,14vh,104px);
+    top:calc(clamp(6px,1.8vh,20px) + clamp(60px,9vh,90px));
     right:clamp(12px,4vw,36px);
     font-size:clamp(11px,2.4vw,13px);
     background:rgba(15,23,42,.72);
@@ -155,7 +161,7 @@
     border-radius:10px;
     box-shadow:0 8px 18px rgba(15,23,42,.28);
     pointer-events:none;
-
+    z-index:3;
   }
 
   .startScreen{
@@ -247,11 +253,21 @@
     }
     .hudRow{justify-content:center;}
     .hudItem{justify-content:center;text-align:center;}
+    .playArea{
+      display:flex;
+      flex-direction:column;
+      align-items:stretch;
+      gap:8px;
+      padding-top:0;
+    }
     #touchControls{border-radius:16px 16px 0 0;margin:12px auto 0;}
     #charInfo{
       position:static;
       align-self:flex-end;
       margin:0 10px;
+      max-width:92%;
+      width:fit-content;
+      z-index:auto;
     }
   }
 
@@ -447,7 +463,10 @@
     #hud{flex-direction:column;align-items:center;gap:clamp(6px,1.8vh,12px);top:clamp(6px,3vh,18px)}
     .hudLeft,.hudRight{max-width:none;flex-direction:row;flex-wrap:wrap;justify-content:center}
     .hudBlock{align-items:center;text-align:center}
-    #charInfo{position:static;margin:6px auto 0;max-width:92%;background:rgba(15,23,42,.72)}
+    .playArea{
+      padding-top:0;
+    }
+    #charInfo{position:static;margin:6px auto 0;max-width:92%;width:fit-content;z-index:auto;background:rgba(15,23,42,.72)}
     .preGameBody{grid-template-columns:1fr}
     .preGameList{max-height:none}
   }
