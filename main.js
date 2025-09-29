@@ -73,6 +73,12 @@ const resultMenu = document.getElementById('resultMenu');
 const resultLeaderboardBtn = document.getElementById('resultLeaderboard');
 const resultCommentBtn = document.getElementById('resultComment');
 
+document.addEventListener('selectstart', event => {
+  if (event.target.closest('button')){
+    event.preventDefault();
+  }
+});
+
 const preGameOverlay = document.getElementById('preGameOverlay');
 const preGameClose = document.getElementById('preGameClose');
 const preGameStart = document.getElementById('preGameStart');
