@@ -1,4 +1,6 @@
-﻿/* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
+import { registerUnlockableAudio } from './audio.js';
+
+/* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
 
 const PSR_ASSETS = [
   './assets/sprite/player.png',
@@ -190,7 +192,10 @@ function floatText(text, x, y, color = '#ffec8b'){
 }
 
 const speedSe = typeof Audio !== 'undefined' ? new Audio('./assets/sfx/whoosh.ogg') : null;
-if (speedSe) speedSe.volume = 0.35;
+if (speedSe){
+  speedSe.volume = 0.35;
+  registerUnlockableAudio(speedSe);
+}
 
 function speedSE(){
   try {
