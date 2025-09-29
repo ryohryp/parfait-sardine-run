@@ -4,6 +4,7 @@ import './js/leaderboard.js';
 import './js/comments.js';
 
 import { showStageTitle, cameraShake, floatText, speedSE } from './js/presentation.js';
+import { initAudio, playBgm, stopBgm, playSfx } from './js/audio.js';
 import { G, BASE_JUMP, GROUND, GAME_TIME, INVINCIBILITY_DURATION, SHOOT_COOLDOWN as shootCD, POWER_DURATION as powerMillis, ENEMY_BONUS as enemyBonus, ITEM_LEVEL as itemLv } from './js/game-constants.js';
 import { ITEM_CATALOG } from './js/game-data/items.js';
 import { characters, rarOrder, rarClass, SPECIAL_LABELS, ULT_DETAILS } from './js/game-data/characters.js';
@@ -34,7 +35,7 @@ window.PSRUN_START = function PSRUN_START(){
   btnStart.style.display='none'; btnRestart.style.display='none';
   setStartScreenVisible(false);
   t0=now(); gameOn=true;
-  playStageBgm(true);
+  playBgm({ reset: true });
   lastItem=lastEnemy=lastPower=lastShot=t0;
   currentStats = getEffectiveStats(currentCharKey);
   setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
@@ -83,53 +84,7 @@ const preGameSpecial = document.getElementById('preGameSpecial');
 const preGameStats = document.getElementById('preGameStats');
 let preGameSelectedKey = null;
 
-const BGM_PATH = './assets/bgm/stage.ogg';
-let stageBgm = null;
-let stageBgmWarned = false;
-
-function getStageBgm(){
-  if (typeof Audio === 'undefined') return null;
-  if (!stageBgm){
-    stageBgm = new Audio(BGM_PATH);
-    stageBgm.loop = true;
-    stageBgm.preload = 'auto';
-    stageBgm.volume = 0.5;
-  }
-  return stageBgm;
-}
-
-function playStageBgm(reset = false){
-  const audio = getStageBgm();
-  if (!audio) return;
-  if (reset){
-    try { audio.currentTime = 0; } catch {}
-  }
-  try {
-    const playPromise = audio.play();
-    if (playPromise?.catch){
-      playPromise.catch(err => {
-        if (err?.name === 'NotAllowedError'){
-          if (!stageBgmWarned){
-            console.warn('[PSR] BGM playback blocked until user interacts with the page.');
-            stageBgmWarned = true;
-          }
-        } else {
-          console.warn('[PSR] BGM play failed:', err);
-        }
-      });
-    }
-  } catch (err){
-    if (!stageBgmWarned){
-      console.warn('[PSR] BGM play failed:', err);
-      stageBgmWarned = true;
-    }
-  }
-}
-
-function stopStageBgm(){
-  if (!stageBgm) return;
-  try { stageBgm.pause(); } catch {}
-}
+initAudio();
 
 // 自キャラ画像（スプライトシート）
 const PLAYER_SPRITE_PATH = 'assets/player-cube-sheet.png';
@@ -1185,6 +1140,7 @@ function updateBossProjectiles(){
       if (now() > hurtUntil){
         lives = Math.max(0, lives-1);
         hurtUntil = now()+900;
+        playSfx('hit');
         if (lives === 0){
           endGame();
           return false;
@@ -1205,9 +1161,11 @@ function jump(){
   if (player.onGround){
     player.vy = currentStats.jump; player.onGround=false;
     canDouble = hasDouble; // 地上離陸時に2段目権利付与
+    playSfx('jump');
   } else if (hasDouble && canDouble){
     player.vy = currentStats.jump * 0.9; // 2段目はやや弱め
     canDouble = false;
+    playSfx('jump');
   }
 }
 function shoot(){
@@ -1550,6 +1508,7 @@ function update(t){
       }
       if (now()>hurtUntil){
         lives=Math.max(0,lives-1); hurtUntil=now()+900;
+        playSfx('hit');
         if (lives===0){ endGame(); return false; }
       }
     }
@@ -1571,6 +1530,7 @@ function update(t){
         } else if (touchAt > hurtUntil){
           lives = Math.max(0, lives-1);
           hurtUntil = touchAt + 900;
+          playSfx('hit');
           bossState.contactCooldown = touchAt + 900;
           if (lives === 0){
             endGame();
@@ -1740,7 +1700,7 @@ function draw(remain, st){
 
 function endGame(){
   if(!gameOn) return; gameOn=false;
-  stopStageBgm();
+  stopBgm();
   bossState = null;
   bossProjectiles.length = 0;
   bossNextSpawnAt = 0;
