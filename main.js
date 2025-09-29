@@ -34,6 +34,7 @@ window.PSRUN_START = function PSRUN_START(){
   btnStart.style.display='none'; btnRestart.style.display='none';
   setStartScreenVisible(false);
   t0=now(); gameOn=true;
+  playStageBgm(true);
   lastItem=lastEnemy=lastPower=lastShot=t0;
   currentStats = getEffectiveStats(currentCharKey);
   setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
@@ -81,6 +82,54 @@ const preGameUlt = document.getElementById('preGameUlt');
 const preGameSpecial = document.getElementById('preGameSpecial');
 const preGameStats = document.getElementById('preGameStats');
 let preGameSelectedKey = null;
+
+const BGM_PATH = './assets/bgm/stage.ogg';
+let stageBgm = null;
+let stageBgmWarned = false;
+
+function getStageBgm(){
+  if (typeof Audio === 'undefined') return null;
+  if (!stageBgm){
+    stageBgm = new Audio(BGM_PATH);
+    stageBgm.loop = true;
+    stageBgm.preload = 'auto';
+    stageBgm.volume = 0.5;
+  }
+  return stageBgm;
+}
+
+function playStageBgm(reset = false){
+  const audio = getStageBgm();
+  if (!audio) return;
+  if (reset){
+    try { audio.currentTime = 0; } catch {}
+  }
+  try {
+    const playPromise = audio.play();
+    if (playPromise?.catch){
+      playPromise.catch(err => {
+        if (err?.name === 'NotAllowedError'){
+          if (!stageBgmWarned){
+            console.warn('[PSR] BGM playback blocked until user interacts with the page.');
+            stageBgmWarned = true;
+          }
+        } else {
+          console.warn('[PSR] BGM play failed:', err);
+        }
+      });
+    }
+  } catch (err){
+    if (!stageBgmWarned){
+      console.warn('[PSR] BGM play failed:', err);
+      stageBgmWarned = true;
+    }
+  }
+}
+
+function stopStageBgm(){
+  if (!stageBgm) return;
+  try { stageBgm.pause(); } catch {}
+}
 
 // 自キャラ画像（スプライトシート）
 const PLAYER_SPRITE_PATH = 'assets/player-cube-sheet.png';
@@ -1691,6 +1740,7 @@ function draw(remain, st){
 
 function endGame(){
   if(!gameOn) return; gameOn=false;
+  stopStageBgm();
   bossState = null;
   bossProjectiles.length = 0;
   bossNextSpawnAt = 0;
