@@ -1,4 +1,8 @@
-  :root { --maxw: 920px; }
+  :root{
+    --scene-base-w: 390; /* 単位なしにして計算しやすく */
+    --scene-base-h: 844;
+    --scene-max-w: 920px; /* 以前の #wrap max-width 相当 */
+  }
   * { box-sizing: border-box; }
   body{margin:0;background:#eaf1f8;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#222;text-align:center}
   header{padding:12px 8px 4px}
@@ -546,9 +550,21 @@
 
 /* 縮小対象 */
 .scene-root{
-  width: var(--scene-base-w, 390px);
-  height: var(--scene-base-h, 844px);
+  /* “縦横比は固定、サイズは可変” にする */
+  aspect-ratio: calc(var(--scene-base-w) / var(--scene-base-h));
+
+  /* 画面が十分広い時は最大920pxまで拡張。
+     画面が狭い時は vmin に従って自動で狭くなる。
+     （縦長デバイスでも縦に収まるよう 100vh 側も考慮） */
+  width: clamp(
+    calc(var(--scene-base-w) * 1px),
+    min(100vw, calc(100vh * (var(--scene-base-w) / var(--scene-base-h)))),
+    var(--scene-max-w)
+  );
+  height: auto;
+
   transform-origin: top center;
+  /* 縮小が必要な時だけ JS で --scene-scale を < 1 にする。広い時は 1 のまま */
   transform: scale(var(--scene-scale, 1));
   will-change: transform;
   transition: transform .12s ease;
