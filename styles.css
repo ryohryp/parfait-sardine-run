@@ -102,7 +102,7 @@
     scroll-snap-type:x mandatory;
   }
   #btns .secondaryBtns button{flex:0 0 auto;scroll-snap-align:center}
-  button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}
+  button{appearance:none;border:0;border-radius:10px;padding:10px 16px;font-size:16px;background:#22c55e;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease;-webkit-user-select:none;user-select:none}
   button.secondary{background:#3b82f6}
   button.ghost{background:#6b7280}
   button.warn{background:#ef4444}
