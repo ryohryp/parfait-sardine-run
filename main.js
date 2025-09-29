@@ -1,4 +1,10 @@
-﻿import './js/utils.js';
+﻿// main.js  (Parfait & Sardine RUN!)
+// 修正点：
+// - モーダル検知の対象をID限定にして modal-open の誤判定を防止
+// - #touchControls を .scene-wrap の外へ退避（pointer-events 無効化の巻き添え防止）
+// - その他のロジックは現行を維持
+
+import './js/utils.js';
 import './js/howto.js';
 import './js/leaderboard.js';
 import './js/comments.js';
@@ -72,6 +78,12 @@ const resultRetry = document.getElementById('resultRetry');
 const resultMenu = document.getElementById('resultMenu');
 const resultLeaderboardBtn = document.getElementById('resultLeaderboard');
 const resultCommentBtn = document.getElementById('resultComment');
+
+document.addEventListener('selectstart', event => {
+  if (event.target.closest('button')){
+    event.preventDefault();
+  }
+});
 
 const preGameOverlay = document.getElementById('preGameOverlay');
 const preGameClose = document.getElementById('preGameClose');
@@ -178,6 +190,14 @@ const playerAnimation = {
   });
 })();
 
+// === タッチコントロールも .scene-wrap の外へ退避（安全策） ===
+(function detachTouchControls(){
+  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
+  const panel = document.getElementById('touchControls');
+  if (wrap && panel && wrap.contains(panel)){
+    document.body.appendChild(panel);
+  }
+})();
 
 let lastPlayerAnimTick = null;
 
@@ -1409,7 +1429,7 @@ function update(t){
     return it.x+it.w>0;
   });
 
-  // ?
+  // ?（パワーUP）
   powers = powers.filter(pw=>{
     pw.x -= pw.v;
     if (AABB(player,pw)){
@@ -1833,12 +1853,19 @@ updateCharInfo();
 setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
 
-// ===== モーダル可視状態 → bodyにフラグ付け ===== 
+// ===== モーダル可視状態 → bodyにフラグ付け（誤判定修正版） ===== 
 (function setupModalOpenFlag(){
   const BODY = document.body;
-  const TARGET_SELECTOR = '.modal, .overlay';
+
+  // 監視対象を ID 限定にする（存在するオーバーレイのみ）
+  const OVERLAY_IDS = [
+    'preGameOverlay','resultOverlay','gachaOverlay',
+    'colOverlay','codexOverlay','leaderboardOverlay','commentsOverlay'
+  ];
+
   const raf = window.requestAnimationFrame?.bind(window) || ((cb) => setTimeout(cb, 16));
   let scheduled = false;
+
   function scheduleUpdate(){
     if (scheduled) return;
     scheduled = true;
@@ -1847,32 +1874,45 @@ LeaderboardModule?.load?.(false);
       updateFlag();
     });
   }
-  function isElementOpen(el){
+
+  function isOpenByStyle(el){
     if (!el || !el.isConnected) return false;
-    const list = el.classList;
-    if (list.contains('is-hidden') || list.contains('isHidden')) return false;
+    const cl = el.classList;
+    if (cl.contains('is-hidden') || cl.contains('isHidden')) return false;
     if (el.hasAttribute('hidden')) return false;
-    const ariaHidden = el.getAttribute('aria-hidden');
-    if (ariaHidden && ariaHidden !== 'false') return false;
-    if (el.hasAttribute('open')) return true;
-    const style = getComputedStyle(el);
-    if (style.display === 'none') return false;
-    if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
-    if (style.opacity === '0' && style.pointerEvents === 'none') return false;
+
+    const s = getComputedStyle(el);
+    if (s.display === 'none') return false;
+    if (s.visibility === 'hidden' || s.visibility === 'collapse') return false;
+    if (s.opacity === '0' && s.pointerEvents === 'none') return false;
     if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
     return true;
   }
-  function updateFlag(){
-    const anyOpen = Array.from(document.querySelectorAll(TARGET_SELECTOR)).some(isElementOpen);
-    BODY.classList.toggle('modal-open', anyOpen);
+
+  function anyOverlayOpen(){
+    for (const id of OVERLAY_IDS){
+      const el = document.getElementById(id);
+      if (isOpenByStyle(el)) return true;
+    }
+    return false;
   }
+
+  function updateFlag(){
+    const open = anyOverlayOpen();
+    BODY.classList.toggle('modal-open', open);
+  }
+
+  // 念のため初期リセット
+  BODY.classList.remove('modal-open');
   updateFlag();
+
   const mo = new MutationObserver(scheduleUpdate);
   mo.observe(document.body, {
     subtree: true,
     attributes: true,
     childList: true
   });
+
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-open-overlay],[data-close-overlay]');
     if (t) scheduleUpdate();
