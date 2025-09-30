@@ -578,6 +578,10 @@
   transition: transform .12s ease;
 }
 
+body.modal-open .scene-root{
+  transform: none;
+}
+
 .scene-wrap.zoomed .scene-root{
   transform: scale(calc(var(--scene-scale, 1) * 1.04));
 }

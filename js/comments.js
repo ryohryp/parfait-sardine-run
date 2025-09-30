@@ -476,9 +476,10 @@
     toggleLike(commentId);
   }
 
-  function openOverlay(){
+  function showOverlay(){
     if (!elements.overlay) return;
     elements.overlay.style.display = 'flex';
+    document.body?.classList?.add('modal-open');
     if (elements.status){
       elements.status.style.display = 'none';
       elements.status.textContent = '';
@@ -508,19 +509,23 @@
     }
   }
 
+  function hideOverlay(){
+    if (!elements.overlay) return;
+    elements.overlay.style.display = 'none';
+    document.body?.classList?.remove('modal-open');
+  }
+
   function init(){
     if (elements.button){
-      elements.button.onclick = () => openOverlay();
+      elements.button.onclick = () => showOverlay();
     }
     if (elements.close){
-      elements.close.onclick = () => {
-        if (elements.overlay) elements.overlay.style.display = 'none';
-      };
+      elements.close.onclick = () => hideOverlay();
     }
     if (elements.overlay){
       elements.overlay.addEventListener('click', ev => {
         if (ev.target === elements.overlay){
-          elements.overlay.style.display = 'none';
+          hideOverlay();
         }
       });
     }
@@ -541,7 +546,8 @@
 
   window.PSR.Comments = {
     init,
-    open: openOverlay,
+    open: showOverlay,
+    close: hideOverlay,
     reload: () => loadComments(true)
   };
 })();
