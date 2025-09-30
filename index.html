@@ -114,6 +114,8 @@
         <button id="codexBtn" class="ghost">図鑑</button>
         <button id="leaderboardBtn" class="ghost">ランキング</button>
         <button id="commentBtn" class="ghost">コメント</button>
+        <button id="versionBtn" class="ghost">更新確認</button>
+        <span id="versionLabel" class="muted" aria-live="polite"></span>
       </div>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
@@ -303,6 +305,7 @@
 
     </div>
   </div><!-- /scene-wrap -->
+  <script type="module" src="js/version.js"></script>
   <script type="module" src="main.js"></script>
   <script>
 (function(){
@@ -337,57 +340,6 @@
   fitScene();
 })();
   </script>
-  <script>
-(function(){
-  const params = new URLSearchParams(location.search);
-  const dev = params.has('dev'); // ?dev を付けたら開発モーチE
 
-  function showUpdateToast(){
-    if (document.getElementById('psr-update-toast')) return;
-    const el = document.createElement('div');
-    el.id = 'psr-update-toast';
-    el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 14px;border-radius:999px;z-index:99999;box-shadow:0 4px 12px #0006;cursor:pointer;';
-    el.textContent = '新しいバ�Eジョンがあります:更新';
-    el.addEventListener('click', () => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.waiting?.postMessage('PSR_SKIP_WAITING');
-      });
-    });
-    document.body.appendChild(el);
-  }
-
-  function setupUpdateHooks(reg){
-    function listenWaiting(sw){
-      if (!sw) return;
-      sw.addEventListener('statechange', () => {
-        if (sw.state === 'installed') showUpdateToast();
-      });
-    }
-
-    if (reg.waiting) showUpdateToast();
-    if (reg.installing) listenWaiting(reg.installing);
-    reg.addEventListener('updatefound', () => listenWaiting(reg.installing));
-  }
-
-  if ('serviceWorker' in navigator){
-    if (dev){
-      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((reg) => reg.unregister()));
-      console.log('[PWA] dev mode: SW unregistered');
-    } else {
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data === 'PSR_RELOAD') location.reload();
-      });
-
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js')
-          .then((reg) => {
-            setupUpdateHooks(reg);
-          })
-          .catch(console.error);
-      });
-    }
-  }
-})();
-</script>
 </body>
 </html>
