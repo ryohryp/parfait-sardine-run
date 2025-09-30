@@ -212,5 +212,6 @@ export {
   showStageTitle,
   cameraShake,
   floatText,
-  speedSE
+  speedSE,
+  PSR_VER
 };

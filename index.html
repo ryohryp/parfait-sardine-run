@@ -114,176 +114,11 @@
         <button id="codexBtn" class="ghost">図鑑</button>
         <button id="leaderboardBtn" class="ghost">ランキング</button>
         <button id="commentBtn" class="ghost">コメント</button>
+        <button id="versionBtn" class="ghost">更新確認</button>
+        <span id="versionLabel" class="muted" aria-live="polite"></span>
       </div>
     </div>
     <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
-  </div>
-
-  <!-- プレゲーム：キャラ選択 -->
-  <div id="preGameOverlay" class="overlay">
-    <div class="cardWrap preGameCard">
-      <div class="cardHeader">
-        <h2>出撃準備</h2>
-        <button id="preGameClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody preGameBody">
-        <div class="preGameList" id="preGameCharList"></div>
-        <div class="preGameInfo">
-          <div class="preGameSummary" id="preGameSummary"></div>
-          <p class="preGameUlt" id="preGameUlt"></p>
-          <div class="preGameSpecial" id="preGameSpecial"></div>
-          <ul class="preGameStats" id="preGameStats"></ul>
-        </div>
-      </div>
-      <div class="footerBtns preGameActions">
-        <button id="preGameStart" class="secondary cta">ゲームスタート</button>
-  </div>
-    </div>
-  </div>
-
-  <!-- 遊び方 -->
-  <div id="howOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>遊び方ガイド</h2>
-        <button id="howClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody">
-        <p id="howLead" class="howLead"></p>
-        <ul id="howList" class="howList"></ul>
-        <section id="howObjective" class="howObjective" aria-live="polite"></section>
-      </div>
-      <div class="howFooter">
-        <span id="howFooterNote" class="howFooterNote"></span>
-        <button id="howStart" class="secondary">今すぐプレイ</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ガチャ -->
-  <div id="gachaOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>ガチャ結果</h2>
-        <button id="gachaClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody">
-        <div id="gachaResults" class="grid"></div>
-      </div>
-      <div class="footerBtns">
-        <button id="pull1" class="warn">もう一度(10)</button>
-        <button id="pull10" class="warn">10連(100)</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- コレクション -->
-  <div id="colOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>コレクション（タップで選択）</h2>
-        <button id="colClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody">
-        <div id="colGrid" class="grid"></div>
-      </div>
-      <div class="footerBtns">
-        <button id="colEquip" class="secondary" disabled>このキャラを装備</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 図鑑 -->
-  <div id="codexOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>アイテム図鑑</h2>
-        <button id="codexClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody">
-        <ul id="codexList" class="codexList"></ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- リザルト -->
-  <div id="resultOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>リザルト</h2>
-        <button id="resultClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody resultBody">
-        <div id="resultSummary" class="resultSummary"></div>
-        <div class="resultSection">
-          <h3>アイテム別スコア内訳</h3>
-          <ul id="resultItemList" class="resultList"></ul>
-        </div>
-        <div class="resultSection">
-          <h3>敵撃破スコア内訳</h3>
-          <ul id="resultEnemyList" class="resultList"></ul>
-        </div>
-      </div>
-      <div class="footerBtns resultPrimary">
-        <button id="resultRetry" class="secondary cta">もう一度挑戦</button>
-        <button id="resultMenu" class="ghost cta">メニューに戻る</button>
-      </div>
-      <div class="footerBtns resultLinks">
-        <button id="resultLeaderboard" class="ghost">ランキングを見る</button>
-        <button id="resultComment" class="ghost">コメントする</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ランキング -->
-  <div id="leaderboardOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>ランキング</h2>
-        <button id="leaderboardClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody">
-        <div class="leaderboardControls">
-          <button id="leaderboardJump" class="ghost">自分の順位へ</button>
-        </div>
-        <p id="leaderboardStatus" class="howLead">読み込み中…</p>
-        <ol id="leaderboardList" class="leaderboardList"></ol>
-      </div>
-      <div class="footerBtns">
-        <button id="leaderboardRefresh" class="secondary">更新</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- コメント -->
-  <div id="commentOverlay" class="overlay">
-    <div class="cardWrap">
-      <div class="cardHeader">
-        <h2>コメント</h2>
-        <button id="commentClose" class="ghost">閉じる</button>
-      </div>
-      <div class="cardBody commentBody">
-        <form id="commentForm" class="commentForm" novalidate>
-          <label class="commentLabel" for="commentName">
-            <span>名前 <small>(必須・1〜40文字)</small></span>
-            <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
-          </label>
-          <label class="commentLabel" for="commentEmail">
-            <span>メールアドレス <small>(任意・公開されません)</small></span>
-            <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
-          </label>
-          <label class="commentLabel" for="commentMessage">
-            <span>コメント <small>(必須・1〜1000文字)</small></span>
-            <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
-          </label>
-          <div class="commentFormActions">
-            <button id="commentSubmit" class="secondary" type="submit">送信</button>
-          </div>
-        </form>
-        <p id="commentStatus" class="howLead" style="display:none"></p>
-        <ul id="commentList" class="commentList"></ul>
-      </div>
-    </div>
   </div>
 
   <div class="vignette" id="vignette"></div>
@@ -303,6 +138,179 @@
 
     </div>
   </div><!-- /scene-wrap -->
+
+  <!-- === Overlays OUTSIDE scene-wrap (fixed to viewport) === -->
+  <div id="uiOverlays">
+    <!-- プレゲーム：キャラ選択 -->
+    <div id="preGameOverlay" class="overlay" hidden>
+      <div class="cardWrap preGameCard">
+        <div class="cardHeader">
+          <h2>出撃準備</h2>
+          <button id="preGameClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody preGameBody">
+          <div class="preGameList" id="preGameCharList"></div>
+          <div class="preGameInfo">
+            <div class="preGameSummary" id="preGameSummary"></div>
+            <p class="preGameUlt" id="preGameUlt"></p>
+            <div class="preGameSpecial" id="preGameSpecial"></div>
+            <ul class="preGameStats" id="preGameStats"></ul>
+          </div>
+        </div>
+        <div class="footerBtns preGameActions">
+          <button id="preGameStart" class="secondary cta">ゲームスタート</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 遊び方 -->
+    <div id="howOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>遊び方ガイド</h2>
+          <button id="howClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody">
+          <p id="howLead" class="howLead"></p>
+          <ul id="howList" class="howList"></ul>
+          <section id="howObjective" class="howObjective" aria-live="polite"></section>
+        </div>
+        <div class="howFooter">
+          <span id="howFooterNote" class="howFooterNote"></span>
+          <button id="howStart" class="secondary">今すぐプレイ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ガチャ -->
+    <div id="gachaOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>ガチャ結果</h2>
+          <button id="gachaClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody">
+          <div id="gachaResults" class="grid"></div>
+        </div>
+        <div class="footerBtns">
+          <button id="pull1" class="warn">もう一度(10)</button>
+          <button id="pull10" class="warn">10連(100)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- コレクション -->
+    <div id="colOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>コレクション（タップで選択）</h2>
+          <button id="colClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody">
+          <div id="colGrid" class="grid"></div>
+        </div>
+        <div class="footerBtns">
+          <button id="colEquip" class="secondary" disabled>このキャラを装備</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 図鑑 -->
+    <div id="codexOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>アイテム図鑑</h2>
+          <button id="codexClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody">
+          <ul id="codexList" class="codexList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- リザルト -->
+    <div id="resultOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>リザルト</h2>
+          <button id="resultClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody resultBody">
+          <div id="resultSummary" class="resultSummary"></div>
+          <div class="resultSection">
+            <h3>アイテム別スコア内訳</h3>
+            <ul id="resultItemList" class="resultList"></ul>
+          </div>
+          <div class="resultSection">
+            <h3>敵撃破スコア内訳</h3>
+            <ul id="resultEnemyList" class="resultList"></ul>
+          </div>
+        </div>
+        <div class="footerBtns resultPrimary">
+          <button id="resultRetry" class="secondary cta">もう一度挑戦</button>
+          <button id="resultMenu" class="ghost cta">メニューに戻る</button>
+        </div>
+        <div class="footerBtns resultLinks">
+          <button id="resultLeaderboard" class="ghost">ランキングを見る</button>
+          <button id="resultComment" class="ghost">コメントする</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ランキング -->
+    <div id="leaderboardOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>ランキング</h2>
+          <button id="leaderboardClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody">
+          <div class="leaderboardControls">
+            <button id="leaderboardJump" class="ghost">自分の順位へ</button>
+          </div>
+          <p id="leaderboardStatus" class="howLead">読み込み中…</p>
+          <ol id="leaderboardList" class="leaderboardList"></ol>
+        </div>
+        <div class="footerBtns">
+          <button id="leaderboardRefresh" class="secondary">更新</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- コメント -->
+    <div id="commentOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>コメント</h2>
+          <button id="commentClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody commentBody">
+          <form id="commentForm" class="commentForm" novalidate>
+            <label class="commentLabel" for="commentName">
+              <span>名前 <small>(必須・1〜40文字)</small></span>
+              <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
+            </label>
+            <label class="commentLabel" for="commentEmail">
+              <span>メールアドレス <small>(任意・公開されません)</small></span>
+              <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
+            </label>
+            <label class="commentLabel" for="commentMessage">
+              <span>コメント <small>(必須・1〜1000文字)</small></span>
+              <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
+            </label>
+            <div class="commentFormActions">
+              <button id="commentSubmit" class="secondary" type="submit">送信</button>
+            </div>
+          </form>
+          <p id="commentStatus" class="howLead" style="display:none"></p>
+          <ul id="commentList" class="commentList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- === /Overlays === -->
+
+  <script type="module" src="js/version.js"></script>
   <script type="module" src="main.js"></script>
   <script>
 (function(){
@@ -337,57 +345,6 @@
   fitScene();
 })();
   </script>
-  <script>
-(function(){
-  const params = new URLSearchParams(location.search);
-  const dev = params.has('dev'); // ?dev を付けたら開発モーチE
 
-  function showUpdateToast(){
-    if (document.getElementById('psr-update-toast')) return;
-    const el = document.createElement('div');
-    el.id = 'psr-update-toast';
-    el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 14px;border-radius:999px;z-index:99999;box-shadow:0 4px 12px #0006;cursor:pointer;';
-    el.textContent = '新しいバ�Eジョンがあります:更新';
-    el.addEventListener('click', () => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.waiting?.postMessage('PSR_SKIP_WAITING');
-      });
-    });
-    document.body.appendChild(el);
-  }
-
-  function setupUpdateHooks(reg){
-    function listenWaiting(sw){
-      if (!sw) return;
-      sw.addEventListener('statechange', () => {
-        if (sw.state === 'installed') showUpdateToast();
-      });
-    }
-
-    if (reg.waiting) showUpdateToast();
-    if (reg.installing) listenWaiting(reg.installing);
-    reg.addEventListener('updatefound', () => listenWaiting(reg.installing));
-  }
-
-  if ('serviceWorker' in navigator){
-    if (dev){
-      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((reg) => reg.unregister()));
-      console.log('[PWA] dev mode: SW unregistered');
-    } else {
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data === 'PSR_RELOAD') location.reload();
-      });
-
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/parfait-sardine-run/service-worker.js')
-          .then((reg) => {
-            setupUpdateHooks(reg);
-          })
-          .catch(console.error);
-      });
-    }
-  }
-})();
-</script>
 </body>
 </html>

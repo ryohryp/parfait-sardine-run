@@ -412,7 +412,14 @@
 
   function openOverlay(){
     if (!elements.overlay) return;
-    elements.overlay.style.display = 'flex';
+    const UI = window.PSR?.UI;
+    if (UI?.openOverlay){
+      UI.openOverlay(elements.overlay);
+    } else {
+      elements.overlay.hidden = false;
+      elements.overlay.classList.add('show');
+      document.body?.classList?.add('modal-open');
+    }
     loadLeaderboard(true);
   }
 
@@ -435,7 +442,14 @@
 
   async function handleAfterGame(result){
     if (elements.overlay){
-      elements.overlay.style.display = 'flex';
+      const UI = window.PSR?.UI;
+      if (UI?.openOverlay){
+        UI.openOverlay(elements.overlay);
+      } else {
+        elements.overlay.hidden = false;
+        elements.overlay.classList.add('show');
+        document.body?.classList?.add('modal-open');
+      }
     }
     if (!result || result.score <= 0){
       await loadLeaderboard(true);
@@ -466,7 +480,17 @@
   function init(){
     if (elements.close){
       elements.close.onclick = () => {
-        if (elements.overlay) elements.overlay.style.display = 'none';
+        if (!elements.overlay) return;
+        const UI = window.PSR?.UI;
+        if (UI?.closeOverlay){
+          UI.closeOverlay(elements.overlay);
+        } else {
+          elements.overlay.hidden = true;
+          elements.overlay.classList.remove('show');
+          if (!document.querySelector('.overlay:not([hidden])')){
+            document.body?.classList?.remove('modal-open');
+          }
+        }
       };
     }
     if (elements.button){

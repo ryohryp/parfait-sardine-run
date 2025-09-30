@@ -47,7 +47,7 @@
       footer.textContent = copy.hint;
     }
     if (lead){
-      if (overlay && overlay.style.display === 'flex'){
+      if (overlay && !overlay.hidden){
         lead.textContent = leadMode === 'initial' ? copy.initialLead : copy.defaultLead;
       } else if (!lead.textContent){
         lead.textContent = copy.defaultLead;
@@ -83,7 +83,14 @@
       const { copy, leadMode } = state;
       lead.textContent = leadMode === 'initial' ? copy.initialLead : copy.defaultLead;
     }
-    overlay.style.display = 'flex';
+    const UI = window.PSR?.UI;
+    if (UI?.openOverlay){
+      UI.openOverlay(overlay);
+    } else {
+      overlay.hidden = false;
+      overlay.classList.add('show');
+      document.body?.classList?.add('modal-open');
+    }
   }
 
   function ensureObjectiveCopy(){
@@ -111,8 +118,17 @@
   }
 
   function close(){
-    if (elements.overlay){
-      elements.overlay.style.display = 'none';
+    const { overlay } = elements;
+    if (!overlay) return;
+    const UI = window.PSR?.UI;
+    if (UI?.closeOverlay){
+      UI.closeOverlay(overlay);
+    } else {
+      overlay.hidden = true;
+      overlay.classList.remove('show');
+      if (!document.querySelector('.overlay:not([hidden])')){
+        document.body?.classList?.remove('modal-open');
+      }
     }
   }
 
