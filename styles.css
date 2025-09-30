@@ -471,6 +471,23 @@
     border-color:rgba(249,115,22,.45);
   }
 
+  /* アップデート情報 */
+  .announcementBody{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .announcementStatus{margin:0;font-size:13px;line-height:1.6;color:#cbd5f5}
+  .announcementStatus[data-variant="success"]{color:#99f6e4}
+  .announcementStatus[data-variant="warning"]{color:#facc15}
+  .announcementStatus[data-variant="error"]{color:#fca5a5}
+  .announcementStatus[data-variant="loading"]{color:#bfdbfe}
+  .announcementStatus[data-variant="cached"]{color:#e0e7ff}
+  .announcementList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .announcementItem{background:rgba(15,23,42,.55);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:inset 0 0 0 1px rgba(148,163,184,.2)}
+  .announcementItemHeader{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .announcementVersion{font-weight:700;font-size:15px;letter-spacing:.04em}
+  .announcementDate{font-size:12px;opacity:.78;font-variant-numeric:tabular-nums}
+  .announcementNotes{margin:0;padding-left:20px;display:grid;gap:6px;line-height:1.6}
+  .announcementSummary{margin:0;font-size:13px;line-height:1.6}
+  .announcementEmpty{padding:24px 0;text-align:center;opacity:.7;font-style:italic;color:#e5e7eb}
+
   @media(max-width:780px){
     #hud{flex-direction:column;align-items:center;gap:clamp(6px,1.8vh,12px);top:clamp(6px,3vh,18px)}
     .hudLeft,.hudRight{max-width:none;flex-direction:row;flex-wrap:wrap;justify-content:center}
@@ -594,7 +611,8 @@ body.modal-open .scene-root > :not(.overlay):not(.modal){ pointer-events: none; 
 #colOverlay,
 #codexOverlay,
 #leaderboardOverlay,
-#commentsOverlay{
+#commentOverlay,
+#announcementOverlay{
   position: fixed;
   inset: 0;               /* 画面全体を覆う想定なら */
   z-index: 9999;          /* ← ゲーム層より前 */

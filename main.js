@@ -8,6 +8,7 @@ import './js/utils.js';
 import './js/howto.js';
 import './js/leaderboard.js';
 import './js/comments.js';
+import './js/announcements.js';
 
 import { showStageTitle, cameraShake, floatText, speedSE } from './js/presentation.js';
 import { initAudio, playBgm, stopBgm, playSfx } from './js/audio.js';
@@ -134,7 +135,8 @@ const playerAnimation = {
     'colOverlay',
     'codexOverlay',
     'leaderboardOverlay',
-    'commentsOverlay'
+    'commentOverlay',
+    'announcementOverlay'
   ];
 
   IDS.forEach(id => {
@@ -1820,7 +1822,7 @@ LeaderboardModule?.load?.(false);
   // 監視対象を ID 限定にする（存在するオーバーレイのみ）
   const OVERLAY_IDS = [
     'preGameOverlay','resultOverlay','gachaOverlay',
-    'colOverlay','codexOverlay','leaderboardOverlay','commentsOverlay'
+    'colOverlay','codexOverlay','leaderboardOverlay','commentOverlay','announcementOverlay'
   ];
 
   const raf = window.requestAnimationFrame?.bind(window) || ((cb) => setTimeout(cb, 16));
