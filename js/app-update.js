@@ -5,6 +5,15 @@ const VERSION_JSON_URL = '/parfait-sardine-run/version.json';
 function getBtn(){ return document.getElementById('updateBtn'); }
 function getVerEl(){ return document.getElementById('appVersion'); }
 
+export function ensureUpdateBtnOutside(){
+  const btn = getBtn();
+  if (!btn) return;
+  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
+  if (wrap && wrap.contains(btn)){
+    document.body.appendChild(btn);
+  }
+}
+
 function setBadge(on){
   const btn = getBtn();
   if (!btn) return;
@@ -112,6 +121,7 @@ function isNewer(a, b) {
 }
 
 export function initUpdateUI(){
+  ensureUpdateBtnOutside();
   restoreBadge();
   setVersionIndicator({ current: CURRENT_VERSION });
 
