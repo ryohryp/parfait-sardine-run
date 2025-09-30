@@ -1819,8 +1819,8 @@ LeaderboardModule?.load?.(false);
 
   // 監視対象を ID 限定にする（存在するオーバーレイのみ）
   const OVERLAY_IDS = [
-    'preGameOverlay','resultOverlay','gachaOverlay',
-    'colOverlay','codexOverlay','leaderboardOverlay','commentsOverlay'
+    'preGameOverlay','howOverlay','resultOverlay','gachaOverlay',
+    'colOverlay','codexOverlay','leaderboardOverlay','commentOverlay'
   ];
 
   const raf = window.requestAnimationFrame?.bind(window) || ((cb) => setTimeout(cb, 16));
