@@ -478,8 +478,14 @@
 
   function showOverlay(){
     if (!elements.overlay) return;
-    elements.overlay.style.display = 'flex';
-    document.body?.classList?.add('modal-open');
+    const UI = window.PSR?.UI;
+    if (UI?.openOverlay){
+      UI.openOverlay(elements.overlay);
+    } else {
+      elements.overlay.hidden = false;
+      elements.overlay.classList.add('show');
+      document.body?.classList?.add('modal-open');
+    }
     if (elements.status){
       elements.status.style.display = 'none';
       elements.status.textContent = '';
@@ -511,8 +517,16 @@
 
   function hideOverlay(){
     if (!elements.overlay) return;
-    elements.overlay.style.display = 'none';
-    document.body?.classList?.remove('modal-open');
+    const UI = window.PSR?.UI;
+    if (UI?.closeOverlay){
+      UI.closeOverlay(elements.overlay);
+    } else {
+      elements.overlay.hidden = true;
+      elements.overlay.classList.remove('show');
+      if (!document.querySelector('.overlay:not([hidden])')){
+        document.body?.classList?.remove('modal-open');
+      }
+    }
   }
 
   function init(){

@@ -80,6 +80,37 @@ const resultMenu = document.getElementById('resultMenu');
 const resultLeaderboardBtn = document.getElementById('resultLeaderboard');
 const resultCommentBtn = document.getElementById('resultComment');
 
+const OVERLAY_SELECTOR = '.overlay';
+
+function openOverlay(el){
+  if (!el) return;
+  document.body.classList.add('modal-open');
+  el.hidden = false;
+  el.classList.add('show');
+  if (el.style?.display){
+    el.style.removeProperty('display');
+  }
+}
+
+function closeOverlay(el){
+  if (!el) return;
+  el.hidden = true;
+  el.classList.remove('show');
+  if (el.style?.display){
+    el.style.removeProperty('display');
+  }
+  if (!document.querySelector(`${OVERLAY_SELECTOR}:not([hidden])`)){
+    document.body.classList.remove('modal-open');
+  }
+}
+
+window.PSR = window.PSR || {};
+window.PSR.UI = Object.assign(window.PSR.UI || {}, {
+  openOverlay,
+  closeOverlay,
+  isOverlayOpen: () => !!document.querySelector(`${OVERLAY_SELECTOR}:not([hidden])`)
+});
+
 document.addEventListener('selectstart', event => {
   if (event.target.closest('button')){
     event.preventDefault();
@@ -120,31 +151,6 @@ const playerAnimation = {
   currentFrame: PLAYER_WALK_FRAMES[0],
 };
 
-// === モーダル/オーバーレイを .scene-wrap の外（body直下）へ退避 ===
-(function detachOverlaysFromScene(){
-  // .scene-wrap or #sceneWrap のどちらでも拾う
-  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
-  if (!wrap) return;
-
-  // 退避対象のID一覧（存在しないものはスキップ）
-  const IDS = [
-    'preGameOverlay',
-    'resultOverlay',
-    'gachaOverlay',
-    'colOverlay',
-    'codexOverlay',
-    'leaderboardOverlay',
-    'commentsOverlay'
-  ];
-
-  IDS.forEach(id => {
-    const el = document.getElementById(id);
-    if (el && wrap.contains(el)) {
-      document.body.appendChild(el); // ← body直下へ移動（参照は生きたまま）
-    }
-  });
-})();
-
 // === タッチコントロールも .scene-wrap の外へ退避（安全策） ===
 (function detachTouchControls(){
   const wrap = document.querySelector('#sceneWrap, .scene-wrap');
@@ -166,9 +172,12 @@ playerSprite.image.onerror = ()=>{ playerSprite.loaded = false; };
 // ガチャUI
 const ov = document.getElementById('gachaOverlay');
 const resWrap = document.getElementById('gachaResults');
-document.getElementById('gachaClose').onclick = ()=> ov.style.display='none';
-document.getElementById('pull1').onclick = ()=> doGacha(1);
-document.getElementById('pull10').onclick = ()=> doGacha(10);
+const gachaClose = document.getElementById('gachaClose');
+const pull1 = document.getElementById('pull1');
+const pull10 = document.getElementById('pull10');
+if (gachaClose){ gachaClose.onclick = ()=> closeOverlay(ov); }
+if (pull1){ pull1.onclick = ()=> doGacha(1); }
+if (pull10){ pull10.onclick = ()=> doGacha(10); }
 
 // コレクションUI
 const colOv = document.getElementById('colOverlay');
@@ -176,8 +185,21 @@ const colGrid = document.getElementById('colGrid');
 const colClose = document.getElementById('colClose');
 const colEquip = document.getElementById('colEquip');
 let colSelectedKey = null;
-colClose.onclick = ()=>{ colOv.style.display='none'; colSelectedKey=null; colEquip.disabled=true; };
-colEquip.onclick = ()=>{ if(colSelectedKey){ setCurrentChar(colSelectedKey); colOv.style.display='none'; } };
+if (colClose){
+  colClose.onclick = ()=>{
+    closeOverlay(colOv);
+    colSelectedKey = null;
+    if (colEquip) colEquip.disabled = true;
+  };
+}
+if (colEquip){
+  colEquip.onclick = ()=>{
+    if(colSelectedKey){
+      setCurrentChar(colSelectedKey);
+      closeOverlay(colOv);
+    }
+  };
+}
 
 // 図鑑UI
 const codexOverlay = document.getElementById('codexOverlay');
@@ -186,11 +208,11 @@ const codexList = document.getElementById('codexList');
 if (btnCodex){
   btnCodex.onclick = ()=>{
     populateCodex();
-    if (codexOverlay) codexOverlay.style.display = 'flex';
+    openOverlay(codexOverlay);
   };
 }
 if (codexClose){
-  codexClose.onclick = ()=>{ if (codexOverlay) codexOverlay.style.display='none'; };
+  codexClose.onclick = ()=> closeOverlay(codexOverlay);
 }
 
 function populateCodex(){
@@ -371,10 +393,10 @@ function doGacha(n){
     dv.innerHTML = `<div class="big">${ch.emoji}</div>
       <div>${ch.name}</div>
       <div class="small">R:${ch.rar} / LB:${own.limit}</div>`;
-    dv.onclick = ()=>{ setCurrentChar(ch.key); ov.style.display='none'; };
+    dv.onclick = ()=>{ setCurrentChar(ch.key); closeOverlay(ov); };
     resWrap.appendChild(dv);
   });
-  ov.style.display='flex';
+  openOverlay(ov);
 }
 
 function addToCollection(key){
@@ -416,7 +438,7 @@ btnCollection.onclick = ()=>{
     };
     colGrid.appendChild(dv);
   });
-  colOv.style.display='flex';
+  openOverlay(colOv);
 };
 
 // ====== HUD / 便利 ======
@@ -591,13 +613,13 @@ function openPreGame(mode='start'){
   buildPreGameList();
   updatePreGameDetails();
   preGameOverlay.dataset.mode = mode;
-  preGameOverlay.style.display = 'flex';
+  openOverlay(preGameOverlay);
   setTimeout(()=>{ try { preGameStart.focus(); } catch {} }, 60);
 }
 
 function closePreGame(){
   if (preGameOverlay){
-    preGameOverlay.style.display = 'none';
+    closeOverlay(preGameOverlay);
   }
   preGameSelectedKey = null;
 }
@@ -863,14 +885,14 @@ function populateResultOverlay(result){
 
 function hideResultOverlay(){
   if (resultOverlay){
-    resultOverlay.style.display = 'none';
+    closeOverlay(resultOverlay);
   }
 }
 
 function showResultOverlay(result){
   if (!resultOverlay) return;
   populateResultOverlay(result);
-  resultOverlay.style.display = 'flex';
+  openOverlay(resultOverlay);
 }
 
 if (resultClose){
@@ -1812,71 +1834,5 @@ setHUD(GAME_TIME);
 updateCharInfo();
 setStartScreenVisible(true);
 LeaderboardModule?.load?.(false);
-
-// ===== モーダル可視状態 → bodyにフラグ付け（誤判定修正版） ===== 
-(function setupModalOpenFlag(){
-  const BODY = document.body;
-
-  // 監視対象を ID 限定にする（存在するオーバーレイのみ）
-  const OVERLAY_IDS = [
-    'preGameOverlay','howOverlay','resultOverlay','gachaOverlay',
-    'colOverlay','codexOverlay','leaderboardOverlay','commentOverlay'
-  ];
-
-  const raf = window.requestAnimationFrame?.bind(window) || ((cb) => setTimeout(cb, 16));
-  let scheduled = false;
-
-  function scheduleUpdate(){
-    if (scheduled) return;
-    scheduled = true;
-    raf(() => {
-      scheduled = false;
-      updateFlag();
-    });
-  }
-
-  function isOpenByStyle(el){
-    if (!el || !el.isConnected) return false;
-    const cl = el.classList;
-    if (cl.contains('is-hidden') || cl.contains('isHidden')) return false;
-    if (el.hasAttribute('hidden')) return false;
-
-    const s = getComputedStyle(el);
-    if (s.display === 'none') return false;
-    if (s.visibility === 'hidden' || s.visibility === 'collapse') return false;
-    if (s.opacity === '0' && s.pointerEvents === 'none') return false;
-    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
-    return true;
-  }
-
-  function anyOverlayOpen(){
-    for (const id of OVERLAY_IDS){
-      const el = document.getElementById(id);
-      if (isOpenByStyle(el)) return true;
-    }
-    return false;
-  }
-
-  function updateFlag(){
-    const open = anyOverlayOpen();
-    BODY.classList.toggle('modal-open', open);
-  }
-
-  // 念のため初期リセット
-  BODY.classList.remove('modal-open');
-  updateFlag();
-
-  const mo = new MutationObserver(scheduleUpdate);
-  mo.observe(document.body, {
-    subtree: true,
-    attributes: true,
-    childList: true
-  });
-
-  document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-open-overlay],[data-close-overlay]');
-    if (t) scheduleUpdate();
-  });
-})();
 
 })();

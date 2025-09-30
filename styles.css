@@ -297,14 +297,34 @@
 
   /* ガチャ & コレクション オーバーレイ */
   .overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; z-index:20;
-    align-items:center; justify-content:center; padding:clamp(12px,4vh,28px) 16px;
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.45);
+    z-index:5000;
+    padding:clamp(12px,4vh,28px) 16px;
     overflow-y:auto;
   }
+  .overlay:not([hidden]),
+  .overlay.show{
+    display:flex;
+  }
   .cardWrap{
-    width:min(94vw,820px); background:#111827; color:#fff; border-radius:16px; padding:16px;
-    box-shadow:0 8px 32px rgba(0,0,0,.45); text-align:left; max-height:calc(100vh - clamp(24px,8vh,56px));
-    display:flex; flex-direction:column; gap:12px;
+    width:100%;
+    max-width:min(680px, 92vw);
+    background:#111827;
+    color:#fff;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 12px 40px rgba(0,0,0,.35);
+    text-align:left;
+    max-height:min(80dvh, 720px);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    overflow:auto;
   }
   .cardHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   .cardHeader h2{margin:0;font-size:20px}
@@ -587,23 +607,8 @@ body.modal-open .scene-root{
 }
 
 /* モーダル表示中はゲーム層のヒットテストを無効化 */
-body.modal-open .scene-root > :not(.overlay):not(.modal){ pointer-events: none; }
-
-/* モーダル/オーバーレイは常に最前面で操作可 */
-.modal,
-.overlay,
-#preGameOverlay,
-#resultOverlay,
-#gachaOverlay,
-#colOverlay,
-#codexOverlay,
-#leaderboardOverlay,
-#commentsOverlay{
-  position: fixed;
-  inset: 0;               /* 画面全体を覆う想定なら */
-  z-index: 9999;          /* ← ゲーム層より前 */
-  pointer-events: auto;   /* ← クリックを受け付ける */
-}
+body.modal-open{ overflow:hidden; }
+.modal-open .scene-wrap{ pointer-events:none; }
 
 /* ビネットは視覚効果のみ（操作は通す） */
 .vignette{
