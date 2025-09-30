@@ -114,7 +114,6 @@
         <button id="codexBtn" class="ghost">図鑑</button>
         <button id="leaderboardBtn" class="ghost">ランキング</button>
         <button id="commentBtn" class="ghost">コメント</button>
-        <button id="versionBtn" class="ghost">更新確認</button>
         <span id="versionLabel" class="muted" aria-live="polite"></span>
       </div>
     </div>
@@ -133,6 +132,14 @@
       <div class="fish" id="pfFish"></div>
     </div>
     <div class="result-score" id="resultScore">SCORE: 0</div>
+  </div>
+
+
+  <button id="updateBtn" class="update-btn">バージョン更新</button>
+
+  <div id="updateBanner" class="update-banner">
+    新しいバージョンがあります！
+    <button id="updateNow">今すぐ更新</button>
   </div>
 
 
@@ -312,6 +319,20 @@
 
   <script type="module" src="js/version.js"></script>
   <script type="module" src="main.js"></script>
+  <script type="module">
+    import { registerSW, forceUpdate, checkLatestAndNotify } from './js/app-update.js';
+    window.addEventListener('DOMContentLoaded', async () => {
+      await registerSW();
+      checkLatestAndNotify({ silent:true });
+      setInterval(() => checkLatestAndNotify({ silent:true }), 6 * 60 * 60 * 1000);
+      document.getElementById('updateBtn')?.addEventListener('click', async () => {
+        const r = await checkLatestAndNotify({ silent:false });
+        if (r.hasUpdate) await forceUpdate();
+        else alert('すでに最新です 👍');
+      });
+      document.getElementById('updateNow')?.addEventListener('click', forceUpdate);
+    });
+  </script>
   <script>
 (function(){
   const BASE_W = 390;
