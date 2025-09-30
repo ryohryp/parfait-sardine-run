@@ -701,3 +701,16 @@ body.modal-open{ overflow:hidden; }
   background:#ef4444;
   box-shadow:0 0 0 2px #fff;
 }
+
+.app-version{
+  position:fixed; left:12px; bottom:12px; z-index:5000;
+  padding:8px 10px; border-radius:10px; font-weight:700;
+  background:#f3f4f6; color:#111827; border:1px solid #e5e7eb;
+  box-shadow:0 6px 18px rgba(0,0,0,.10);
+}
+.app-version.is-latest{
+  background:#ecfdf5; color:#065f46; border-color:#a7f3d0;
+}
+.app-version.is-outdated{
+  background:#fef2f2; color:#991b1b; border-color:#fecaca;
+}

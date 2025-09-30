@@ -1,8 +1,9 @@
-// ==== Update Helper (badge version) ====
+// ==== Update Helper (badge + version indicator) ====
 const CURRENT_VERSION = '2025.09.30-02'; // ★version.json と揃える
 const VERSION_JSON_URL = '/parfait-sardine-run/version.json';
 
 function getBtn(){ return document.getElementById('updateBtn'); }
+function getVerEl(){ return document.getElementById('appVersion'); }
 
 function setBadge(on){
   const btn = getBtn();
@@ -12,23 +13,38 @@ function setBadge(on){
 }
 
 function restoreBadge(){
-  try {
-    const on = localStorage.getItem('psr_update_badge') === '1';
-    setBadge(on);
-  } catch {}
+  try { setBadge(localStorage.getItem('psr_update_badge') === '1'); } catch {}
+}
+
+function setVersionIndicator({ current = CURRENT_VERSION, latest = null, hasUpdate = null } = {}){
+  const el = getVerEl();
+  if (!el) return;
+
+  if (hasUpdate === true) {
+    const nextLabel = latest ? `v${latest}` : 'v—';
+    el.textContent = `v${current} → ${nextLabel}`;
+    el.classList.remove('is-latest');
+    el.classList.add('is-outdated');
+  } else if (hasUpdate === false) {
+    el.textContent = `v${current}`;
+    el.classList.remove('is-outdated');
+    el.classList.add('is-latest');
+  } else {
+    el.textContent = `v${current}`;
+    el.classList.remove('is-outdated', 'is-latest');
+  }
 }
 
 export async function registerSW() {
   if (!('serviceWorker' in navigator)) return null;
-  // SW スコープは /parfait-sardine-run/ に限定
   const reg = await navigator.serviceWorker.register('/parfait-sardine-run/sw.js');
 
-  // 新 SW 検出時（＝更新が利用可能）にバッジON
   reg.addEventListener('updatefound', () => {
     const nw = reg.installing;
     nw?.addEventListener('statechange', () => {
       if (nw.state === 'installed' && navigator.serviceWorker.controller) {
         setBadge(true);
+        setVersionIndicator({ current: CURRENT_VERSION, hasUpdate: true });
       }
     });
   });
@@ -37,30 +53,26 @@ export async function registerSW() {
 }
 
 export async function forceUpdate() {
-  // クリック直後の連打ガード
   const btn = getBtn();
   if (btn) {
     btn.disabled = true;
     btn.style.opacity = '0.7';
   }
 
-  // 1) SW を更新
   const reg = await navigator.serviceWorker.getRegistration('/parfait-sardine-run/');
   if (reg) {
     await reg.update();
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
   }
 
-  // 2) キャッシュ全削除（自前の命名のみ）
   if ('caches' in window) {
     const keys = await caches.keys();
     await Promise.all(keys.filter(k => k.startsWith('psr-cache-')).map(k => caches.delete(k)));
   }
 
-  // 強制更新後のバッジは即座に消す
   setBadge(false);
+  setVersionIndicator({ current: CURRENT_VERSION, latest: null, hasUpdate: false });
 
-  // 3) コントローラ切替 → リロード
   const reload = () => location.reload();
   if (navigator.serviceWorker.controller) {
     navigator.serviceWorker.addEventListener('controllerchange', reload, { once:true });
@@ -69,7 +81,6 @@ export async function forceUpdate() {
     reload();
   }
 
-  // 念のためフェイルセーフでボタンを復帰
   if (btn) {
     setTimeout(() => {
       btn.disabled = false;
@@ -83,13 +94,16 @@ export async function checkLatestAndBadge() {
     const res = await fetch(`${VERSION_JSON_URL}?t=${Date.now()}`, { cache:'no-store' });
     const json = await res.json();
     const latest = String(json.appVersion || '');
-    setBadge(isNewer(latest, CURRENT_VERSION));
+    const hasUpdate = isNewer(latest, CURRENT_VERSION);
+    setBadge(hasUpdate);
+    setVersionIndicator({ current: CURRENT_VERSION, latest, hasUpdate });
+    return { latest, hasUpdate };
   } catch {
-    // 失敗時はバッジ状態維持
+    setVersionIndicator({ current: CURRENT_VERSION, latest: null, hasUpdate: null });
+    return { latest: null, hasUpdate: null };
   }
 }
 
-// "2025.09.30-02" 形式の簡易比較
 function isNewer(a, b) {
   if (!a || !b) return false;
   const na = parseInt(a.replace(/\D/g,''), 10) || 0;
@@ -97,20 +111,17 @@ function isNewer(a, b) {
   return na > nb;
 }
 
-// 初期化ヘルパー（main.js から呼ぶ）
 export function initUpdateUI(){
-  // 復元（前回の検知を反映）
   restoreBadge();
+  setVersionIndicator({ current: CURRENT_VERSION });
 
-  // ボタンクリック（存在するまでリトライ）
   const tryBind = () => {
     const btn = getBtn();
     if (!btn) return false;
     if (!btn.__psrBound) {
       btn.addEventListener('click', async () => {
-        // 手動チェック → あれば更新、なければ通知
         await checkLatestAndBadge();
-        await forceUpdate(); // 常に更新動作（ユーザー意思が明確なので）
+        await forceUpdate();
       });
       btn.__psrBound = true;
     }
@@ -118,7 +129,6 @@ export function initUpdateUI(){
   };
 
   if (!tryBind()) {
-    // DOM 未生成なら少し待って再試行
     const id = setInterval(() => { if (tryBind()) clearInterval(id); }, 200);
     setTimeout(() => clearInterval(id), 5000);
   }

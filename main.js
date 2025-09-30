@@ -164,7 +164,7 @@ const playerAnimation = {
 window.addEventListener('DOMContentLoaded', async () => {
   await registerSW();
   initUpdateUI();
-  checkLatestAndBadge();
+  await checkLatestAndBadge();
   setInterval(checkLatestAndBadge, 6 * 60 * 60 * 1000);
 });
 
