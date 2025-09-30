@@ -376,7 +376,7 @@
   async function submitComment(){
     if (!elements.messageInput || !elements.status || !elements.submit) return;
     const rawName = elements.nameInput?.value ?? '';
-    const sanitizedName = Utils.sanitizeName(rawName) || Leaderboard.DEFAULT_PLAYER_NAME || 'プレイヤー';
+    const sanitizedName = Utils.sanitizeName(rawName) || Leaderboard.DEFAULT_PLAYER_NAME || 'ゲスト';
     const nameLength = Utils.graphemeLength(sanitizedName);
     if (nameLength < 1 || nameLength > 40){
       elements.status.textContent = '名前は1〜40文字で入力してください。';
@@ -491,7 +491,7 @@
       elements.status.textContent = '';
     }
     if (elements.nameInput){
-      const stored = Utils.sanitizeName(Leaderboard.loadPlayerName?.() || Leaderboard.DEFAULT_PLAYER_NAME || 'プレイヤー');
+      const stored = Utils.sanitizeName(Leaderboard.loadPlayerName?.() || Leaderboard.DEFAULT_PLAYER_NAME || 'ゲスト');
       if (stored && !elements.nameInput.value){
         elements.nameInput.value = stored;
       }

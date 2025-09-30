@@ -119,7 +119,9 @@
   .lbScore{min-width:120px;text-align:right;font-variant-numeric:tabular-nums}
   .lbDate{min-width:132px;text-align:right;font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
   .leaderboardItem.selfEntry{box-shadow:0 0 0 2px rgba(250,204,21,.55)}
-  .leaderboardControls{display:flex;justify-content:flex-end;gap:8px;margin-bottom:4px}
+  .leaderboardControls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .leaderboardControlButtons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .leaderboardPlayerName{font-size:14px;color:rgba(255,255,255,.78)}
   #leaderboardJump{display:none}
   .muted{opacity:.75}
   .controls{max-width:var(--maxw);margin:0 auto;line-height:1.6;text-align:left}
@@ -403,6 +405,13 @@
   .resultList .value small{font-size:12px;color:#facc15}
   .resultList .note{font-size:12px;opacity:.75}
   .resultList li.resultEmpty{justify-content:center;opacity:.6;font-style:italic}
+
+  /* 設定 */
+  .settingsBody{display:flex;flex-direction:column;gap:18px}
+  .settingsSection{display:flex;flex-direction:column;gap:12px;background:rgba(15,23,42,.45);padding:16px;border-radius:12px}
+  .settingsSection h3{margin:0;font-size:16px}
+  .settingsPlayerName{margin:0;font-weight:600;font-size:15px;word-break:break-word}
+  .settingsHelp{margin:0;font-size:13px;line-height:1.6;opacity:.78}
 
   /* コメント */
   .commentBody{display:flex;flex-direction:column;gap:16px}

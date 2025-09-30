@@ -9,21 +9,66 @@
     refresh: document.getElementById('leaderboardRefresh'),
     status: document.getElementById('leaderboardStatus'),
     list: document.getElementById('leaderboardList'),
-    jump: document.getElementById('leaderboardJump')
+    jump: document.getElementById('leaderboardJump'),
+    rename: document.getElementById('leaderboardRename'),
+    playerName: document.getElementById('leaderboardPlayerName')
   };
 
   const PLAYER_NAME_KEY = 'psrun_player_name_v1';
-  const DEFAULT_PLAYER_NAME = 'プレイヤー';
+  const DEFAULT_PLAYER_NAME = 'ゲスト';
 
-  function loadPlayerName(){
+  function readStoredPlayerName(){
     try { return localStorage.getItem(PLAYER_NAME_KEY) || ''; }
     catch { return ''; }
   }
 
-  function savePlayerName(name){
+  function writeStoredPlayerName(name){
     try { localStorage.setItem(PLAYER_NAME_KEY, name); }
     catch { }
   }
+
+  function loadPlayerName(){
+    const raw = readStoredPlayerName();
+    const sanitized = Utils.sanitizeName?.(raw) || '';
+    if (sanitized){
+      if (raw !== sanitized) writeStoredPlayerName(sanitized);
+      return sanitized;
+    }
+    return '';
+  }
+
+  function updateNameLabel(name){
+    if (!elements.playerName) return;
+    const displayName = name || loadPlayerName() || DEFAULT_PLAYER_NAME;
+    elements.playerName.textContent = `現在の名前：${displayName}`;
+  }
+
+  function dispatchNameChanged(name){
+    const finalName = name || loadPlayerName() || DEFAULT_PLAYER_NAME;
+    updateNameLabel(finalName);
+    try {
+      window.dispatchEvent(new CustomEvent('psr:playerNameChanged', { detail: { name: finalName } }));
+    } catch { }
+  }
+
+  function ensurePlayerName(){
+    const current = loadPlayerName();
+    if (current) return current;
+    writeStoredPlayerName(DEFAULT_PLAYER_NAME);
+    dispatchNameChanged(DEFAULT_PLAYER_NAME);
+    return DEFAULT_PLAYER_NAME;
+  }
+
+  function savePlayerName(name){
+    const sanitized = Utils.sanitizeName?.(name) || '';
+    const finalName = sanitized || DEFAULT_PLAYER_NAME;
+    writeStoredPlayerName(finalName);
+    dispatchNameChanged(finalName);
+    return finalName;
+  }
+
+  const initialPlayerName = ensurePlayerName();
+  updateNameLabel(initialPlayerName);
 
   function leaderboardUrl(){
     const base = (typeof window !== 'undefined' && window.PSRUN_API_BASE)
@@ -301,6 +346,8 @@
     const { list, status, jump } = elements;
     if (!list || !status) return;
     if (jump){ jump.style.display = 'none'; jump.onclick = null; }
+    const currentName = ensurePlayerName();
+    updateNameLabel(currentName);
     if (showLoading){
       status.textContent = '読み込み中…';
       status.style.display = 'block';
@@ -317,7 +364,7 @@
       status.style.display = 'none';
 
       const limit = Math.min(100, entries.length);
-      const storedName = Utils.sanitizeName(loadPlayerName() || DEFAULT_PLAYER_NAME);
+      const storedName = Utils.sanitizeName(ensurePlayerName());
       const targetName = storedName || '';
       let selfRank = -1;
 
@@ -440,6 +487,21 @@
     await res.json().catch(() => ({}));
   }
 
+  async function requestNameChange(){
+    const current = ensurePlayerName();
+    const input = prompt('新しい名前を入力してください。（1〜40文字）', current);
+    if (input === null){
+      return { changed: false, name: current };
+    }
+    const sanitized = Utils.sanitizeName?.(input) || '';
+    if (!sanitized){
+      alert('名前は1〜40文字で入力してください。');
+      return { changed: false, name: current };
+    }
+    const finalName = savePlayerName(sanitized);
+    return { changed: finalName !== current, name: finalName };
+  }
+
   async function handleAfterGame(result){
     if (elements.overlay){
       const UI = window.PSR?.UI;
@@ -451,28 +513,17 @@
         document.body?.classList?.add('modal-open');
       }
     }
-    if (!result || result.score <= 0){
-      await loadLeaderboard(true);
-      return;
-    }
-    const stored = loadPlayerName() || DEFAULT_PLAYER_NAME;
-    const input = prompt(`ランキングにスコア(${result.score})を登録します。名前を入力してください。`, stored);
-    if (input === null){
-      await loadLeaderboard(true);
-      return;
-    }
-    const name = Utils.sanitizeName(input);
-    if (!name){
-      alert('名前が空のため送信をスキップしました。');
-      await loadLeaderboard(true);
-      return;
-    }
-    try {
-      savePlayerName(name);
-      await submitScore(name, result);
-    } catch (err){
-      console.error('Failed to submit leaderboard', err);
-      alert('ランキングへの送信に失敗しました。通信状況をご確認ください。');
+    const name = ensurePlayerName();
+    updateNameLabel(name);
+    const isPositiveScore = !!result && Number(result.score) > 0;
+    const isHighScore = !!(result && (result.didUpdateBest || result.isNewBest || result.bestUpdated));
+    if (isPositiveScore && isHighScore){
+      try {
+        await submitScore(name, result);
+      } catch (err){
+        console.error('Failed to submit leaderboard', err);
+        alert('ランキングへの送信に失敗しました。通信状況をご確認ください。');
+      }
     }
     await loadLeaderboard(true);
   }
@@ -499,6 +550,9 @@
     if (elements.refresh){
       elements.refresh.onclick = () => loadLeaderboard(true);
     }
+    if (elements.rename){
+      elements.rename.onclick = () => { requestNameChange(); };
+    }
   }
 
   window.PSR.Leaderboard = {
@@ -508,6 +562,8 @@
     handleAfterGame,
     loadPlayerName,
     savePlayerName,
+    ensurePlayerName,
+    requestNameChange,
     DEFAULT_PLAYER_NAME
   };
 })();
