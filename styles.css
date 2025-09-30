@@ -684,20 +684,20 @@ body.modal-open{ overflow:hidden; }
 
 
 .update-btn{
-  position:fixed; right:12px; bottom:12px; z-index:4000;
+  position:fixed; right:12px; bottom:12px; z-index:5000;
   padding:10px 14px; border-radius:10px; border:0;
   background:#16a34a; color:#fff; font-weight:700;
   box-shadow:0 6px 18px rgba(0,0,0,.25);
+  pointer-events:auto;
 }
 
-.update-banner{
-  position:fixed; left:50%; transform:translateX(-50%); bottom:64px; z-index:4000;
-  background:#111827; color:#fff; padding:10px 14px; border-radius:12px;
-  box-shadow:0 10px 28px rgba(0,0,0,.3);
-  display:none; gap:8px; align-items:center;
+.update-btn.has-update{
+  position:fixed;
 }
-.update-banner.show{ display:flex; }
-.update-banner #updateNow{
-  margin-left:8px; border:0; border-radius:8px; padding:8px 10px;
-  background:#3b82f6; color:#fff; font-weight:700;
+.update-btn.has-update::after{
+  content:"";
+  position:absolute; top:-6px; right:-6px;
+  width:14px; height:14px; border-radius:50%;
+  background:#ef4444;
+  box-shadow:0 0 0 2px #fff;
 }

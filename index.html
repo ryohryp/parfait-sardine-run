@@ -135,16 +135,10 @@
   </div>
 
 
-  <button id="updateBtn" class="update-btn">バージョン更新</button>
-
-  <div id="updateBanner" class="update-banner">
-    新しいバージョンがあります！
-    <button id="updateNow">今すぐ更新</button>
-  </div>
-
-
     </div>
   </div><!-- /scene-wrap -->
+
+  <button id="updateBtn" class="update-btn" aria-label="バージョン更新">バージョン更新</button>
 
   <!-- === Overlays OUTSIDE scene-wrap (fixed to viewport) === -->
   <div id="uiOverlays">
@@ -319,20 +313,6 @@
 
   <script type="module" src="js/version.js"></script>
   <script type="module" src="main.js"></script>
-  <script type="module">
-    import { registerSW, forceUpdate, checkLatestAndNotify } from './js/app-update.js';
-    window.addEventListener('DOMContentLoaded', async () => {
-      await registerSW();
-      checkLatestAndNotify({ silent:true });
-      setInterval(() => checkLatestAndNotify({ silent:true }), 6 * 60 * 60 * 1000);
-      document.getElementById('updateBtn')?.addEventListener('click', async () => {
-        const r = await checkLatestAndNotify({ silent:false });
-        if (r.hasUpdate) await forceUpdate();
-        else alert('すでに最新です 👍');
-      });
-      document.getElementById('updateNow')?.addEventListener('click', forceUpdate);
-    });
-  </script>
   <script>
 (function(){
   const BASE_W = 390;

@@ -15,6 +15,7 @@ import { G, BASE_JUMP, GROUND, GAME_TIME, INVINCIBILITY_DURATION, SHOOT_COOLDOWN
 import { ITEM_CATALOG } from './js/game-data/items.js';
 import { characters, rarOrder, rarClass, SPECIAL_LABELS, ULT_DETAILS } from './js/game-data/characters.js';
 import { stages, stageForLevel, stageBosses } from './js/game-data/stages.js';
+import { registerSW, checkLatestAndBadge, initUpdateUI } from './js/app-update.js';
 
 // 先頭付近に置く（PSRUN_STARTより前）
 function now(){ return performance.now(); }
@@ -159,6 +160,13 @@ const playerAnimation = {
     document.body.appendChild(panel);
   }
 })();
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await registerSW();
+  initUpdateUI();
+  checkLatestAndBadge();
+  setInterval(checkLatestAndBadge, 6 * 60 * 60 * 1000);
+});
 
 let lastPlayerAnimTick = null;
 
