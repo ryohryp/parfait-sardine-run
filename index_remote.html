@@ -116,6 +116,7 @@ if ('serviceWorker' in navigator) {
         <button id="gacha10" class="warn" disabled>10連(100)</button>
         <button id="collection" class="ghost">コレクション</button>
         <button id="codexBtn" class="ghost">図鑑</button>
+        <button id="settingsBtn" class="ghost">設定</button>
         <button id="leaderboardBtn" class="ghost">ランキング</button>
         <button id="commentBtn" class="ghost">コメント</button>
       </div>
@@ -248,7 +249,11 @@ if ('serviceWorker' in navigator) {
       </div>
       <div class="cardBody">
         <div class="leaderboardControls">
-          <button id="leaderboardJump" class="ghost">自分の順位へ</button>
+          <span id="leaderboardPlayerName" class="leaderboardPlayerName">現在の名前：-</span>
+          <div class="leaderboardControlButtons">
+            <button id="leaderboardRename" class="ghost">名前変更</button>
+            <button id="leaderboardJump" class="ghost">自分の順位へ</button>
+          </div>
         </div>
         <p id="leaderboardStatus" class="howLead">読み込み中…</p>
         <ol id="leaderboardList" class="leaderboardList"></ol>
@@ -296,10 +301,29 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 
+  <!-- 設定 -->
+  <div id="settingsOverlay" class="overlay">
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>設定</h2>
+        <button id="settingsClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody settingsBody">
+        <section class="settingsSection">
+          <h3>プレイヤー名</h3>
+          <p id="settingsPlayerName" class="settingsPlayerName">現在の名前：-</p>
+          <button id="settingsRename" class="secondary">名前を変更</button>
+          <p class="settingsHelp">ランキングに送信される名前です。1〜40文字で設定できます。</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
 
 <script src="js/utils.js"></script>
 <script src="js/howto.js"></script>
 <script src="js/leaderboard.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/comments.js"></script>
 <script src="main.js"></script>
 <script>

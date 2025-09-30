@@ -7,6 +7,7 @@
 import './js/utils.js';
 import './js/howto.js';
 import './js/leaderboard.js';
+import './js/settings.js';
 import './js/comments.js';
 
 import { showStageTitle, cameraShake, floatText, speedSE } from './js/presentation.js';
@@ -1767,7 +1768,8 @@ function endGame(){
     c.fillText(line, cv.width/2, cv.height/2 + 46 + idx*24);
   });
   const finalResult = { score, level, coins, char: currentCharKey };
-  updateBestScore(finalResult.score);
+  const didUpdateBest = updateBestScore(finalResult.score);
+  finalResult.didUpdateBest = didUpdateBest;
   setHUD(0);
   showResultOverlay(finalResult);
   setStartScreenVisible(true);
@@ -1828,7 +1830,9 @@ function updateBestScore(latestScore){
     bestScore = normalized;
     saveBestScore();
     refreshHUD();
+    return true;
   }
+  return false;
 }
 
 // ====== 初期HUD ======
