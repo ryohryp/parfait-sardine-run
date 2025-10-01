@@ -593,41 +593,6 @@ html,body{
 .speedlines.show{ opacity:1; animation:psr_slideBg .5s linear infinite; }
 @keyframes psr_slideBg{ from{ background-position:0 0 } to{ background-position:200px 0 } }
 
-/* 画面ズーム用のラッパ。body直下に .scene-wrap を1つ被せる想定 */
-.scene-wrap{
-  position: fixed;
-  inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
-         env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-  width: 100vw;
-  height: calc(var(--vh) * 100);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  touch-action: manipulation;
-  -webkit-user-select: none;
-  user-select: none;
-  transform-origin: center;
-  z-index: 1;              /* ← ゲーム層は背面 */
-  pointer-events: auto;    /* ← 通常は入力を受ける */
-}
-
-.scene-root,
-#gameCanvas{
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.scene-root{
-  transform-origin: center;
-  overflow: hidden;
-}
-
-.scene-wrap.zoomed .scene-root{
-  transform: scale(1.04);
-}
-
 /* モーダル表示中はゲーム層のヒットテストを無効化 */
 body.modal-open{ overflow:hidden; }
 .modal-open .scene-wrap{ pointer-events:none; }
@@ -738,4 +703,107 @@ body.modal-open{ overflow:hidden; }
 }
 .app-version.is-outdated{
   background:#fef2f2; color:#991b1b; border-color:#fecaca;
+}
+
+/* === Fullscreen game layer === */
+html,
+body{
+  margin:0;
+  padding:0;
+  height:100%;
+  overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+}
+
+:root{ --vh: 100svh; }
+
+.scene-wrap{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:calc(var(--vh) * 100);
+  overflow:hidden;
+  transform-origin:center;
+  z-index:1000;
+}
+
+.scene-wrap > .scene-root{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  transform:none !important;
+}
+
+#gameCanvas,
+.scene-root canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  max-width:100%;
+  max-height:100%;
+  image-rendering:pixelated;
+}
+
+#touchControls{ z-index:2000; }
+
+.scene-wrap #wrap{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-width:none !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+
+.scene-wrap #wrap .playArea{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-width:none !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+
+.scene-wrap #wrap #hud{
+  max-width:none !important;
+  width:100%;
+}
+
+.scene-wrap #btns{
+  position:fixed;
+  right:clamp(12px,4vw,28px);
+  bottom:clamp(120px,22vh,240px);
+  width:min(320px, 48vw);
+  margin:0 !important;
+  z-index:2000;
+}
+
+.scene-wrap #btns .secondaryBtns{
+  flex-direction:column;
+  align-items:stretch;
+}
+
+.scene-wrap .controls{
+  position:fixed;
+  right:clamp(12px,4vw,28px);
+  bottom:clamp(12px,6vh,40px);
+  width:min(320px, 48vw);
+  margin:0 !important;
+  background:rgba(15,23,42,.7);
+  color:#f8fafc;
+  padding:12px 16px;
+  border-radius:16px;
+  box-shadow:0 18px 42px rgba(15,23,42,.28);
+  text-align:left;
+  z-index:2000;
 }
