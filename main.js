@@ -25,6 +25,15 @@ function rand(a, b){ return a + Math.random() * (b - a); }
 function AABB(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 
 (()=>{
+const LOGICAL_CANVAS_WIDTH = 900;
+const LOGICAL_CANVAS_HEIGHT = 430;
+let canvasPixelWidth = LOGICAL_CANVAS_WIDTH;
+let canvasPixelHeight = LOGICAL_CANVAS_HEIGHT;
+let canvasScale = 1;
+let canvasOffsetX = 0;
+let canvasOffsetY = 0;
+let canvasDevicePixelRatio = 1;
+
 // ====== 開始/終了 ======
 window.PSRUN_START = function PSRUN_START(){
   hideResultOverlay();
@@ -36,7 +45,7 @@ window.PSRUN_START = function PSRUN_START(){
   defeatedBossStages = new Set();
   currentStageKey = stageForLevel(level).key;
   bossNextSpawnAt = 0;
-  player.x=120; player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true;
+  player.x=120; player.y=LOGICAL_CANVAS_HEIGHT-GROUND-player.h; player.vy=0; player.onGround=true;
   canDouble = characters[currentCharKey].special?.includes('doubleJump');
   guardReadyTime = 0;
   resetPlayerAnimation();
@@ -57,8 +66,60 @@ const HowtoModule = PSR.Howto || null;
 const LeaderboardModule = PSR.Leaderboard || null;
 const CommentsModule = PSR.Comments || null;
 // ====== 基本 ======
-const cv = document.getElementById('cv');
+const cv = document.getElementById('gameCanvas');
 const c = cv.getContext('2d');
+const MAX_CANVAS_DPR = 3;
+
+function applyCanvasTransform(){
+  c.setTransform(canvasScale, 0, 0, canvasScale, canvasOffsetX, canvasOffsetY);
+}
+
+(function setupFullScreenCanvas(){
+  if (!cv) return;
+
+  function updateVhVar(){
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+
+  function resizeCanvasToScreen(){
+    updateVhVar();
+
+    const rect = cv.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR));
+    const targetWidth = Math.max(1, Math.floor(rect.width * dpr));
+    const targetHeight = Math.max(1, Math.floor(rect.height * dpr));
+
+    if (cv.width !== targetWidth || cv.height !== targetHeight){
+      cv.width = targetWidth;
+      cv.height = targetHeight;
+    }
+
+    canvasDevicePixelRatio = dpr;
+    canvasPixelWidth = targetWidth;
+    canvasPixelHeight = targetHeight;
+    document.documentElement.style.setProperty('--device-dpr', String(dpr));
+
+    const scaleX = targetWidth / LOGICAL_CANVAS_WIDTH;
+    const scaleY = targetHeight / LOGICAL_CANVAS_HEIGHT;
+    const scale = Math.max(scaleX, scaleY);
+
+    canvasScale = scale;
+    canvasOffsetX = (targetWidth - LOGICAL_CANVAS_WIDTH * scale) / 2;
+    canvasOffsetY = (targetHeight - LOGICAL_CANVAS_HEIGHT * scale) / 2;
+  }
+
+  resizeCanvasToScreen();
+  window.addEventListener('resize', resizeCanvasToScreen, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(resizeCanvasToScreen, 0));
+  window.addEventListener('focus', resizeCanvasToScreen);
+  window.addEventListener('scroll', () => setTimeout(resizeCanvasToScreen, 0), { passive: true });
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', resizeCanvasToScreen);
+  }
+
+  window.PSRUN_RESIZE_CANVAS = resizeCanvasToScreen;
+})();
 const hud = document.getElementById('hud');
 const btnStart = document.getElementById('start');
 const btnRestart = document.getElementById('restart');
@@ -279,7 +340,7 @@ let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
 let runStats; // ★ 追加：ラン集計の入れ物（resetRunStatsで初期化）
 
-const player = { x:120, y:cv.height-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
+const player = { x:120, y:LOGICAL_CANVAS_HEIGHT-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
 
 function resetPlayerAnimation(){
   playerAnimation.sequence = PLAYER_WALK_FRAMES;
@@ -968,8 +1029,8 @@ if (btnUlt){
 function spawnItem(){
   const isParfait = Math.random()<0.5;
   items.push({
-    x: cv.width+24,
-    y: cv.height - GROUND - 44 - rand(0, 95),
+    x: LOGICAL_CANVAS_WIDTH+24,
+    y: LOGICAL_CANVAS_HEIGHT - GROUND - 44 - rand(0, 95),
     w: 30, h: 30,
     v: 3.0 + rand(.6,1.8) + (level-1)*.22,
     char: isParfait ? '🍨' : '🐟',
@@ -1008,9 +1069,9 @@ function spawnEnemy(offset=0){
   const st = stageForLevel(level);
   const baseSpeed = (2.7 + (level-1)*.35) * st.enemyMul;
   const type = pickEnemyType(level);
-  const baseY = cv.height - GROUND - 36;
+  const baseY = LOGICAL_CANVAS_HEIGHT - GROUND - 36;
   const enemy = {
-    x: cv.width+30 + offset,
+    x: LOGICAL_CANVAS_WIDTH+30 + offset,
     y: baseY,
     w: 36,
     h: 36,
@@ -1044,8 +1105,8 @@ function spawnEnemy(offset=0){
 }
 function spawnPower(){
   powers.push({
-    x: cv.width+26,
-    y: cv.height - GROUND - 44 - rand(0, 120),
+    x: LOGICAL_CANVAS_WIDTH+26,
+    y: LOGICAL_CANVAS_HEIGHT - GROUND - 44 - rand(0, 120),
     w: 26, h: 26,
     v: 3.0 + (level-1)*.25,
     char: '⭐'          // ← 追加
@@ -1056,17 +1117,17 @@ function spawnBossForStage(stageKey, t){
   const config = stageBosses[stageKey];
   if (!config) return;
   bossProjectiles.length = 0;
-  const baseY = Math.min(cv.height - GROUND - config.height, Math.max(24, cv.height - GROUND - config.height - config.groundOffset));
+  const baseY = Math.min(LOGICAL_CANVAS_HEIGHT - GROUND - config.height, Math.max(24, LOGICAL_CANVAS_HEIGHT - GROUND - config.height - config.groundOffset));
   bossState = {
     stageKey,
     config,
-    x: cv.width + config.width + 40,
+    x: LOGICAL_CANVAS_WIDTH + config.width + 40,
     y: baseY,
     baseY,
     w: config.width,
     h: config.height,
     vx: config.speed,
-    targetX: Math.max(cv.width - (config.targetOffset || (config.width + 200)), cv.width * 0.34),
+    targetX: Math.max(LOGICAL_CANVAS_WIDTH - (config.targetOffset || (config.width + 200)), LOGICAL_CANVAS_WIDTH * 0.34),
     state:'enter',
     hp: config.hp,
     maxHp: config.hp,
@@ -1094,7 +1155,7 @@ function bossFireVolley(boss, time){
     const offset = i - (count - 1)/2;
     const laneOffset = offset * (player.h * 0.22);
     const desiredY = player.y + player.h * 0.7 + laneOffset;
-    const targetY = clamp(desiredY, player.y + 12, cv.height - GROUND - 18);
+    const targetY = clamp(desiredY, player.y + 12, LOGICAL_CANVAS_HEIGHT - GROUND - 18);
     const vy = (targetY - launchY) / travelFrames;
     bossProjectiles.push({
       x: baseX,
@@ -1177,7 +1238,7 @@ function updateBossProjectiles(){
     shot.x -= shot.vx;
     shot.y += shot.vy;
     if (shot.gravity) shot.vy += shot.gravity;
-    if (shot.y > cv.height + 120 || shot.x + shot.w < -80 || shot.y + shot.h < -120){
+    if (shot.y > LOGICAL_CANVAS_HEIGHT + 120 || shot.x + shot.w < -80 || shot.y + shot.h < -120){
       return false;
     }
     if (AABB(player, shot)){
@@ -1377,8 +1438,8 @@ function update(t){
 
   // 物理
   player.vy += G; player.y += player.vy;
-  if (player.y+player.h >= cv.height-GROUND){
-    player.y=cv.height-GROUND-player.h; player.vy=0; player.onGround=true; canDouble = characters[currentCharKey].special?.includes('doubleJump');
+  if (player.y+player.h >= LOGICAL_CANVAS_HEIGHT-GROUND){
+    player.y=LOGICAL_CANVAS_HEIGHT-GROUND-player.h; player.vy=0; player.onGround=true; canDouble = characters[currentCharKey].special?.includes('doubleJump');
   }
 
   // オート射撃（ガチャ効果など将来用）
@@ -1392,7 +1453,7 @@ function update(t){
       b.hitsLeft -= 1;
       if (b.hitsLeft <= 0) return false;
     }
-    return (b.x < cv.width+24) && b.hitsLeft>0;
+    return (b.x < LOGICAL_CANVAS_WIDTH+24) && b.hitsLeft>0;
   });
 
   // アイテム（Mythic magnet）
@@ -1473,7 +1534,7 @@ function update(t){
       }
     }
 
-    en.y = clamp(en.y, 18, cv.height - GROUND - en.h + 6);
+    en.y = clamp(en.y, 18, LOGICAL_CANVAS_HEIGHT - GROUND - en.h + 6);
     en.x -= en.vx;
 
     // 必殺
@@ -1488,7 +1549,7 @@ function update(t){
         const beamX = player.x + player.w - 6;
         const beamTop = player.y - 36;
         const beamBottom = player.y + player.h + 36;
-        const hit = (en.x+en.w) >= beamX && en.x <= cv.width && en.y <= beamBottom && (en.y+en.h) >= beamTop;
+        const hit = (en.x+en.w) >= beamX && en.x <= LOGICAL_CANVAS_WIDTH && en.y <= beamBottom && (en.y+en.h) >= beamTop;
         if (hit){ awardEnemyDefeat(en); return false; }
       } else {
         const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
@@ -1505,7 +1566,7 @@ function update(t){
           const beamX = player.x + player.w - 6;
           const beamTop = player.y - 36;
           const beamBottom = player.y + player.h + 36;
-          const hitBoss = (bossState.x+bossState.w) >= beamX && bossState.x <= cv.width && bossState.y <= beamBottom && (bossState.y+bossState.h) >= beamTop;
+          const hitBoss = (bossState.x+bossState.w) >= beamX && bossState.x <= LOGICAL_CANVAS_WIDTH && bossState.y <= beamBottom && (bossState.y+bossState.h) >= beamTop;
           if (hitBoss){ damageBoss(0.8); }
         } else {
           const lanes = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
@@ -1564,7 +1625,7 @@ function update(t){
         if (lives===0){ endGame(); return false; }
       }
     }
-    return en.x+en.w>0 && en.y < cv.height;
+    return en.x+en.w>0 && en.y < LOGICAL_CANVAS_HEIGHT;
   });
 
   if (bossState && bossState.state !== 'defeated'){
@@ -1593,7 +1654,7 @@ function update(t){
     }
   }
 
-  ultProjectiles = ultProjectiles.filter(p=> !p.dead && now()<p.expires && p.x<cv.width+60 && p.y>-80 && p.y<cv.height+80 && p.hits>0);
+  ultProjectiles = ultProjectiles.filter(p=> !p.dead && now()<p.expires && p.x<LOGICAL_CANVAS_WIDTH+60 && p.y>-80 && p.y<LOGICAL_CANVAS_HEIGHT+80 && p.hits>0);
 
   draw(remain, st);
   requestAnimationFrame(update);
@@ -1601,10 +1662,14 @@ function update(t){
 
 // ====== 描画 ======
 function draw(remain, st){
-  const g=c.createLinearGradient(0,0,0,cv.height);
+  c.setTransform(1,0,0,1,0,0);
+  c.clearRect(0,0,canvasPixelWidth,canvasPixelHeight);
+  applyCanvasTransform();
+
+  const g=c.createLinearGradient(0,0,0,LOGICAL_CANVAS_HEIGHT);
   g.addColorStop(0, st.bg1); g.addColorStop(1, st.bg2);
-  c.fillStyle=g; c.fillRect(0,0,cv.width,cv.height);
-  c.fillStyle=st.ground; c.fillRect(0, cv.height-GROUND, cv.width, GROUND);
+  c.fillStyle=g; c.fillRect(0,0,LOGICAL_CANVAS_WIDTH,LOGICAL_CANVAS_HEIGHT);
+  c.fillStyle=st.ground; c.fillRect(0, LOGICAL_CANVAS_HEIGHT-GROUND, LOGICAL_CANVAS_WIDTH, GROUND);
 
   if (now()<invUntil){ c.strokeStyle='#f5c542'; c.lineWidth=4; c.strokeRect(player.x-2,player.y-2,player.w+4,player.h+4); }
   const blink = now()<hurtUntil && Math.floor(now()/60)%2===0;
@@ -1646,8 +1711,8 @@ function draw(remain, st){
       const beamTop = player.y - 36;
       const beamH = player.h + 72;
       const intensity = 0.45 + 0.25 * ((Math.sin(now()/90)+1)/2);
-      c.fillStyle=`rgba(255,235,59,${intensity})`; c.fillRect(beamX, beamTop, cv.width-beamX, beamH);
-      c.fillStyle='rgba(255,255,255,0.8)'; c.fillRect(beamX, beamTop + beamH/2 - 6, cv.width-beamX, 12);
+      c.fillStyle=`rgba(255,235,59,${intensity})`; c.fillRect(beamX, beamTop, LOGICAL_CANVAS_WIDTH-beamX, beamH);
+      c.fillStyle='rgba(255,255,255,0.8)'; c.fillRect(beamX, beamTop + beamH/2 - 6, LOGICAL_CANVAS_WIDTH-beamX, 12);
     } else if (type==='yadon'){
       const auraPulse = 40 + Math.sin(now()/140)*6;
       c.strokeStyle='rgba(255,192,203,0.7)';
@@ -1656,8 +1721,8 @@ function draw(remain, st){
     } else {
       const laneYs = [player.y + player.h/2, player.y + player.h/2 - 36, player.y + player.h/2 + 36];
       laneYs.forEach((y,idx)=>{
-        c.fillStyle=`rgba(${180+idx*25},${80+idx*50},255,.65)`; c.fillRect(player.x, y-6, cv.width-player.x, 12);
-        c.fillStyle='rgba(255,255,255,.55)'; c.fillRect(player.x, y-2, cv.width-player.x, 4);
+        c.fillStyle=`rgba(${180+idx*25},${80+idx*50},255,.65)`; c.fillRect(player.x, y-6, LOGICAL_CANVAS_WIDTH-player.x, 12);
+        c.fillStyle='rgba(255,255,255,.55)'; c.fillRect(player.x, y-2, LOGICAL_CANVAS_WIDTH-player.x, 4);
       });
     }
   }
@@ -1715,7 +1780,7 @@ function draw(remain, st){
     const barWidth = 260;
     const barHeight = 12;
     const hpRatio = bossState.maxHp ? Math.max(0, bossState.hp / bossState.maxHp) : 0;
-    const barX = cv.width/2 - barWidth/2;
+    const barX = LOGICAL_CANVAS_WIDTH/2 - barWidth/2;
     const barY = 64;
     c.save();
     c.fillStyle = 'rgba(0,0,0,0.45)';
@@ -1758,14 +1823,15 @@ function endGame(){
   bossNextSpawnAt = 0;
   const st = stageForLevel(level);
   draw(0, st);
-  c.fillStyle='rgba(0,0,0,.55)'; c.fillRect(0,0,cv.width,cv.height);
+  applyCanvasTransform();
+  c.fillStyle='rgba(0,0,0,.55)'; c.fillRect(0,0,LOGICAL_CANVAS_WIDTH,LOGICAL_CANVAS_HEIGHT);
   c.fillStyle='#fff'; c.textAlign='center';
-  c.font='36px sans-serif'; c.fillText('ゲーム終了！', cv.width/2, cv.height/2 - 24);
-  c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}　コイン: 🪙${coins}`, cv.width/2, cv.height/2 + 10);
+  c.font='36px sans-serif'; c.fillText('ゲーム終了！', LOGICAL_CANVAS_WIDTH/2, LOGICAL_CANVAS_HEIGHT/2 - 24);
+  c.font='24px sans-serif'; c.fillText(`最終スコア: ${score}　レベル: ${level}　コイン: 🪙${coins}`, LOGICAL_CANVAS_WIDTH/2, LOGICAL_CANVAS_HEIGHT/2 + 10);
   c.font='18px sans-serif';
   const breakdown = buildScoreBreakdownLines();
   breakdown.forEach((line, idx)=>{
-    c.fillText(line, cv.width/2, cv.height/2 + 46 + idx*24);
+    c.fillText(line, LOGICAL_CANVAS_WIDTH/2, LOGICAL_CANVAS_HEIGHT/2 + 46 + idx*24);
   });
   const finalResult = { score, level, coins, char: currentCharKey };
   const didUpdateBest = updateBestScore(finalResult.score);
