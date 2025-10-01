@@ -123,6 +123,9 @@ export function setGameRunning(isRunning){
   }
 }
 
+window.PSR = window.PSR || {};
+window.PSR.setGameRunning = setGameRunning;
+
 // 先頭付近に置く（PSRUN_STARTより前）
 function now(){ return performance.now(); }
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
