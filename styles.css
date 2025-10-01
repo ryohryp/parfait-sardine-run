@@ -9,6 +9,8 @@ html,body{
 
   :root{
     --vh: 100svh;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --hudH: 72px;
     --scene-base-w: 390; /* 単位なしにして計算しやすく */
     --scene-base-h: 844;
     --scene-max-w: 920px; /* 以前の #wrap max-width 相当 */
@@ -228,12 +230,13 @@ html,body{
 
   #touchControls{
     position: fixed;              /* ← sticky を fixed に */
-    left: 50%;
-    bottom: 12px;                 /* 好みで 0〜16px に調整 */
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
     width: 100%;
     max-width: var(--maxw);
-    margin: 0;                    /* fixed では余白不要 */
+    margin: 0 auto;
     display: flex;
     justify-content: center;
     gap: clamp(12px,4vw,22px);
@@ -249,7 +252,7 @@ html,body{
   }
   #touchControls.isVisible{
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: none;
     pointer-events: auto;
   }
 
@@ -716,8 +719,6 @@ body{
   touch-action:manipulation;
 }
 
-:root{ --vh: 100svh; }
-
 .scene-wrap{
   position:fixed;
   inset:0;
@@ -752,7 +753,44 @@ body{
   image-rendering:pixelated;
 }
 
-#touchControls{ z-index:2000; }
+#touchControls{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  margin:0 auto;
+  max-width:var(--maxw);
+  transform:none;
+  padding-bottom:calc(12px + var(--safe-bottom));
+  z-index:2000;
+}
+
+#sideMenu{
+  position:fixed;
+  right:12px;
+  top:calc(12px + var(--hudH));
+  width:min(420px, 86vw);
+  max-height:calc(100vh - var(--hudH) - 24px - var(--safe-bottom));
+  overflow:auto;
+  z-index:1400;
+  transition:transform .18s ease, opacity .18s ease;
+}
+
+body.inGame #sideMenu{
+  transform:translateX(120%);
+  opacity:0;
+  pointer-events:none;
+}
+
+#hudTop{
+  position:fixed;
+  left:0;
+  right:0;
+  top:0;
+  height:var(--hudH);
+  z-index:1500;
+  pointer-events:none;
+}
 
 .scene-wrap #wrap{
   position:absolute;

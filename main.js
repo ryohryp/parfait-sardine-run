@@ -18,6 +18,111 @@ import { characters, rarOrder, rarClass, SPECIAL_LABELS, ULT_DETAILS } from './j
 import { stages, stageForLevel, stageBosses } from './js/game-data/stages.js';
 import { registerSW, checkLatestAndBadge, initUpdateUI, ensureUpdateBtnOutside } from './js/app-update.js';
 
+const LOGICAL_CANVAS_WIDTH = 900;
+const LOGICAL_CANVAS_HEIGHT = 430;
+
+export const SAFE = { top: 0, right: 12, bottom: 120, left: 12 };
+export let PLAY = { x: 0, y: 0, w: LOGICAL_CANVAS_WIDTH, h: LOGICAL_CANVAS_HEIGHT };
+export let PLAY_LOGICAL = { x: 0, y: 0, w: LOGICAL_CANVAS_WIDTH, h: LOGICAL_CANVAS_HEIGHT };
+export let GROUND_Y = LOGICAL_CANVAS_HEIGHT - GROUND;
+
+let canvasPixelWidth = LOGICAL_CANVAS_WIDTH;
+let canvasPixelHeight = LOGICAL_CANVAS_HEIGHT;
+let canvasScale = 1;
+let canvasOffsetX = 0;
+let canvasOffsetY = 0;
+let canvasDevicePixelRatio = 1;
+let canvasElement = null;
+
+function cssPx(name, fallback = 0){
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name);
+  const numeric = parseFloat(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function measureSafeArea(canvas){
+  const hudH = cssPx('--hudH', 72);
+  const safeBottom = cssPx('--safe-bottom', 0);
+  const tc = document.getElementById('touchControls');
+  let tcHeight = 96;
+  if (tc){
+    const rect = tc.getBoundingClientRect();
+    if (rect && rect.height){
+      tcHeight = Math.max(tcHeight, Math.ceil(rect.height));
+    }
+  }
+
+  SAFE.top = Math.max(12, Math.ceil(hudH));
+  SAFE.bottom = Math.max(24, 12 + safeBottom + tcHeight);
+  SAFE.left = 12;
+  SAFE.right = 12;
+
+  const width = canvas?.width || 0;
+  const height = canvas?.height || 0;
+
+  PLAY = {
+    x: SAFE.left,
+    y: SAFE.top,
+    w: Math.max(1, width - SAFE.left - SAFE.right),
+    h: Math.max(1, height - SAFE.top - SAFE.bottom)
+  };
+}
+
+function alignCanvasToSafeArea(){
+  const scaleX = PLAY.w / LOGICAL_CANVAS_WIDTH;
+  const scaleY = PLAY.h / LOGICAL_CANVAS_HEIGHT;
+  const scale = Math.max(0.01, Math.min(scaleX, scaleY));
+  const scaledWidth = LOGICAL_CANVAS_WIDTH * scale;
+  const scaledHeight = LOGICAL_CANVAS_HEIGHT * scale;
+
+  canvasScale = scale;
+  canvasOffsetX = PLAY.x + (PLAY.w - scaledWidth) / 2;
+  canvasOffsetY = PLAY.y + (PLAY.h - scaledHeight) / 2;
+}
+
+function updatePlayBounds(){
+  const scale = canvasScale || 1;
+  const offsetX = canvasOffsetX || 0;
+  const offsetY = canvasOffsetY || 0;
+
+  const safeLeft = (PLAY.x - offsetX) / scale;
+  const safeTop = (PLAY.y - offsetY) / scale;
+  const safeRight = (PLAY.x + PLAY.w - offsetX) / scale;
+  const safeBottom = (PLAY.y + PLAY.h - offsetY) / scale;
+
+  const clampedLeft = Math.max(0, safeLeft);
+  const clampedTop = Math.max(0, safeTop);
+  const clampedRight = Math.min(LOGICAL_CANVAS_WIDTH, safeRight);
+  const clampedBottom = Math.min(LOGICAL_CANVAS_HEIGHT, safeBottom);
+
+  PLAY_LOGICAL = {
+    x: clampedLeft,
+    y: clampedTop,
+    w: Math.max(1, clampedRight - clampedLeft),
+    h: Math.max(1, clampedBottom - clampedTop)
+  };
+
+  const groundHeight = GROUND;
+  const bottom = Number.isFinite(clampedBottom) ? clampedBottom : LOGICAL_CANVAS_HEIGHT;
+  GROUND_Y = Math.max(groundHeight, Math.min(LOGICAL_CANVAS_HEIGHT - groundHeight, bottom - groundHeight));
+}
+
+export function recalcSafeInsets(canvas){
+  if (!canvas){
+    return;
+  }
+  measureSafeArea(canvas);
+  alignCanvasToSafeArea();
+  updatePlayBounds();
+}
+
+export function setGameRunning(isRunning){
+  document.body.classList.toggle('inGame', !!isRunning);
+  if (canvasElement){
+    recalcSafeInsets(canvasElement);
+  }
+}
+
 // 先頭付近に置く（PSRUN_STARTより前）
 function now(){ return performance.now(); }
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
@@ -25,15 +130,6 @@ function rand(a, b){ return a + Math.random() * (b - a); }
 function AABB(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 
 (()=>{
-const LOGICAL_CANVAS_WIDTH = 900;
-const LOGICAL_CANVAS_HEIGHT = 430;
-let canvasPixelWidth = LOGICAL_CANVAS_WIDTH;
-let canvasPixelHeight = LOGICAL_CANVAS_HEIGHT;
-let canvasScale = 1;
-let canvasOffsetX = 0;
-let canvasOffsetY = 0;
-let canvasDevicePixelRatio = 1;
-
 // ====== 開始/終了 ======
 window.PSRUN_START = function PSRUN_START(){
   hideResultOverlay();
@@ -45,13 +141,19 @@ window.PSRUN_START = function PSRUN_START(){
   defeatedBossStages = new Set();
   currentStageKey = stageForLevel(level).key;
   bossNextSpawnAt = 0;
-  player.x=120; player.y=LOGICAL_CANVAS_HEIGHT-GROUND-player.h; player.vy=0; player.onGround=true;
+  player.x = 120;
+  player.y = GROUND_Y - player.h;
+  player.vy = 0;
+  player.onGround = true;
   canDouble = characters[currentCharKey].special?.includes('doubleJump');
   guardReadyTime = 0;
   resetPlayerAnimation();
   btnStart.style.display='none'; btnRestart.style.display='none';
   setStartScreenVisible(false);
   t0=now(); gameOn=true;
+  setGameRunning(true);
+  player.y = GROUND_Y - player.h;
+  clampPlayerToPlayfield();
   playBgm({ reset: true });
   lastItem=lastEnemy=lastPower=lastShot=t0;
   currentStats = getEffectiveStats(currentCharKey);
@@ -67,6 +169,7 @@ const LeaderboardModule = PSR.Leaderboard || null;
 const CommentsModule = PSR.Comments || null;
 // ====== 基本 ======
 const cv = document.getElementById('gameCanvas');
+canvasElement = cv;
 const c = cv.getContext('2d');
 const MAX_CANVAS_DPR = 3;
 
@@ -100,13 +203,12 @@ function applyCanvasTransform(){
     canvasPixelHeight = targetHeight;
     document.documentElement.style.setProperty('--device-dpr', String(dpr));
 
-    const scaleX = targetWidth / LOGICAL_CANVAS_WIDTH;
-    const scaleY = targetHeight / LOGICAL_CANVAS_HEIGHT;
-    const scale = Math.max(scaleX, scaleY);
-
-    canvasScale = scale;
-    canvasOffsetX = (targetWidth - LOGICAL_CANVAS_WIDTH * scale) / 2;
-    canvasOffsetY = (targetHeight - LOGICAL_CANVAS_HEIGHT * scale) / 2;
+    measureSafeArea(cv);
+    alignCanvasToSafeArea();
+    updatePlayBounds();
+    if (typeof gameOn !== 'undefined' && gameOn){
+      clampPlayerToPlayfield();
+    }
   }
 
   resizeCanvasToScreen();
@@ -120,6 +222,8 @@ function applyCanvasTransform(){
 
   window.PSRUN_RESIZE_CANVAS = resizeCanvasToScreen;
 })();
+
+setGameRunning(false);
 const hud = document.getElementById('hud');
 const btnStart = document.getElementById('start');
 const btnRestart = document.getElementById('restart');
@@ -340,7 +444,23 @@ let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
 let runStats; // ★ 追加：ラン集計の入れ物（resetRunStatsで初期化）
 
-const player = { x:120, y:LOGICAL_CANVAS_HEIGHT-GROUND-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
+const player = { x:120, y:GROUND_Y-46, w:46, h:46, vy:0, onGround:true, color:'#ff6347' };
+
+function clampPlayerToPlayfield(){
+  const margin = 8;
+  const leftBound = PLAY_LOGICAL.x + margin;
+  const rightBound = PLAY_LOGICAL.x + PLAY_LOGICAL.w - margin - player.w;
+  const minX = Math.min(leftBound, rightBound);
+  const maxX = Math.max(leftBound, rightBound);
+
+  const topBound = PLAY_LOGICAL.y;
+  const bottomBound = Math.min(GROUND_Y - player.h, PLAY_LOGICAL.y + PLAY_LOGICAL.h - player.h);
+  const minY = Math.min(topBound, bottomBound);
+  const maxY = Math.max(topBound, bottomBound);
+
+  player.x = clamp(player.x, minX, maxX);
+  player.y = clamp(player.y, minY, maxY);
+}
 
 function resetPlayerAnimation(){
   playerAnimation.sequence = PLAYER_WALK_FRAMES;
@@ -1028,9 +1148,13 @@ if (btnUlt){
 // ====== スポーン ======
 function spawnItem(){
   const isParfait = Math.random()<0.5;
+  const groundTop = GROUND_Y;
+  const maxY = groundTop - 30;
+  const minY = Math.max(PLAY_LOGICAL.y, groundTop - 140);
+  const spawnY = clamp(groundTop - 44 - rand(0, 95), minY, maxY);
   items.push({
     x: LOGICAL_CANVAS_WIDTH+24,
-    y: LOGICAL_CANVAS_HEIGHT - GROUND - 44 - rand(0, 95),
+    y: spawnY,
     w: 30, h: 30,
     v: 3.0 + rand(.6,1.8) + (level-1)*.22,
     char: isParfait ? '🍨' : '🐟',
@@ -1069,7 +1193,7 @@ function spawnEnemy(offset=0){
   const st = stageForLevel(level);
   const baseSpeed = (2.7 + (level-1)*.35) * st.enemyMul;
   const type = pickEnemyType(level);
-  const baseY = LOGICAL_CANVAS_HEIGHT - GROUND - 36;
+  const baseY = clamp(GROUND_Y - 36, PLAY_LOGICAL.y + 12, GROUND_Y - 18);
   const enemy = {
     x: LOGICAL_CANVAS_WIDTH+30 + offset,
     y: baseY,
@@ -1087,7 +1211,7 @@ function spawnEnemy(offset=0){
     enemy.vx = baseSpeed*0.9;
     enemy.amplitude = rand(28, 68);
     enemy.frequency = rand(0.08, 0.14);
-    enemy.baseY = baseY - rand(10, 50);
+    enemy.baseY = clamp(baseY - rand(10, 50), PLAY_LOGICAL.y, GROUND_Y - enemy.h);
   } else if (type === 'dash'){
     enemy.vx = baseSpeed*0.75;
     enemy.maxV = baseSpeed*1.9;
@@ -1098,15 +1222,17 @@ function spawnEnemy(offset=0){
     enemy.vx = baseSpeed*0.85;
     enemy.hoverRange = rand(28, 92);
     enemy.hoverSpeed = rand(0.02, 0.035);
-    enemy.baseY = baseY - rand(40, 120);
+    enemy.baseY = clamp(baseY - rand(40, 120), PLAY_LOGICAL.y, GROUND_Y - enemy.h);
   }
 
   enemies.push(enemy);
 }
 function spawnPower(){
+  const groundTop = GROUND_Y;
+  const spawnY = clamp(groundTop - 44 - rand(0, 120), PLAY_LOGICAL.y, groundTop - 32);
   powers.push({
     x: LOGICAL_CANVAS_WIDTH+26,
-    y: LOGICAL_CANVAS_HEIGHT - GROUND - 44 - rand(0, 120),
+    y: spawnY,
     w: 26, h: 26,
     v: 3.0 + (level-1)*.25,
     char: '⭐'          // ← 追加
@@ -1117,7 +1243,10 @@ function spawnBossForStage(stageKey, t){
   const config = stageBosses[stageKey];
   if (!config) return;
   bossProjectiles.length = 0;
-  const baseY = Math.min(LOGICAL_CANVAS_HEIGHT - GROUND - config.height, Math.max(24, LOGICAL_CANVAS_HEIGHT - GROUND - config.height - config.groundOffset));
+  const baseFloor = GROUND_Y - config.height;
+  const offsetFloor = baseFloor - (config.groundOffset || 0);
+  const safeTop = Math.max(24, PLAY_LOGICAL.y);
+  const baseY = Math.min(baseFloor, Math.max(safeTop, offsetFloor));
   bossState = {
     stageKey,
     config,
@@ -1155,7 +1284,7 @@ function bossFireVolley(boss, time){
     const offset = i - (count - 1)/2;
     const laneOffset = offset * (player.h * 0.22);
     const desiredY = player.y + player.h * 0.7 + laneOffset;
-    const targetY = clamp(desiredY, player.y + 12, LOGICAL_CANVAS_HEIGHT - GROUND - 18);
+    const targetY = clamp(desiredY, Math.max(player.y + 12, PLAY_LOGICAL.y), GROUND_Y - 18);
     const vy = (targetY - launchY) / travelFrames;
     bossProjectiles.push({
       x: baseX,
@@ -1438,9 +1567,14 @@ function update(t){
 
   // 物理
   player.vy += G; player.y += player.vy;
-  if (player.y+player.h >= LOGICAL_CANVAS_HEIGHT-GROUND){
-    player.y=LOGICAL_CANVAS_HEIGHT-GROUND-player.h; player.vy=0; player.onGround=true; canDouble = characters[currentCharKey].special?.includes('doubleJump');
+  if (player.y + player.h >= GROUND_Y){
+    player.y = GROUND_Y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+    canDouble = characters[currentCharKey].special?.includes('doubleJump');
   }
+
+  clampPlayerToPlayfield();
 
   // オート射撃（ガチャ効果など将来用）
   if (now()<autoShootUntil && t-lastShot>shootCD*0.6){ shoot(); }
@@ -1534,7 +1668,7 @@ function update(t){
       }
     }
 
-    en.y = clamp(en.y, 18, LOGICAL_CANVAS_HEIGHT - GROUND - en.h + 6);
+    en.y = clamp(en.y, Math.max(18, PLAY_LOGICAL.y), GROUND_Y - en.h + 6);
     en.x -= en.vx;
 
     // 必殺
@@ -1669,7 +1803,7 @@ function draw(remain, st){
   const g=c.createLinearGradient(0,0,0,LOGICAL_CANVAS_HEIGHT);
   g.addColorStop(0, st.bg1); g.addColorStop(1, st.bg2);
   c.fillStyle=g; c.fillRect(0,0,LOGICAL_CANVAS_WIDTH,LOGICAL_CANVAS_HEIGHT);
-  c.fillStyle=st.ground; c.fillRect(0, LOGICAL_CANVAS_HEIGHT-GROUND, LOGICAL_CANVAS_WIDTH, GROUND);
+  c.fillStyle=st.ground; c.fillRect(0, GROUND_Y, LOGICAL_CANVAS_WIDTH, GROUND);
 
   if (now()<invUntil){ c.strokeStyle='#f5c542'; c.lineWidth=4; c.strokeRect(player.x-2,player.y-2,player.w+4,player.h+4); }
   const blink = now()<hurtUntil && Math.floor(now()/60)%2===0;
@@ -1817,6 +1951,7 @@ function draw(remain, st){
 
 function endGame(){
   if(!gameOn) return; gameOn=false;
+  setGameRunning(false);
   stopBgm();
   bossState = null;
   bossProjectiles.length = 0;
