@@ -2,19 +2,30 @@
 const APP_VERSION = '2025.09.30-02';           // ★リリースごとに手動更新
 const CACHE_NAME  = `psr-cache-${APP_VERSION}`;
 
-// HTML/JSはネットワーク優先（更新を反映しやすくする）
-const NETWORK_FIRST_PATHS = [
-  '/', '/index.html', '/manifest.webmanifest'
+const BASE_URL = new URL('./', self.location);
+const BASE_PATH = BASE_URL.pathname;
+const BASE_PATH_TRIMMED = BASE_PATH.endsWith('/') && BASE_PATH !== '/' ? BASE_PATH.slice(0, -1) : BASE_PATH;
+const FALLBACK_INDEX_URL = new URL('index.html', BASE_URL).toString();
+// 最低限の事前キャッシュ対象
+const PRECACHE_ASSETS = [
+  '.',
+  'index.html',
+  'styles.css',
+  'main.js',
+  'manifest.webmanifest',
+  'version.json'
 ];
+const PRECACHE = PRECACHE_ASSETS.map((asset) => new URL(asset, BASE_URL).toString());
 
-// 最低限の事前キャッシュ
-const PRECACHE = [
-  '/parfait-sardine-run/',
-  '/parfait-sardine-run/index.html',
-  '/parfait-sardine-run/styles.css',
-  '/parfait-sardine-run/js/main.js',
-  '/parfait-sardine-run/version.json'
-];
+// HTML/JSはネットワーク優先（更新を反映しやすくする）
+const NETWORK_FIRST_PATHS = new Set([
+  '/',
+  BASE_PATH,
+  BASE_PATH_TRIMMED,
+  new URL('index.html', BASE_URL).pathname,
+  new URL('manifest.webmanifest', BASE_URL).pathname
+]);
+
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -50,9 +61,10 @@ self.addEventListener('fetch', (e) => {
 });
 
 function isNetworkFirst(url) {
-  return NETWORK_FIRST_PATHS.some(p =>
-    url.pathname.endsWith(p) || url.pathname === '/parfait-sardine-run/'
-  );
+  const pathname = url.pathname;
+  if (NETWORK_FIRST_PATHS.has(pathname)) return true;
+  if (pathname.endsWith('/')) return NETWORK_FIRST_PATHS.has(pathname.slice(0, -1));
+  return false;
 }
 
 async function networkFirst(req) {
@@ -64,7 +76,7 @@ async function networkFirst(req) {
   } catch {
     const cached = await cache.match(req);
     if (cached) return cached;
-    return cache.match('/parfait-sardine-run/index.html');
+    return cache.match(FALLBACK_INDEX_URL);
   }
 }
 
