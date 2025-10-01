@@ -1,4 +1,5 @@
   :root{
+    --maxw: 920px; /* 本文領域の最大幅 */
     --scene-base-w: 390; /* 単位なしにして計算しやすく */
     --scene-base-h: 844;
     --scene-max-w: 920px; /* 以前の #wrap max-width 相当 */
@@ -725,4 +726,32 @@ body.modal-open{ overflow:hidden; }
 }
 .app-version.is-outdated{
   background:#fef2f2; color:#991b1b; border-color:#fecaca;
+}
+
+/* === Centering fix === */
+#wrap{
+  max-width: var(--maxw);
+  margin-left: auto;
+  margin-right: auto;
+  /* 既存と整合 */
+  padding: 8px;
+  position: relative;
+  z-index: 10;
+}
+
+.playArea{
+  max-width: var(--maxw);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* キャンバス自体も中央に */
+canvas{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.scene-wrap{
+  z-index: 1;
 }
