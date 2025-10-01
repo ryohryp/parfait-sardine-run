@@ -1,6 +1,16 @@
 // ==== Update Helper (badge + version indicator) ====
 const CURRENT_VERSION = '2025.09.30-02'; // ★version.json と揃える
-const VERSION_JSON_URL = '/parfait-sardine-run/version.json';
+const BASE_PATH = (() => {
+  const url = new URL(import.meta.url);
+  const segments = url.pathname.split('/');
+  segments.pop();
+  if (segments.length && segments[segments.length - 1] === 'js') segments.pop();
+  const base = segments.join('/') || '/';
+  return base.endsWith('/') ? base : base + '/';
+})();
+const BASE_URL = new URL(BASE_PATH, import.meta.url);
+const SW_URL = new URL('sw.js', BASE_URL).toString();
+const VERSION_JSON_URL = new URL('version.json', BASE_URL).toString();
 
 function getBtn(){ return document.getElementById('updateBtn'); }
 function getVerEl(){ return document.getElementById('appVersion'); }
@@ -46,7 +56,7 @@ function setVersionIndicator({ current = CURRENT_VERSION, latest = null, hasUpda
 
 export async function registerSW() {
   if (!('serviceWorker' in navigator)) return null;
-  const reg = await navigator.serviceWorker.register('/parfait-sardine-run/sw.js');
+  const reg = await navigator.serviceWorker.register(SW_URL, { scope: BASE_PATH });
 
   reg.addEventListener('updatefound', () => {
     const nw = reg.installing;
@@ -68,7 +78,7 @@ export async function forceUpdate() {
     btn.style.opacity = '0.7';
   }
 
-  const reg = await navigator.serviceWorker.getRegistration('/parfait-sardine-run/');
+  const reg = await navigator.serviceWorker.getRegistration(BASE_PATH);
   if (reg) {
     await reg.update();
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
