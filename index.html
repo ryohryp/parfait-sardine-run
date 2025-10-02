@@ -85,14 +85,15 @@
           <span class="hudValue">-</span>
         </div>
       </div>
-      <div class="hudEffects isHidden"></div>
+        <button id="collection" class="ghost">コレクション</button>
+        <button id="codexBtn" class="ghost">図鑑</button>
+        <button id="settingsBtn" class="ghost">設定</button>
+        <button id="leaderboardBtn" class="ghost">ランキング</button>
+        <button id="noticeBtn" class="ghost" aria-haspopup="dialog">お知らせ</button>
+        <button id="commentBtn" class="ghost">コメント</button>
+        <span id="versionLabel" class="muted" aria-live="polite"></span>
+      </div>
     </div>
-    <div class="playArea">
-      <div id="charInfo" class="muted">CHAR: -</div>
-      <canvas id="cv" width="900" height="430"></canvas>
-      <div id="startScreen" class="startScreen" aria-hidden="false">
-        <div class="startScreenInner">
-          <p class="startScreenTitle">走る準備はいい？</p>
           <div class="primaryBtns">
             <button id="start">スタート</button>
             <button id="restart" class="secondary" style="display:none">リスタート</button>
@@ -261,18 +262,32 @@
       </div>
     </div>
 
-    <!-- ランキング -->
-    <div id="leaderboardOverlay" class="overlay" hidden>
+    <!-- コメント -->
+    <div id="commentOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>ランキング</h2>
-          <button id="leaderboardClose" class="ghost">閉じる</button>
+          <h2>コメント</h2>
+      </div>
+    </div>
+
+    <!-- お知らせ -->
+    <div id="noticeOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
+          <h2>お知らせ</h2>
+          <button id="noticeClose" class="ghost">閉じる</button>
         </div>
-        <div class="cardBody">
-          <div class="leaderboardControls">
-            <span id="leaderboardPlayerName" class="leaderboardPlayerName">現在の名前：-</span>
-            <div class="leaderboardControlButtons">
-              <button id="leaderboardRename" class="ghost">名前変更</button>
+        <div class="cardBody noticeBody">
+          <p id="noticeStatus" class="noticeStatus muted" role="status" aria-live="polite"></p>
+          <ul id="noticeList" class="noticeList" aria-live="polite"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 設定 -->
+    <div id="settingsOverlay" class="overlay" hidden>
+      <div class="cardWrap">
+        <div class="cardHeader">
               <button id="leaderboardJump" class="ghost">自分の順位へ</button>
             </div>
           </div>
