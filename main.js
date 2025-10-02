@@ -8,6 +8,7 @@ import './js/utils.js';
 import './js/howto.js';
 import './js/leaderboard.js';
 import './js/settings.js';
+import './js/notices.js';
 import './js/comments.js';
 
 import { showStageTitle, cameraShake, floatText, speedSE } from './js/presentation.js';
