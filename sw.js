@@ -67,25 +67,52 @@ function isNetworkFirst(url) {
   return false;
 }
 
-async function networkFirst(req) {
-  const cache = await caches.open(CACHE_NAME);
-  try {
-    const res = await fetch(req, { cache: 'no-store' });
-    cache.put(req, res.clone());
-    return res;
-  } catch {
-    const cached = await cache.match(req);
-    if (cached) return cached;
-    return cache.match(FALLBACK_INDEX_URL);
-  }
-}
-
-async function staleWhileRevalidate(req) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(req);
-  const fetchPromise = fetch(req).then(res => {
-    cache.put(req, res.clone());
-    return res;
-  }).catch(() => cached);
-  return cached || fetchPromise;
-}
+function isCacheableResponse(res) {
+  if (!res) return false;
+  if (!res.ok) return false;
+  if (res.status === 206) return false;
+  if (res.type === 'opaque' || res.type === 'opaqueredirect') return false;
+  return true;
+}
+
+async function safeCachePut(cache, req, res) {
+  if (!isCacheableResponse(res)) return;
+  try {
+    await cache.put(req, res.clone());
+  } catch (err) {
+    console.warn('[SW] cache.put failed for', req.url, err);
+  }
+}
+
+async function networkFirst(req) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const res = await fetch(req, { cache: 'no-store' });
+    await safeCachePut(cache, req, res);
+    return res;
+  } catch (err) {
+    console.warn('[SW] networkFirst fallback for', req.url, err);
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    const fallback = await cache.match(FALLBACK_INDEX_URL);
+    if (fallback) return fallback;
+    return new Response('Offline', { status: 504, statusText: 'Offline' });
+  }
+}
+
+async function staleWhileRevalidate(req) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(req);
+  const fetchPromise = fetch(req)
+    .then(async (res) => {
+      await safeCachePut(cache, req, res);
+      return res;
+    })
+    .catch((err) => {
+      console.warn('[SW] staleWhileRevalidate fetch failed for', req.url, err);
+      return cached || new Response('Offline', { status: 504, statusText: 'Offline' });
+    });
+
+  return cached || fetchPromise;
+}
+

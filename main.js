@@ -423,34 +423,37 @@ function addToCollection(key){
 }
 
 // コレクションUI
-btnCollection.onclick = ()=>{
-  colGrid.innerHTML='';
-  // ソート：レア→所持→名前
-  const list = Object.values(characters).sort((a,b)=>{
-    const ra = rarOrder.indexOf(a.rar), rb = rarOrder.indexOf(b.rar);
-    if (ra!==rb) return ra-rb;
-    const oa = !!collection.owned[a.key], ob = !!collection.owned[b.key];
-    if (oa!==ob) return (ob?1:-1);
-    return a.name.localeCompare(b.name,'ja');
-  });
-  list.forEach(ch=>{
-    const own = collection.owned[ch.key];
-    const dv=document.createElement('div');
-    dv.className=`miniCard ${rarClass(ch.rar)}`;
-    dv.innerHTML = `<div class="big">${ch.emoji}</div>
-      <div>${ch.name}</div>
-      <div class="small">${own?`R:${ch.rar} / LB:${own.limit||0}`:'未所持'}</div>`;
-    dv.onclick = ()=>{
-      colSelectedKey = ch.key;
-      colEquip.disabled = !own;
-      // 軽い選択ハイライト
-      [...colGrid.children].forEach(x=>x.style.outline='none');
-      dv.style.outline='2px solid #fff';
-    };
-    colGrid.appendChild(dv);
-  });
-  openOverlay(colOv);
-};
+if (btnCollection){
+  btnCollection.onclick = ()=>{
+    if (!colGrid || !colOv) return;
+    colGrid.innerHTML='';
+    // ソート：レア→所持→名前
+    const list = Object.values(characters).sort((a,b)=>{
+      const ra = rarOrder.indexOf(a.rar), rb = rarOrder.indexOf(b.rar);
+      if (ra!==rb) return ra-rb;
+      const oa = !!collection.owned[a.key], ob = !!collection.owned[b.key];
+      if (oa!==ob) return (ob?1:-1);
+      return a.name.localeCompare(b.name,'ja');
+    });
+    list.forEach(ch=>{
+      const own = collection.owned[ch.key];
+      const dv=document.createElement('div');
+      dv.className=`miniCard ${rarClass(ch.rar)}`;
+      dv.innerHTML = `<div class="big">${ch.emoji}</div>
+        <div>${ch.name}</div>
+        <div class="small">${own?`R:${ch.rar} / LB:${own.limit||0}`:'未所持'}</div>`;
+      dv.onclick = ()=>{
+        colSelectedKey = ch.key;
+        colEquip.disabled = !own;
+        // 軽い選択ハイライト
+        [...colGrid.children].forEach(x=>x.style.outline='none');
+        dv.style.outline='2px solid #fff';
+      };
+      colGrid.appendChild(dv);
+    });
+    openOverlay(colOv);
+  };
+}
 
 // ====== HUD / 便利 ======
 function hearts(n){

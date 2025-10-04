@@ -1,157 +1,152 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>パフェとイワシ RUN! – Character Gacha EX</title>
+<title>繝代ヵ繧ｧ縺ｨ繧､繝ｯ繧ｷ RUN! 窶・Character Gacha EX</title>
 <link rel="stylesheet" href="styles.css">
 
 <!-- === Presentation Enhancements (Splash / Meta) === -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#ff7ad9">
 
-<!-- iOS PWA最適化 -->
+<!-- iOS PWA譛驕ｩ蛹・-->
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="パフェRUN">
+<meta name="apple-mobile-web-app-title" content="繝代ヵ繧ｧRUN">
 <!-- === /Presentation Enhancements === -->
 
-
 </head>
-
 <body>
   <div class="scene-wrap" id="sceneWrap">
     <div class="scene-root">
-  <!-- === Splash / Fade / Titles / Speedlines === -->
-  <div id="splash" class="splash" role="status" aria-live="polite">
-    <div class="splash-inner">
-      <img src="./icons/icon-192.png" alt="logo" class="splash-logo" />
-      <div class="splash-title">Parfait &amp; Sardine RUN!</div>
-      <div class="splash-bar"><span class="splash-fill" style="width:0%"></span></div>
-      <div class="splash-percent">0%</div>
-    </div>
-  </div>
-
-  <div id="fade" class="fade" aria-hidden="true"></div>
-  <div id="stageTitle" class="stage-title" aria-hidden="true"></div>
-  <div id="speedlines" class="speedlines" aria-hidden="true"></div>
-  <!-- === /Splash / Fade / Titles / Speedlines === -->
-
-  <header>
-    <h1>パフェとイワシ RUN! – Character Gacha EX</h1>
-  </header>
-
-  <section id="objective">
-    <h2>ゲームの目的</h2>
-    <p>令和スタイルのラン＆シュートで、<strong>60秒以内にベストスコアを叩き出し</strong>つつコインを稼ぎ、コレクションを増やしましょう。</p>
-    <ul>
-      <li><strong>アイテムを集めて</strong>スコアとコインを獲得。集めたコインでガチャを回し、新しいキャラを開放！</li>
-      <li><strong>ジャンプと攻撃で敵をかわしつつ撃破</strong>。連続ヒットでスコアがぐんぐん伸びます。</li>
-      <li><strong>必殺技ゲージが100%になったら一気に反撃</strong>。キャラ固有のスキルを活かしてハイスコアを狙いましょう。</li>
-    </ul>
-  </section>
-
-  <div id="wrap">
-    <div id="hud" class="hudOverlay">
-      <div class="hudRow hudRowPrimary">
-        <div class="hudItem hudLife">
-          <span class="hudLabel">ライフ</span>
-          <span class="hudValue hudHearts">-</span>
-          <span class="hudGauge">必殺 0%</span>
-        </div>
-        <div class="hudItem hudTime">
-          <span class="hudLabel">残り時間</span>
-          <span class="hudValue">-</span>
-        </div>
-        <div class="hudItem hudScore">
-          <span class="hudLabel">スコア</span>
-          <span class="hudValue hudScoreValue">-</span>
+      <!-- === Splash / Fade / Titles / Speedlines === -->
+      <div id="splash" class="splash" role="status" aria-live="polite">
+        <div class="splash-inner">
+          <img src="./icons/icon-192.png" alt="logo" class="splash-logo" />
+          <div class="splash-title">Parfait &amp; Sardine RUN!</div>
+          <div class="splash-bar"><span class="splash-fill" style="width:0%"></span></div>
+          <div class="splash-percent">0%</div>
         </div>
       </div>
-      <div class="hudRow hudRowSecondary">
-        <div class="hudItem hudStage">
-          <span class="hudLabel">ステージ</span>
-          <span class="hudValue">-</span>
-          <span class="hudSub">Lv.-</span>
+
+      <div id="fade" class="fade" aria-hidden="true"></div>
+      <div id="stageTitle" class="stage-title" aria-hidden="true"></div>
+      <div id="speedlines" class="speedlines" aria-hidden="true"></div>
+      <!-- === /Splash / Fade / Titles / Speedlines === -->
+
+      <header>
+        <h1>繝代ヵ繧ｧ縺ｨ繧､繝ｯ繧ｷ RUN! 窶・Character Gacha EX</h1>
+      </header>
+
+      <section id="objective">
+        <h2>繧ｲ繝ｼ繝縺ｮ逶ｮ逧・/h2>
+        <p>莉､蜥後せ繧ｿ繧､繝ｫ縺ｮ繝ｩ繝ｳ・・す繝･繝ｼ繝医〒縲・strong>60遘剃ｻ･蜀・↓繝吶せ繝医せ繧ｳ繧｢繧貞娼縺榊・縺・/strong>縺､縺､繧ｳ繧､繝ｳ繧堤ｨｼ縺弱√さ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ繧貞｢励ｄ縺励∪縺励ｇ縺・・/p>
+        <ul>
+          <li><strong>繧｢繧､繝・Β繧帝寔繧√※</strong>繧ｹ繧ｳ繧｢縺ｨ繧ｳ繧､繝ｳ繧堤佐蠕励る寔繧√◆繧ｳ繧､繝ｳ縺ｧ繧ｬ繝√Ε繧貞屓縺励∵眠縺励＞繧ｭ繝｣繝ｩ繧帝幕謾ｾ・・/li>
+          <li><strong>繧ｸ繝｣繝ｳ繝励→謾ｻ謦・〒謨ｵ繧偵°繧上＠縺､縺､謦・ｴ</strong>縲る｣邯壹ヲ繝・ヨ縺ｧ繧ｹ繧ｳ繧｢縺後＄繧薙＄繧謎ｼｸ縺ｳ縺ｾ縺吶・/li>
+          <li><strong>蠢・ｮｺ謚繧ｲ繝ｼ繧ｸ縺・00%縺ｫ縺ｪ縺｣縺溘ｉ荳豌励↓蜿肴茶</strong>縲ゅく繝｣繝ｩ蝗ｺ譛峨・繧ｹ繧ｭ繝ｫ繧呈ｴｻ縺九＠縺ｦ繝上う繧ｹ繧ｳ繧｢繧堤漁縺・∪縺励ｇ縺・・/li>
+        </ul>
+      </section>
+
+      <div id="wrap">
+        <div id="hud" class="hudOverlay">
+          <div class="hudRow hudRowPrimary">
+            <div class="hudItem hudLife">
+              <span class="hudLabel">繝ｩ繧､繝・/span>
+              <span class="hudValue hudHearts">-</span>
+              <span class="hudGauge">蠢・ｮｺ 0%</span>
+            </div>
+            <div class="hudItem hudTime">
+              <span class="hudLabel">谿九ｊ譎る俣</span>
+              <span class="hudValue">-</span>
+            </div>
+            <div class="hudItem hudScore">
+              <span class="hudLabel">繧ｹ繧ｳ繧｢</span>
+              <span class="hudValue hudScoreValue">-</span>
+            </div>
+          </div>
+          <div class="hudRow hudRowSecondary">
+            <div class="hudItem hudStage">
+              <span class="hudLabel">繧ｹ繝・・繧ｸ</span>
+              <span class="hudValue">-</span>
+              <span class="hudSub">Lv.-</span>
+            </div>
+            <div class="hudItem hudCoins">
+              <span class="hudLabel">繧ｳ繧､繝ｳ</span>
+              <span class="hudValue">-</span>
+            </div>
+            <div class="hudItem hudBest">
+              <span class="hudLabel">繝吶せ繝・/span>
+              <span class="hudValue">-</span>
+            </div>
+          </div>
+          <div class="hudEffects isHidden"></div>
         </div>
-        <div class="hudItem hudCoins">
-          <span class="hudLabel">コイン</span>
-          <span class="hudValue">-</span>
-        </div>
-        <div class="hudItem hudBest">
-          <span class="hudLabel">ベスト</span>
-          <span class="hudValue">-</span>
-        </div>
-      </div>
-        <button id="collection" class="ghost">コレクション</button>
-        <button id="codexBtn" class="ghost">図鑑</button>
-        <button id="settingsBtn" class="ghost">設定</button>
-        <button id="leaderboardBtn" class="ghost">ランキング</button>
-        <button id="noticeBtn" class="ghost" aria-haspopup="dialog">お知らせ</button>
-        <button id="commentBtn" class="ghost">コメント</button>
-        <span id="versionLabel" class="muted" aria-live="polite"></span>
-      </div>
-    </div>
-          <div class="primaryBtns">
-            <button id="start">スタート</button>
-            <button id="restart" class="secondary" style="display:none">リスタート</button>
-            <button id="howto" class="ghost">遊び方</button>
+        <div class="playArea">
+          <div id="charInfo" class="muted">CHAR: -</div>
+          <canvas id="cv" width="900" height="430"></canvas>
+          <div id="startScreen" class="startScreen" aria-hidden="false">
+            <div class="startScreenInner">
+              <p class="startScreenTitle">襍ｰ繧区ｺ門ｙ縺ｯ縺ｧ縺阪※繧具ｼ・/p>
+              <div class="primaryBtns">
+                <button id="start">繧ｹ繧ｿ繝ｼ繝・/button>
+                <button id="restart" class="secondary" style="display:none">繝ｪ繧ｹ繧ｿ繝ｼ繝・/button>
+                <button id="howto" class="ghost">驕翫・譁ｹ</button>
+              </div>
+            </div>
           </div>
         </div>
+        <div id="touchControls" class="actionBar" aria-hidden="true">
+          <button id="jumpBtn" class="touchBtn touchJump" aria-label="繧ｸ繝｣繝ｳ繝・>繧ｸ繝｣繝ｳ繝・/button>
+          <button id="attackBtn" class="touchBtn touchAttack" aria-label="謾ｻ謦・>謾ｻ謦・/button>
+          <button id="ultBtn" class="touchBtn touchUlt" aria-label="蠢・ｮｺ謚">蠢・ｮｺ謚</button>
+        </div>
+
+        <div id="btns">
+          <div class="secondaryBtns" aria-label="繧ｵ繝悶Γ繝九Η繝ｼ">
+            <button id="gachaOpen" class="warn" disabled>繧ｬ繝√Ε(10)</button>
+            <button id="gacha10" class="warn" disabled>10騾｣(100)</button>
+            <button id="collection" class="ghost">繧ｳ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ</button>
+            <button id="codexBtn" class="ghost">蝗ｳ髑・/button>
+            <button id="settingsBtn" class="ghost">險ｭ螳・/button>
+            <button id="leaderboardBtn" class="ghost">繝ｩ繝ｳ繧ｭ繝ｳ繧ｰ</button>
+            <button id="noticeBtn" class="ghost" aria-haspopup="dialog">縺顔衍繧峨○</button>
+            <button id="commentBtn" class="ghost">繧ｳ繝｡繝ｳ繝・/button>
+            <span id="versionLabel" class="muted" aria-live="polite"></span>
+          </div>
+        </div>
+        <p class="muted controls"><strong>謫堺ｽ懊ヲ繝ｳ繝茨ｼ・/strong> 逕ｻ髱｢蟾ｦ蛛ｴ繧ｿ繝・・/繧ｯ繝ｪ繝・け縺ｧ繧ｸ繝｣繝ｳ繝励∝承蛛ｴ縺ｧ謾ｻ謦・ょ承髟ｷ謚ｼ縺励∪縺溘・蜿ｳ荳九・<strong>蠢・ｮｺ</strong>繝懊ち繝ｳ縺ｧ蠢・ｮｺ謚・医ご繝ｼ繧ｸ100%譎ゑｼ峨・/p>
       </div>
-    </div>
-    <div id="touchControls" class="actionBar" aria-hidden="true">
-      <button id="jumpBtn" class="touchBtn touchJump" aria-label="ジャンプ">ジャンプ</button>
-      <button id="attackBtn" class="touchBtn touchAttack" aria-label="攻撃">攻撃</button>
-      <button id="ultBtn" class="touchBtn touchUlt" aria-label="必殺技">必殺技</button>
-    </div>
 
-    <div id="btns">
-      <div class="secondaryBtns" aria-label="サブメニュー">
-        <button id="gachaOpen" class="warn" disabled>ガチャ(10)</button>
-        <button id="gacha10" class="warn" disabled>10連(100)</button>
-        <button id="collection" class="ghost">コレクション</button>
-        <button id="codexBtn" class="ghost">図鑑</button>
-        <button id="settingsBtn" class="ghost">設定</button>
-        <button id="leaderboardBtn" class="ghost">ランキング</button>
-        <button id="commentBtn" class="ghost">コメント</button>
-        <span id="versionLabel" class="muted" aria-live="polite"></span>
+      <div class="vignette" id="vignette"></div>
+      <div class="combo" id="combo"></div>
+      <div class="fever" id="fever"></div>
+      <div class="boss-band" id="bossBand" style="display:none"></div>
+      <div class="boss-intro" id="bossIntro">BOSS APPROACHING...</div>
+      <div class="result-wrap" id="result">
+        <div class="parfait" aria-label="螳檎挑繝代ヵ繧ｧ">
+          <div class="layer" id="pfLayer"></div>
+          <div class="cream" id="pfCream"></div>
+          <div class="fish" id="pfFish"></div>
+        </div>
+        <div class="result-score" id="resultScore">SCORE: 0</div>
       </div>
-    </div>
-    <p class="muted controls"><strong>操作ヒント：</strong>画面左側タップ/クリック＝ジャンプ、右側＝攻撃、右長押し or 右下の<strong>必殺</strong>ボタン＝必殺技（ゲージ100%時）。</p>
-  </div>
-
-  <div class="vignette" id="vignette"></div>
-  <div class="combo" id="combo"></div>
-  <div class="fever" id="fever"></div>
-  <div class="boss-band" id="bossBand" style="display:none"></div>
-  <div class="boss-intro" id="bossIntro">BOSS APPROACHING...</div>
-  <div class="result-wrap" id="result">
-    <div class="parfait" aria-label="完成パフェ">
-      <div class="layer" id="pfLayer"></div>
-      <div class="cream" id="pfCream"></div>
-      <div class="fish" id="pfFish"></div>
-    </div>
-    <div class="result-score" id="resultScore">SCORE: 0</div>
-  </div>
-
-
     </div>
   </div><!-- /scene-wrap -->
 
-  <button id="updateBtn" class="update-btn" aria-label="バージョン更新">バージョン更新</button>
-  <div id="appVersion" class="app-version" aria-live="polite" title="アプリのバージョン">v—</div>
+  <button id="updateBtn" class="update-btn" aria-label="繝舌・繧ｸ繝ｧ繝ｳ譖ｴ譁ｰ">繝舌・繧ｸ繝ｧ繝ｳ譖ｴ譁ｰ</button>
+  <div id="appVersion" class="app-version" aria-live="polite" title="繧｢繝励Μ縺ｮ繝舌・繧ｸ繝ｧ繝ｳ">v窶ｦ</div>
 
-  <!-- === Overlays OUTSIDE scene-wrap (fixed to viewport) === -->
+  <!-- === Overlays === -->
   <div id="uiOverlays">
-    <!-- プレゲーム：キャラ選択 -->
+    <!-- 繝励Ξ繧ｲ繝ｼ繝・壹く繝｣繝ｩ驕ｸ謚・-->
     <div id="preGameOverlay" class="overlay" hidden>
       <div class="cardWrap preGameCard">
         <div class="cardHeader">
-          <h2>出撃準備</h2>
-          <button id="preGameClose" class="ghost">閉じる</button>
+          <h2>蜃ｺ謦・ｺ門ｙ</h2>
+          <button id="preGameClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody preGameBody">
           <div class="preGameList" id="preGameCharList"></div>
@@ -163,17 +158,17 @@
           </div>
         </div>
         <div class="footerBtns preGameActions">
-          <button id="preGameStart" class="secondary cta">ゲームスタート</button>
+          <button id="preGameStart" class="secondary cta">繧ｲ繝ｼ繝繧ｹ繧ｿ繝ｼ繝・/button>
         </div>
       </div>
     </div>
 
-    <!-- 遊び方 -->
+    <!-- 驕翫・譁ｹ -->
     <div id="howOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>遊び方ガイド</h2>
-          <button id="howClose" class="ghost">閉じる</button>
+          <h2>驕翫・譁ｹ繧ｬ繧､繝・/h2>
+          <button id="howClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody">
           <p id="howLead" class="howLead"></p>
@@ -182,50 +177,50 @@
         </div>
         <div class="howFooter">
           <span id="howFooterNote" class="howFooterNote"></span>
-          <button id="howStart" class="secondary">今すぐプレイ</button>
+          <button id="howStart" class="secondary">莉翫☆縺舌・繝ｬ繧､</button>
         </div>
       </div>
     </div>
 
-    <!-- ガチャ -->
+    <!-- 繧ｬ繝√Ε -->
     <div id="gachaOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>ガチャ結果</h2>
-          <button id="gachaClose" class="ghost">閉じる</button>
+          <h2>繧ｬ繝√Ε邨先棡</h2>
+          <button id="gachaClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody">
           <div id="gachaResults" class="grid"></div>
         </div>
         <div class="footerBtns">
-          <button id="pull1" class="warn">もう一度(10)</button>
-          <button id="pull10" class="warn">10連(100)</button>
+          <button id="pull1" class="warn">繧ゅ≧荳蠎ｦ(10)</button>
+          <button id="pull10" class="warn">10騾｣(100)</button>
         </div>
       </div>
     </div>
 
-    <!-- コレクション -->
+    <!-- 繧ｳ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ -->
     <div id="colOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>コレクション（タップで選択）</h2>
-          <button id="colClose" class="ghost">閉じる</button>
+          <h2>繧ｳ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ・医ち繝・メ縺ｧ驕ｸ謚橸ｼ・ｼ・/h2>
+          <button id="colClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody">
           <div id="colGrid" class="grid"></div>
         </div>
         <div class="footerBtns">
-          <button id="colEquip" class="secondary" disabled>このキャラを装備</button>
+          <button id="colEquip" class="secondary" disabled>縺薙・繧ｭ繝｣繝ｩ繧定｣・ｙ</button>
         </div>
       </div>
     </div>
 
-    <!-- 図鑑 -->
+    <!-- 蝗ｳ髑・-->
     <div id="codexOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>アイテム図鑑</h2>
-          <button id="codexClose" class="ghost">閉じる</button>
+          <h2>繧｢繧､繝・Β蝗ｳ髑・/h2>
+          <button id="codexClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody">
           <ul id="codexList" class="codexList"></ul>
@@ -233,49 +228,63 @@
       </div>
     </div>
 
-    <!-- リザルト -->
+    <!-- 繝ｪ繧ｶ繝ｫ繝・-->
     <div id="resultOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>リザルト</h2>
-          <button id="resultClose" class="ghost">閉じる</button>
+          <h2>繝ｪ繧ｶ繝ｫ繝・/h2>
+          <button id="resultClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody resultBody">
           <div id="resultSummary" class="resultSummary"></div>
           <div class="resultSection">
-            <h3>アイテム別スコア内訳</h3>
+            <h3>繧｢繧､繝・Β蛻･繧ｹ繧ｳ繧｢</h3>
             <ul id="resultItemList" class="resultList"></ul>
           </div>
           <div class="resultSection">
-            <h3>敵撃破スコア内訳</h3>
+            <h3>謨ｵ謦・ｴ繧ｹ繧ｳ繧｢</h3>
             <ul id="resultEnemyList" class="resultList"></ul>
           </div>
         </div>
         <div class="footerBtns resultPrimary">
-          <button id="resultRetry" class="secondary cta">もう一度挑戦</button>
-          <button id="resultMenu" class="ghost cta">メニューに戻る</button>
+          <button id="resultRetry" class="secondary cta">繧ゅ≧荳蠎ｦ謖第姶</button>
+          <button id="resultMenu" class="ghost cta">繝｡繝九Η繝ｼ縺ｫ謌ｻ繧・/button>
         </div>
         <div class="footerBtns resultLinks">
-          <button id="resultLeaderboard" class="ghost">ランキングを見る</button>
-          <button id="resultComment" class="ghost">コメントする</button>
+          <button id="resultLeaderboard" class="ghost">繝ｩ繝ｳ繧ｭ繝ｳ繧ｰ繧定ｦ九ｋ</button>
+          <button id="resultComment" class="ghost">繧ｳ繝｡繝ｳ繝医☆繧・/button>
         </div>
       </div>
     </div>
 
-    <!-- コメント -->
-    <div id="commentOverlay" class="overlay" hidden>
+    <!-- 繝ｩ繝ｳ繧ｭ繝ｳ繧ｰ -->
+    <div id="leaderboardOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>コメント</h2>
+          <h2>繝ｩ繝ｳ繧ｭ繝ｳ繧ｰ</h2>
+          <button id="leaderboardClose" class="ghost">髢峨§繧・/button>
+        </div>
+        <div class="cardBody leaderboardBody">
+          <p id="leaderboardStatus" class="howLead">隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ窶ｦ</p>
+          <ol id="leaderboardList" class="leaderboardList"></ol>
+        </div>
+        <div class="footerBtns leaderboardBtns">
+          <button id="leaderboardJump" class="ghost">閾ｪ蛻・・鬆・ｽ阪∈</button>
+          <button id="leaderboardRefresh" class="secondary">譖ｴ譁ｰ</button>
+        </div>
+        <div class="leaderboardPlayer">
+          <p id="leaderboardPlayerName" class="settingsPlayerName">迴ｾ蝨ｨ縺ｮ蜷榊燕・・</p>
+          <button id="leaderboardRename" class="secondary">蜷榊燕繧貞､画峩</button>
+        </div>
       </div>
     </div>
 
-    <!-- お知らせ -->
+    <!-- 縺顔衍繧峨○ -->
     <div id="noticeOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>お知らせ</h2>
-          <button id="noticeClose" class="ghost">閉じる</button>
+          <h2>縺顔衍繧峨○</h2>
+          <button id="noticeClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody noticeBody">
           <p id="noticeStatus" class="noticeStatus muted" role="status" aria-live="polite"></p>
@@ -284,66 +293,52 @@
       </div>
     </div>
 
-    <!-- 設定 -->
-    <div id="settingsOverlay" class="overlay" hidden>
-      <div class="cardWrap">
-        <div class="cardHeader">
-              <button id="leaderboardJump" class="ghost">自分の順位へ</button>
-            </div>
-          </div>
-          <p id="leaderboardStatus" class="howLead">読み込み中…</p>
-          <ol id="leaderboardList" class="leaderboardList"></ol>
-        </div>
-        <div class="footerBtns">
-          <button id="leaderboardRefresh" class="secondary">更新</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- コメント -->
+    <!-- 繧ｳ繝｡繝ｳ繝・-->
     <div id="commentOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>コメント</h2>
-          <button id="commentClose" class="ghost">閉じる</button>
+          <h2>繧ｳ繝｡繝ｳ繝・/h2>
+          <button id="commentClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody commentBody">
           <form id="commentForm" class="commentForm" novalidate>
             <label class="commentLabel" for="commentName">
-              <span>名前 <small>(必須・1〜40文字)</small></span>
-              <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
+              <span>蜷榊燕 <small>(蠢・医・1縲・0譁・ｭ・</small></span>
+              <input id="commentName" name="name" type="text" maxlength="40" placeholder="縺雁錐蜑・ autocomplete="name" required />
             </label>
             <label class="commentLabel" for="commentEmail">
-              <span>メールアドレス <small>(任意・公開されません)</small></span>
+              <span>繝｡繝ｼ繝ｫ繧｢繝峨Ξ繧ｹ <small>(莉ｻ諢上・蜈ｬ髢九＆繧後∪縺帙ｓ)</small></span>
               <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
             </label>
             <label class="commentLabel" for="commentMessage">
-              <span>コメント <small>(必須・1〜1000文字)</small></span>
-              <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
+              <span>繧ｳ繝｡繝ｳ繝・<small>(蠢・医・1縲・000譁・ｭ・</small></span>
+              <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="繧ｲ繝ｼ繝縺ｮ諢滓Φ繧偵←縺・◇・・ required></textarea>
             </label>
             <div class="commentFormActions">
-              <button id="commentSubmit" class="secondary" type="submit">送信</button>
+              <button id="commentSubmit" class="secondary" type="submit">騾∽ｿ｡</button>
             </div>
           </form>
           <p id="commentStatus" class="howLead" style="display:none"></p>
           <ul id="commentList" class="commentList"></ul>
+          <p id="commentFeedStatus" class="commentFeedStatus" style="display:none"></p>
+          <ul id="commentFeedList" class="commentList"></ul>
         </div>
       </div>
     </div>
 
-    <!-- 設定 -->
+    <!-- 險ｭ螳・-->
     <div id="settingsOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>設定</h2>
-          <button id="settingsClose" class="ghost">閉じる</button>
+          <h2>險ｭ螳・/h2>
+          <button id="settingsClose" class="ghost">髢峨§繧・/button>
         </div>
         <div class="cardBody settingsBody">
           <section class="settingsSection">
-            <h3>プレイヤー名</h3>
-            <p id="settingsPlayerName" class="settingsPlayerName">現在の名前：-</p>
-            <button id="settingsRename" class="secondary">名前を変更</button>
-            <p class="settingsHelp">ランキングに送信される名前です。1〜40文字で設定できます。</p>
+            <h3>繝励Ξ繧､繝､繝ｼ蜷・/h3>
+            <p id="settingsPlayerName" class="settingsPlayerName">迴ｾ蝨ｨ縺ｮ蜷榊燕・・</p>
+            <button id="settingsRename" class="secondary">蜷榊燕繧貞､画峩</button>
+            <p class="settingsHelp">繝ｩ繝ｳ繧ｭ繝ｳ繧ｰ縺ｫ騾∽ｿ｡縺輔ｌ繧句錐蜑阪〒縺吶・縲・0譁・ｭ励〒險ｭ螳壹〒縺阪∪縺吶・/p>
           </section>
         </div>
       </div>
@@ -354,38 +349,38 @@
   <script type="module" src="js/version.js"></script>
   <script type="module" src="main.js"></script>
   <script>
-(function(){
-  const BASE_W = 390;
-  const BASE_H = 844;
+  (function(){
+    const BASE_W = 390;
+    const BASE_H = 844;
+    const rootStyle = document.documentElement.style;
+    rootStyle.setProperty('--scene-base-w', BASE_W + 'px');
+    rootStyle.setProperty('--scene-base-h', BASE_H + 'px');
 
-  const rootStyle = document.documentElement.style;
-  rootStyle.setProperty('--scene-base-w', BASE_W + 'px');
-  rootStyle.setProperty('--scene-base-h', BASE_H + 'px');
-
-  function getVisualHeight(){
-    if (window.visualViewport && typeof window.visualViewport.height === 'number') {
-      return Math.max(1, window.visualViewport.height);
+    function getVisualHeight(){
+      if (window.visualViewport && typeof window.visualViewport.height === 'number') {
+        return Math.max(1, window.visualViewport.height);
+      }
+      return Math.max(1, window.innerHeight);
     }
-    return Math.max(1, window.innerHeight);
-  }
 
-  function fitScene(){
-    const vw = Math.max(1, window.innerWidth);
-    const vh = getVisualHeight();
-    const scale = Math.min(1, vw / BASE_W, vh / BASE_H);
-    rootStyle.setProperty('--scene-scale', scale.toFixed(4));
-  }
+    function fitScene(){
+      const vw = Math.max(1, window.innerWidth);
+      const vh = getVisualHeight();
+      const scale = Math.min(1, vw / BASE_W, vh / BASE_H);
+      rootStyle.setProperty('--scene-scale', scale.toFixed(4));
+    }
 
-  window.addEventListener('resize', fitScene, {passive:true});
-  window.addEventListener('orientationchange', fitScene, {passive:true});
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', fitScene, {passive:true});
-    window.visualViewport.addEventListener('scroll', fitScene, {passive:true});
-  }
-  document.addEventListener('DOMContentLoaded', fitScene);
-  fitScene();
-})();
+    window.addEventListener('resize', fitScene, {passive:true});
+    window.addEventListener('orientationchange', fitScene, {passive:true});
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitScene, {passive:true});
+      window.visualViewport.addEventListener('scroll', fitScene, {passive:true});
+    }
+    document.addEventListener('DOMContentLoaded', fitScene);
+    fitScene();
+  })();
   </script>
-
 </body>
 </html>
+
+
