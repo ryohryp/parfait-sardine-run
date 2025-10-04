@@ -1,5 +1,5 @@
 /* ==== PSR Service Worker ==== */
-const APP_VERSION = '2025.09.30-02';           // ★リリースごとに手動更新
+const APP_VERSION = '2025.10.05-01';           // ★リリースごとに手動更新
 const CACHE_NAME  = `psr-cache-${APP_VERSION}`;
 
 const BASE_URL = new URL('./', self.location);

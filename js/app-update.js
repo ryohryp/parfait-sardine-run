@@ -1,5 +1,5 @@
 // ==== Update Helper (badge + version indicator) ====
-const CURRENT_VERSION = '2025.09.30-02'; // ★version.json と揃える
+const CURRENT_VERSION = '2025.10.05-01'; // ★version.json と揃える
 const BASE_PATH = (() => {
   const url = new URL(import.meta.url);
   const segments = url.pathname.split('/');

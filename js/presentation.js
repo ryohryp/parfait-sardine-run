@@ -1,4 +1,5 @@
 import { registerUnlockableAudio } from './audio.js';
+import { fitScene } from './scene-scale.js';
 
 /* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
 
@@ -12,34 +13,12 @@ const PSR_ASSETS = [
   './assets/bgm/stage.ogg'
 ];
 
-const PSR_VER = 'psr-preload-v20240929-01';
+const PSR_VER = 'psr-preload-v20251005-01';
 const LOAD_TIMEOUT_MS = 10000;
 const IMG_PATTERN = /\.(png|jpe?g|webp|gif|svg)$/i;
 const AUDIO_PATTERN = /\.(ogg|mp3|wav|m4a|aac)$/i;
 
 /* === Responsive scale (<=1 only) === */
-const SCENE_BASE_W = 390;
-const SCENE_BASE_H = 844;
-
-let _resizeRaf = 0;
-function setSceneScale() {
-  const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-  const vh = window.innerHeight || document.documentElement.clientHeight || 0;
-  const s = Math.min(vw / SCENE_BASE_W, vh / SCENE_BASE_H, 1);
-  document.documentElement.style.setProperty('--scene-scale', s.toFixed(4));
-}
-
-function scheduleResize() {
-  if (_resizeRaf) return;
-  _resizeRaf = requestAnimationFrame(() => {
-    _resizeRaf = 0;
-    setSceneScale();
-  });
-}
-
-addEventListener('resize', scheduleResize, { passive: true });
-addEventListener('orientationchange', scheduleResize, { passive: true });
-
 /* ====== Preloader utils ====== */
 
 function withBustParam(src){
@@ -146,7 +125,7 @@ async function psrPreload(list){
 async function psrBoot(){
   try {
     // 初期スケールを先に合わせてからプリロード（見た目のブレ最小化）
-    setSceneScale();
+    fitScene();
     await psrPreload(PSR_ASSETS);
   } finally {
     setTimeout(() => {

@@ -310,41 +310,9 @@
               <button id="commentSubmit" class="secondary" type="submit">送信</button>
             </div>
           </form>
-          <p id="commentStatus" class="howLead" style="display:none"></p>
-          <ul id="commentList" class="commentList"></ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- 設定 -->
-    <div id="settingsOverlay" class="overlay" hidden>
-      <div class="cardWrap">
-        <div class="cardHeader">
-          <h2>設定</h2>
-          <button id="settingsClose" class="ghost">閉じる</button>
-        </div>
-        <div class="cardBody settingsBody">
-          <section class="settingsSection">
-            <h3>プレイヤー名</h3>
-            <p id="settingsPlayerName" class="settingsPlayerName">現在の名前：-</p>
-            <button id="settingsRename" class="secondary">名前を変更</button>
-            <p class="settingsHelp">ランキングに送信される名前です。1〜40文字で設定できます。</p>
-          </section>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- === /Overlays === -->
-
   <script type="module" src="js/version.js"></script>
+  <script type="module" src="js/scene-scale.js"></script>
   <script type="module" src="main.js"></script>
-  <script>
-(function(){
-  const BASE_W = 390;
-  const BASE_H = 844;
-
-  const rootStyle = document.documentElement.style;
-  rootStyle.setProperty('--scene-base-w', BASE_W + 'px');
   rootStyle.setProperty('--scene-base-h', BASE_H + 'px');
 
   function getVisualHeight(){
