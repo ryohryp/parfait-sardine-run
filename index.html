@@ -310,63 +310,9 @@
               <button id="commentSubmit" class="secondary" type="submit">送信</button>
             </div>
           </form>
-          <p id="commentStatus" class="howLead" style="display:none"></p>
-          <ul id="commentList" class="commentList"></ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- 設定 -->
-  const rootStyle = document.documentElement.style;
-  const sceneRoot = document.querySelector('.scene-root');
-
-  let naturalWidth = BASE_W;
-  let naturalHeight = BASE_H;
-
-  rootStyle.setProperty('--scene-base-w', String(BASE_W));
-  rootStyle.setProperty('--scene-base-h', String(BASE_H));
-
-  function measureScene(){
-    if (!sceneRoot) {
-      naturalWidth = BASE_W;
-      naturalHeight = BASE_H;
-      return;
-    }
-
-    const measuredWidth = Math.max(BASE_W, Math.round(sceneRoot.scrollWidth));
-    const measuredHeight = Math.max(BASE_H, Math.round(sceneRoot.scrollHeight));
-
-    naturalWidth = measuredWidth;
-    naturalHeight = measuredHeight;
-  }
-
-  function getVisualHeight(){
-    if (window.visualViewport && typeof window.visualViewport.height === 'number') {
-      return Math.max(1, window.visualViewport.height);
-    }
-    return Math.max(1, window.innerHeight);
-  }
-
-  function fitScene(){
-    measureScene();
-    const vw = Math.max(1, window.innerWidth);
-    const vh = getVisualHeight();
-    const widthScale = Math.max(0, vw / naturalWidth);
-    const heightScale = Math.max(0, vh / naturalHeight);
-    const scale = Math.min(1, widthScale, heightScale);
-    rootStyle.setProperty('--scene-scale', scale.toFixed(4));
-  }
-  <!-- === /Overlays === -->
-
   <script type="module" src="js/version.js"></script>
+  <script type="module" src="js/scene-scale.js"></script>
   <script type="module" src="main.js"></script>
-  <script>
-(function(){
-  const BASE_W = 390;
-  const BASE_H = 844;
-
-  const rootStyle = document.documentElement.style;
-  rootStyle.setProperty('--scene-base-w', BASE_W + 'px');
   rootStyle.setProperty('--scene-base-h', BASE_H + 'px');
 
   function getVisualHeight(){
