@@ -266,32 +266,6 @@
       <div class="cardWrap">
         <div class="cardHeader">
           <h2>ランキング</h2>
-          <button id="leaderboardClose" class="ghost">閉じる</button>
-        </div>
-        <div class="cardBody">
-          <div class="leaderboardControls">
-            <span id="leaderboardPlayerName" class="leaderboardPlayerName">現在の名前：-</span>
-            <div class="leaderboardControlButtons">
-              <button id="leaderboardRename" class="ghost">名前変更</button>
-              <button id="leaderboardJump" class="ghost">自分の順位へ</button>
-            </div>
-          </div>
-          <p id="leaderboardStatus" class="howLead">読み込み中…</p>
-          <ol id="leaderboardList" class="leaderboardList"></ol>
-        </div>
-        <div class="footerBtns">
-          <button id="leaderboardRefresh" class="secondary">更新</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- コメント -->
-    <div id="commentOverlay" class="overlay" hidden>
-      <div class="cardWrap">
-        <div class="cardHeader">
-          <h2>コメント</h2>
-          <button id="commentClose" class="ghost">閉じる</button>
-        </div>
         <div class="cardBody commentBody">
           <form id="commentForm" class="commentForm" novalidate>
             <label class="commentLabel" for="commentName">
@@ -310,9 +284,14 @@
               <button id="commentSubmit" class="secondary" type="submit">送信</button>
             </div>
           </form>
-  <script type="module" src="js/version.js"></script>
-  <script type="module" src="js/scene-scale.js"></script>
-  <script type="module" src="main.js"></script>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === Scripts: body の最後にまとめる === -->
+</body>
+</html>
   rootStyle.setProperty('--scene-base-h', BASE_H + 'px');
 
   function getVisualHeight(){
