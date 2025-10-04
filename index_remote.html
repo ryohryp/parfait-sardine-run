@@ -118,6 +118,7 @@ if ('serviceWorker' in navigator) {
         <button id="codexBtn" class="ghost">図鑑</button>
         <button id="settingsBtn" class="ghost">設定</button>
         <button id="leaderboardBtn" class="ghost">ランキング</button>
+        <button id="noticeBtn" class="ghost" aria-haspopup="dialog">お知らせ</button>
         <button id="commentBtn" class="ghost">コメント</button>
       </div>
     </div>
@@ -301,6 +302,20 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 
+  <!-- お知らせ -->
+  <div id="noticeOverlay" class="overlay" hidden>
+    <div class="cardWrap">
+      <div class="cardHeader">
+        <h2>お知らせ</h2>
+        <button id="noticeClose" class="ghost">閉じる</button>
+      </div>
+      <div class="cardBody noticeBody">
+        <p id="noticeStatus" class="noticeStatus muted" role="status" aria-live="polite"></p>
+        <ul id="noticeList" class="noticeList" aria-live="polite"></ul>
+      </div>
+    </div>
+  </div>
+
   <!-- 設定 -->
   <div id="settingsOverlay" class="overlay">
     <div class="cardWrap">
@@ -324,6 +339,7 @@ if ('serviceWorker' in navigator) {
 <script src="js/howto.js"></script>
 <script src="js/leaderboard.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/notices.js"></script>
 <script src="js/comments.js"></script>
 <script src="main.js"></script>
 <script>

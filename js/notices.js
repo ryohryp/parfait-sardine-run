@@ -1,13 +1,32 @@
 (function(){
   window.PSR = window.PSR || {};
 
-  const elements = {
-    button: document.getElementById('noticeBtn'),
-    overlay: document.getElementById('noticeOverlay'),
-    close: document.getElementById('noticeClose'),
-    list: document.getElementById('noticeList'),
-    status: document.getElementById('noticeStatus')
+  let elements = {
+    button: null,
+    overlay: null,
+    close: null,
+    list: null,
+    status: null
   };
+
+  function cacheElements(){
+    elements = {
+      button: document.getElementById('noticeBtn'),
+      overlay: document.getElementById('noticeOverlay'),
+      close: document.getElementById('noticeClose'),
+      list: document.getElementById('noticeList'),
+      status: document.getElementById('noticeStatus')
+    };
+  }
+
+  function ensureButtonLabel(){
+    const { button } = elements;
+    if (!button) return;
+    const text = (button.textContent || '').trim();
+    if (!text){
+      button.textContent = 'お知らせ';
+    }
+  }
 
   const STORAGE_KEY = 'psrun_notice_last_read_v1';
   const DEFAULT_SOURCE = 'notices.json';
@@ -213,6 +232,7 @@
   function updateUnreadBadge(){
     const { button } = elements;
     if (!button) return;
+    ensureButtonLabel();
     latestTimestamp = notices.reduce((max, item) => Math.max(max, item.timestamp || 0), 0);
     const unread = latestTimestamp > (lastRead || 0);
     if (unread){
@@ -283,12 +303,19 @@
   }
 
   function init(){
-    if (elements.button){
-      elements.button.addEventListener('click', openOverlay);
+    cacheElements();
+    ensureButtonLabel();
+
+    if (!elements.button || !elements.overlay){
+      return;
     }
+
+    elements.button.addEventListener('click', openOverlay);
     if (elements.close){
       elements.close.addEventListener('click', closeOverlay);
     }
+
+    updateUnreadBadge();
     load();
   }
 
