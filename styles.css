@@ -578,7 +578,7 @@
          env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   overflow: hidden;
   touch-action: manipulation;
   -webkit-user-select: none;

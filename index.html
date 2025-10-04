@@ -317,23 +317,45 @@
     </div>
 
     <!-- 設定 -->
-    <div id="settingsOverlay" class="overlay" hidden>
+  const rootStyle = document.documentElement.style;
+  const sceneRoot = document.querySelector('.scene-root');
+
+  let naturalWidth = BASE_W;
+  let naturalHeight = BASE_H;
+
   rootStyle.setProperty('--scene-base-w', String(BASE_W));
   rootStyle.setProperty('--scene-base-h', String(BASE_H));
-          <h2>設定</h2>
-          <button id="settingsClose" class="ghost">閉じる</button>
-        </div>
-        <div class="cardBody settingsBody">
-          <section class="settingsSection">
-            <h3>プレイヤー名</h3>
-            <p id="settingsPlayerName" class="settingsPlayerName">現在の名前：-</p>
-            <button id="settingsRename" class="secondary">名前を変更</button>
-            <p class="settingsHelp">ランキングに送信される名前です。1〜40文字で設定できます。</p>
-          </section>
-        </div>
-      </div>
-    </div>
-  </div>
+
+  function measureScene(){
+    if (!sceneRoot) {
+      naturalWidth = BASE_W;
+      naturalHeight = BASE_H;
+      return;
+    }
+
+    const measuredWidth = Math.max(BASE_W, Math.round(sceneRoot.scrollWidth));
+    const measuredHeight = Math.max(BASE_H, Math.round(sceneRoot.scrollHeight));
+
+    naturalWidth = measuredWidth;
+    naturalHeight = measuredHeight;
+  }
+
+  function getVisualHeight(){
+    if (window.visualViewport && typeof window.visualViewport.height === 'number') {
+      return Math.max(1, window.visualViewport.height);
+    }
+    return Math.max(1, window.innerHeight);
+  }
+
+  function fitScene(){
+    measureScene();
+    const vw = Math.max(1, window.innerWidth);
+    const vh = getVisualHeight();
+    const widthScale = Math.max(0, vw / naturalWidth);
+    const heightScale = Math.max(0, vh / naturalHeight);
+    const scale = Math.min(1, widthScale, heightScale);
+    rootStyle.setProperty('--scene-scale', scale.toFixed(4));
+  }
   <!-- === /Overlays === -->
 
   <script type="module" src="js/version.js"></script>
