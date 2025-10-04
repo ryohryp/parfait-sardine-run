@@ -72,11 +72,21 @@ function isNetworkFirst(url) {
   return false;
 }
 
+function isCacheableResponse(res) {
+  if (!res) return false;
+  if (!res.ok) return false;
+  if (res.status === 206) return false; // Range responses cannot be cached
+  if (res.type !== 'basic' && res.type !== 'default') return false;
+  return true;
+}
+
 async function networkFirst(req) {
   const cache = await caches.open(CACHE_NAME);
   try {
     const res = await fetch(req, { cache: 'no-store' });
-    cache.put(req, res.clone());
+    if (isCacheableResponse(res)) {
+      await cache.put(req, res.clone());
+    }
     return res;
   } catch {
     const cached = await cache.match(req);
@@ -88,8 +98,10 @@ async function networkFirst(req) {
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(req);
-  const fetchPromise = fetch(req).then(res => {
-    cache.put(req, res.clone());
+  const fetchPromise = fetch(req).then(async res => {
+    if (isCacheableResponse(res)) {
+      await cache.put(req, res.clone());
+    }
     return res;
   }).catch(() => cached);
   return cached || fetchPromise;
