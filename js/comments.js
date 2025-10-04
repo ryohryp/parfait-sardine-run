@@ -143,6 +143,49 @@
     return [];
   }
 
+  function extractMessageSource(entry){
+    if (!entry) return '';
+
+    if (typeof entry === 'string'){
+      return entry;
+    }
+
+    const candidates = [];
+
+    const content = entry.content;
+    if (typeof content === 'string'){
+      candidates.push(content);
+    } else if (content && typeof content === 'object'){
+      if (typeof content.rendered === 'string') candidates.push(content.rendered);
+      if (typeof content.raw === 'string') candidates.push(content.raw);
+      if (typeof content.protected === 'string') candidates.push(content.protected);
+      if (Array.isArray(content)) candidates.push(content.join('\n'));
+    }
+
+    const otherKeys = ['message','comment','body','text','content_raw','contentRaw','excerpt'];
+    for (const key of otherKeys){
+      const value = entry?.[key];
+      if (typeof value === 'string'){
+        candidates.push(value);
+      } else if (value && typeof value === 'object'){
+        if (typeof value.rendered === 'string') candidates.push(value.rendered);
+        if (typeof value.raw === 'string') candidates.push(value.raw);
+      }
+    }
+
+    const metaMessage = entry?.meta?.message;
+    if (typeof metaMessage === 'string'){
+      candidates.push(metaMessage);
+    }
+
+    for (const candidate of candidates){
+      const str = String(candidate).trim();
+      if (str) return str;
+    }
+
+    return '';
+  }
+
   function renderLists(){
     const targets = [];
     if (elements.list) targets.push({ el: elements.list, empty: 'まだコメントがありません。' });
@@ -336,7 +379,7 @@
           const id = extractCommentId(entry);
           const likeRaw = entry?.like_count ?? entry?.likes ?? entry?.likeCount ?? entry?.meta?.psr_like_count ?? entry?.meta?.like_count;
           const likedRaw = entry?.liked ?? entry?.has_liked ?? entry?.is_liked ?? entry?.meta?.liked;
-          const messageSource = entry?.content ?? entry?.message ?? entry?.comment ?? entry?.body ?? (typeof entry?.content?.rendered === 'string' ? entry.content.rendered : '');
+          const messageSource = extractMessageSource(entry);
           const sanitizedMessage = Utils.sanitizeCommentMessage(messageSource, 1000);
           const sanitizedName = Utils.sanitizeName(entry?.author_name ?? entry?.author ?? entry?.name ?? entry?.user ?? entry?.title ?? '匿名') || '匿名';
           return {
