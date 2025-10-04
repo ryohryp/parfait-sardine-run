@@ -24,6 +24,8 @@
     if (!raw) return '';
     let normalized = String(raw)
       .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+      .replace(/<\s*(script|style|template|iframe|object|embed|noscript)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+      .replace(/<\s*(script|style|template|iframe|object|embed|noscript)\b[^>]*\/>/gi, '')
       .replace(/<[^>]*>/g, '')
       .replace(/\r\n?/g, '\n')
       .replace(/\u00A0/g, ' ');
