@@ -576,8 +576,9 @@
   position: fixed;
   inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
          env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
   touch-action: manipulation;
   -webkit-user-select: none;
@@ -601,23 +602,20 @@
   );
   height: auto;
 
-  transform-origin: top left;
+  transform-origin: top center;
   /* 縮小が必要な時だけ JS で --scene-scale を < 1 にする。広い時は 1 のまま */
-  transform: translateX(calc((1 - var(--scene-scale, 1)) * 50%))
-    scale(var(--scene-scale, 1));
+  transform: scale(var(--scene-scale, 1));
   will-change: transform;
   transition: transform .12s ease;
 }
 
 body.modal-open .scene-root{
-  transform: translateX(calc((1 - var(--scene-scale, 1)) * 50%))
-    scale(var(--scene-scale, 1));
-}
+  transform: scale(var(--scene-scale, 1));
+ }
 
 .scene-wrap.zoomed .scene-root{
-  transform: translateX(calc((1 - (var(--scene-scale, 1) * 1.04)) * 50%))
-    scale(calc(var(--scene-scale, 1) * 1.04));
-}
+  transform: scale(calc(var(--scene-scale, 1) * 1.04));
+ }
 
 /* モーダル表示中はゲーム層のヒットテストを無効化 */
 body.modal-open{ overflow:hidden; }
