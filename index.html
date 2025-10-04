@@ -261,13 +261,20 @@
       </div>
     </div>
 
-    <!-- ランキング -->
-    <div id="leaderboardOverlay" class="overlay" hidden>
+    <!-- コメント -->
+    <div id="commentOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
-          <h2>ランキング</h2>
-        <div class="cardBody commentBody">
-          <form id="commentForm" class="commentForm" novalidate>
+          <h2>コメント</h2>
+          <button id="commentClose" class="ghost">閉じる</button>
+        </div>
+
+          <p id="commentStatus" class="howLead">読み込み中…</p>
+          <ul id="commentList" class="commentList"></ul>
+          <div class="footerBtns">
+            <button id="commentMore" class="ghost" hidden>もっと見る</button>
+          </div>
+
             <label class="commentLabel" for="commentName">
               <span>名前 <small>(必須・1〜40文字)</small></span>
               <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
@@ -290,6 +297,7 @@
   </div>
 
   <!-- === Scripts: body の最後にまとめる === -->
+  <script type="module" src="js/comments.js"></script>
 </body>
 </html>
   rootStyle.setProperty('--scene-base-h', BASE_H + 'px');

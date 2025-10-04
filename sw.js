@@ -51,6 +51,11 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   const sameOrigin = url.origin === self.location.origin;
 
+  if (url.pathname.startsWith('/wp-json/psr/v1/')) {
+    e.respondWith(fetch(e.request)); // APIはキャッシュしない
+    return;
+  }
+
   if (!sameOrigin) return; // 自サイトのみ制御
 
   if (isNetworkFirst(url)) {
