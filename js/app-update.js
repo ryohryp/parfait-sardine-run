@@ -1,155 +1,189 @@
-// ==== Update Helper (badge + version indicator) ====
-const CURRENT_VERSION = '2025.09.30-02'; // ★version.json と揃える
-const BASE_PATH = (() => {
-  const url = new URL(import.meta.url);
-  const segments = url.pathname.split('/');
-  segments.pop();
-  if (segments.length && segments[segments.length - 1] === 'js') segments.pop();
-  const base = segments.join('/') || '/';
-  return base.endsWith('/') ? base : base + '/';
-})();
-const BASE_URL = new URL(BASE_PATH, import.meta.url);
-const SW_URL = new URL('sw.js', BASE_URL).toString();
-const VERSION_JSON_URL = new URL('version.json', BASE_URL).toString();
+// js/app-update.js  (badge-killer rev3)
+// 目的：押下直後・次回起動後ともに赤丸が復活しないよう完全対策
+// - 既読ACK: LS_ACK_KEY
+// - 端末適用版: LS_INST_KEY
+// - 保険(次回起動で同期): LS_ACK_PENDING_KEY
+//
+// 公開: registerSW, initUpdateUI, checkLatestAndBadge, ensureUpdateBtnOutside
 
-function getBtn(){ return document.getElementById('updateBtn'); }
-function getVerEl(){ return document.getElementById('appVersion'); }
+const VERSION_URL = 'version.json';
+const LS_ACK_KEY = 'psrun_version_acked_v1';
+const LS_INST_KEY = 'psrun_version_installed_v1';
+const LS_ACK_PENDING_KEY = 'psrun_version_ack_pending_v1';
 
-export function ensureUpdateBtnOutside(){
-  const btn = getBtn();
-  if (!btn) return;
-  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
-  if (wrap && wrap.contains(btn)){
-    document.body.appendChild(btn);
+let latestVersion = null;
+let regCache = null;
+
+const $ = (s)=>document.querySelector(s);
+
+function setText(el, text){ if(el) el.textContent = text ?? ''; }
+
+function hardUnbadge(){
+  const btn = $('#updateBtn');
+  if (btn){
+    btn.classList.remove('hasUpdate','update-available','showBadge','needsUpdate');
+    btn.removeAttribute('data-has-update');
+    btn.removeAttribute('data-update'); btn.removeAttribute('data-update-available');
+    btn.removeAttribute('aria-busy');
+  }
+  const label = $('#appVersion');
+  if (label){
+    label.classList.remove('hasUpdate','update-available');
+    label.removeAttribute('data-has-update'); label.removeAttribute('data-update'); label.removeAttribute('data-diff');
+  }
+}
+
+function showVersion(ver, prev){
+  const label = $('#appVersion');
+  if (!label) return;
+  if (ver && prev && ver !== prev){
+    setText(label, `v${prev} → v${ver}`);
+    label.classList.add('hasUpdate');
+    label.setAttribute('data-has-update','1');
+  } else {
+    setText(label, ver ? `v${ver}` : 'v—');
+    label.classList.remove('hasUpdate');
+    label.removeAttribute('data-has-update');
+  }
+}
+
+async function fetchVersionNoStore(){
+  const res = await fetch(VERSION_URL, {
+    cache: 'no-store',
+    headers: { 'Cache-Control':'no-cache, no-store, must-revalidate', 'Pragma':'no-cache' }
+  });
+  if(!res.ok) throw new Error(`version.json HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function registerSW(){
+  if(!('serviceWorker' in navigator)) return null;
+  try{
+    regCache = await navigator.serviceWorker.register('/sw.js');
+    return regCache;
+  }catch(e){
+    console.warn('[app-update] SW register failed:', e);
+    return null;
   }
 }
 
 function setBadge(on){
-  const btn = getBtn();
+  const btn = $('#updateBtn');
   if (!btn) return;
-  btn.classList.toggle('has-update', !!on);
-  try { localStorage.setItem('psr_update_badge', on ? '1' : '0'); } catch {}
+  btn.classList.toggle('hasUpdate', !!on);
+  if (on) btn.setAttribute('data-has-update','1'); else btn.removeAttribute('data-has-update');
 }
 
-function restoreBadge(){
-  try { setBadge(localStorage.getItem('psr_update_badge') === '1'); } catch {}
-}
+function readLS(key){ try{ return localStorage.getItem(key) || ''; }catch{ return ''; } }
+function writeLS(key, val){ try{ localStorage.setItem(key, val); }catch{} }
+function delLS(key){ try{ localStorage.removeItem(key); }catch{} }
 
-function setVersionIndicator({ current = CURRENT_VERSION, latest = null, hasUpdate = null } = {}){
-  const el = getVerEl();
-  if (!el) return;
-
-  if (hasUpdate === true) {
-    const nextLabel = latest ? `v${latest}` : 'v—';
-    el.textContent = `v${current} → ${nextLabel}`;
-    el.classList.remove('is-latest');
-    el.classList.add('is-outdated');
-  } else if (hasUpdate === false) {
-    el.textContent = `v${current}`;
-    el.classList.remove('is-outdated');
-    el.classList.add('is-latest');
-  } else {
-    el.textContent = `v${current}`;
-    el.classList.remove('is-outdated', 'is-latest');
-  }
-}
-
-export async function registerSW() {
-  if (!('serviceWorker' in navigator)) return null;
-  const reg = await navigator.serviceWorker.register(SW_URL, { scope: BASE_PATH });
-
-  reg.addEventListener('updatefound', () => {
-    const nw = reg.installing;
-    nw?.addEventListener('statechange', () => {
-      if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-        setBadge(true);
-        setVersionIndicator({ current: CURRENT_VERSION, hasUpdate: true });
-      }
-    });
-  });
-
-  return reg;
-}
-
-export async function forceUpdate() {
-  const btn = getBtn();
-  if (btn) {
-    btn.disabled = true;
-    btn.style.opacity = '0.7';
-  }
-
-  const reg = await navigator.serviceWorker.getRegistration(BASE_PATH);
-  if (reg) {
-    await reg.update();
-    if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-  }
-
-  if ('caches' in window) {
-    const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k.startsWith('psr-cache-')).map(k => caches.delete(k)));
-  }
-
+function ackLatestVersionSync(ver){
+  if (!ver) return;
+  writeLS(LS_ACK_KEY, ver);
+  writeLS(LS_INST_KEY, ver);
+  // 次回起動の保険（万一 ACK が反映されていないときに自己修復）
+  writeLS(LS_ACK_PENDING_KEY, ver);
+  // UI 即時反映
+  hardUnbadge();
   setBadge(false);
-  setVersionIndicator({ current: CURRENT_VERSION, latest: null, hasUpdate: false });
+  showVersion(ver, null);
+  window.__PSR_VERSION_ACK = ver;
+  try{ window.dispatchEvent(new CustomEvent('psr:versionAcked',{detail:{version:ver}})); }catch{}
+}
 
-  const reload = () => location.reload();
-  if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.addEventListener('controllerchange', reload, { once:true });
-    setTimeout(reload, 1200);
-  } else {
-    reload();
-  }
-
-  if (btn) {
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.style.opacity = '';
-    }, 4000);
+function finalizePendingAck(ver){
+  // 起動時に pending==latest なら ACK/INST を強制同期して pending を消す
+  const pending = readLS(LS_ACK_PENDING_KEY);
+  if (ver && pending && pending === ver){
+    writeLS(LS_ACK_KEY, ver);
+    writeLS(LS_INST_KEY, ver);
+    delLS(LS_ACK_PENDING_KEY);
   }
 }
 
-export async function checkLatestAndBadge() {
-  try {
-    const res = await fetch(`${VERSION_JSON_URL}?t=${Date.now()}`, { cache:'no-store' });
-    const json = await res.json();
-    const latest = String(json.appVersion || '');
-    const hasUpdate = isNewer(latest, CURRENT_VERSION);
-    setBadge(hasUpdate);
-    setVersionIndicator({ current: CURRENT_VERSION, latest, hasUpdate });
-    return { latest, hasUpdate };
-  } catch {
-    setVersionIndicator({ current: CURRENT_VERSION, latest: null, hasUpdate: null });
-    return { latest: null, hasUpdate: null };
+// ★ここがポイント：バッジ点灯条件を「最新が ACK/INST/PENDING のどれにも一致しない場合」に限定
+export async function checkLatestAndBadge(){
+  let prevInstalled = readLS(LS_INST_KEY);
+
+  try{
+    const json = await fetchVersionNoStore();
+    latestVersion = String(json.appVersion || '').trim() || null;
+  }catch(e){
+    console.warn('[app-update] version fetch failed:', e);
+    showVersion(prevInstalled || null, null);
+    return;
   }
+
+  // 起動時に pending を確定反映
+  finalizePendingAck(latestVersion);
+
+  const ack = readLS(LS_ACK_KEY);
+  const pending = readLS(LS_ACK_PENDING_KEY);
+
+  const alreadyKnown =
+    (latestVersion && ack === latestVersion) ||
+    (latestVersion && prevInstalled === latestVersion) ||
+    (latestVersion && pending === latestVersion);
+
+  setBadge(!alreadyKnown);
+
+  // 差分表示（未既読なら prev→latest、既読なら latest 単体）
+  const prevForDiff = !alreadyKnown ? (ack || prevInstalled || '') : null;
+  showVersion(latestVersion, prevForDiff);
 }
 
-function isNewer(a, b) {
-  if (!a || !b) return false;
-  const na = parseInt(a.replace(/\D/g,''), 10) || 0;
-  const nb = parseInt(b.replace(/\D/g,''), 10) || 0;
-  return na > nb;
+function postMessageToSW(sw, msg){ try{ sw?.postMessage?.(msg); }catch{} }
+
+async function updateSWAndReload(){
+  if(!('serviceWorker' in navigator)) return;
+  const reg = regCache || await navigator.serviceWorker.getRegistration();
+
+  if (reg?.waiting){
+    postMessageToSW(reg.waiting, { type:'SKIP_WAITING' });
+  }
+  const onCtl = ()=> window.location.reload();
+  navigator.serviceWorker.addEventListener('controllerchange', onCtl, { once:true });
+
+  try{ await reg?.update(); }catch{}
+
+  setTimeout(()=>{
+    if (navigator.serviceWorker.controller) window.location.reload();
+  }, 1500);
 }
 
 export function initUpdateUI(){
-  ensureUpdateBtnOutside();
-  restoreBadge();
-  setVersionIndicator({ current: CURRENT_VERSION });
+  const btn = $('#updateBtn');
+  if (!btn) return;
 
-  const tryBind = () => {
-    const btn = getBtn();
-    if (!btn) return false;
-    if (!btn.__psrBound) {
-      btn.addEventListener('click', async () => {
-        await checkLatestAndBadge();
-        await forceUpdate();
-      });
-      btn.__psrBound = true;
+  btn.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    // 最新版が未取得ならここで再取得
+    if(!latestVersion){
+      try{
+        const json = await fetchVersionNoStore();
+        latestVersion = String(json.appVersion || '').trim() || null;
+      }catch{}
     }
-    return true;
-  };
+    // 既読ACK（同期書き込み＋保険キー）
+    ackLatestVersionSync(latestVersion);
+    // SW 更新適用
+    await updateSWAndReload();
+  }, { passive:false });
 
-  if (!tryBind()) {
-    const id = setInterval(() => { if (tryBind()) clearInterval(id); }, 200);
-    setTimeout(() => clearInterval(id), 5000);
-  }
+  // 他タブで ACK したら即同期（復活防止）
+  window.addEventListener('storage', (ev)=>{
+    if (ev.key === LS_ACK_KEY || ev.key === LS_INST_KEY || ev.key === LS_ACK_PENDING_KEY){
+      // もう一度判定して UI を揃える
+      checkLatestAndBadge();
+    }
+  });
+}
+
+export function ensureUpdateBtnOutside(){
+  const wrap = document.querySelector('#sceneWrap, .scene-wrap');
+  const btn = $('#updateBtn');
+  const ver = $('#appVersion');
+  if (wrap && btn && wrap.contains(btn)) document.body.appendChild(btn);
+  if (wrap && ver && wrap.contains(ver)) document.body.appendChild(ver);
 }

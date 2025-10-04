@@ -1,6 +1,15 @@
 (function(){
   window.PSR = window.PSR || {};
-  const Utils = window.PSR.Utils || {};
+  const Utils = (() => {
+    const safe = {
+      sanitizeName: (s) => String(s ?? '').slice(0, 40),
+      sanitizeCommentMessage: (s, max = 1000) =>
+        String(s ?? '').replace(/\r\n?/g, '\n').slice(0, max),
+      graphemeLength: (s) => String(s ?? '').length,
+      clampGraphemes: (s, n) => String(s ?? '').slice(0, n),
+    };
+    return Object.assign(safe, (window.PSR && window.PSR.Utils) ? window.PSR.Utils : {});
+  })();
   const Leaderboard = window.PSR.Leaderboard || {};
 
   const elements = {
@@ -73,7 +82,10 @@
   }
 
   function listUrl(){
-    const params = new URLSearchParams({ post_id: String(COMMENT_POST_ID), page: '1', per_page: '20' });
+    const params = new URLSearchParams({
+      post_id: String(COMMENT_POST_ID), page: '1', per_page: '20',
+      _: String(Date.now()) // cache-buster
+    });
     return `${apiBase()}/comments?${params.toString()}`;
   }
 
@@ -325,7 +337,7 @@
       if (clientId){
         headers[COMMENT_CLIENT_HEADER] = clientId;
       }
-      const res = await fetch(listUrl(), { method: 'GET', headers });
+      const res = await fetch(listUrl(), { method: 'GET', headers, cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let raw = null;
       try { raw = await res.json(); }
@@ -564,4 +576,11 @@
     close: hideOverlay,
     reload: () => loadComments(true)
   };
+
+  // === Auto init: DOM 準備できたら1回だけ初期化 ===
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    try { init(); } catch (e) { console.error(e); }
+  }
 })();

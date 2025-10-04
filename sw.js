@@ -1,91 +1,70 @@
-/* ==== PSR Service Worker ==== */
-const APP_VERSION = '2025.09.30-02';           // ★リリースごとに手動更新
-const CACHE_NAME  = `psr-cache-${APP_VERSION}`;
+// --- Parfait & Sardine RUN! Service Worker (safe caching) ---
+const SW_VERSION = 'v20251004-02';           // ← バージョン必ず更新
+const CACHE_NAME = `psr-cache-${SW_VERSION}`;
+const API_PREFIX = '/wp-json/psr/v1/';
 
-const BASE_URL = new URL('./', self.location);
-const BASE_PATH = BASE_URL.pathname;
-const BASE_PATH_TRIMMED = BASE_PATH.endsWith('/') && BASE_PATH !== '/' ? BASE_PATH.slice(0, -1) : BASE_PATH;
-const FALLBACK_INDEX_URL = new URL('index.html', BASE_URL).toString();
-// 最低限の事前キャッシュ対象
-const PRECACHE_ASSETS = [
-  '.',
-  'index.html',
-  'styles.css',
-  'main.js',
-  'manifest.webmanifest',
-  'version.json'
-];
-const PRECACHE = PRECACHE_ASSETS.map((asset) => new URL(asset, BASE_URL).toString());
-
-// HTML/JSはネットワーク優先（更新を反映しやすくする）
-const NETWORK_FIRST_PATHS = new Set([
-  '/',
-  BASE_PATH,
-  BASE_PATH_TRIMMED,
-  new URL('index.html', BASE_URL).pathname,
-  new URL('manifest.webmanifest', BASE_URL).pathname
-]);
-
-
-self.addEventListener('install', (e) => {
+self.addEventListener('install', (event) => {
+  // 旧SWを待たず即座に切替
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE)));
 });
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil((async () => {
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    // 古いキャッシュを掃除
     const keys = await caches.keys();
-    await Promise.all(keys
-      .filter(k => k.startsWith('psr-cache-') && k !== CACHE_NAME)
-      .map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
-self.addEventListener('message', (e) => {
-  const { type } = e.data || {};
-  if (type === 'SKIP_WAITING') self.skipWaiting();
-});
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
 
-self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  const sameOrigin = url.origin === self.location.origin;
-
-  if (!sameOrigin) return; // 自サイトのみ制御
-
-  if (isNetworkFirst(url)) {
-    e.respondWith(networkFirst(e.request));
-  } else {
-    e.respondWith(staleWhileRevalidate(e.request));
+  // 1) 非GET/Range/ダウンロード系は素通し
+  if (req.method !== 'GET' || req.headers.has('range')) {
+    event.respondWith(fetch(req));
+    return;
   }
-});
 
-function isNetworkFirst(url) {
-  const pathname = url.pathname;
-  if (NETWORK_FIRST_PATHS.has(pathname)) return true;
-  if (pathname.endsWith('/')) return NETWORK_FIRST_PATHS.has(pathname.slice(0, -1));
-  return false;
-}
-
-async function networkFirst(req) {
-  const cache = await caches.open(CACHE_NAME);
-  try {
-    const res = await fetch(req, { cache: 'no-store' });
-    cache.put(req, res.clone());
-    return res;
-  } catch {
-    const cached = await cache.match(req);
-    if (cached) return cached;
-    return cache.match(FALLBACK_INDEX_URL);
+  // 2) コメントAPIなどは常にネット優先 & 非キャッシュ
+  if (url.pathname.startsWith(API_PREFIX)) {
+    event.respondWith(fetch(req)); // ここは cache しない
+    return;
   }
-}
 
-async function staleWhileRevalidate(req) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(req);
-  const fetchPromise = fetch(req).then(res => {
-    cache.put(req, res.clone());
-    return res;
-  }).catch(() => cached);
-  return cached || fetchPromise;
-}
+  // 3) クロスオリジンはキャッシュしない（CDN等でopaqueになることが多く無駄）
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  // 4) 通常アセット: ネット優先 + 成功(200)のみキャッシュ、失敗はキャッシュフォールバック
+  event.respondWith((async () => {
+    try {
+      const res = await fetch(req);
+      // 206/304/opaques/partial は cache.put しない
+      const cacheable =
+        res && res.status === 200 &&
+        !res.headers.has('Content-Range') &&
+        res.type !== 'opaque';
+
+      if (cacheable) {
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(req, res.clone());   // ← ここが line 87 対策
+        } catch (e) {
+          // cache.put 失敗は握りつぶして配信は続行
+          // console.warn('cache.put skipped:', e);
+        }
+      }
+      return res;
+    } catch (e) {
+      // ネット失敗時はキャッシュから
+      const cache = await caches.open(CACHE_NAME);
+      const hit = await cache.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      throw e;
+    }
+  })());
+});

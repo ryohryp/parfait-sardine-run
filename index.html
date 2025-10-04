@@ -12,7 +12,8 @@
 
 <!-- iOS PWA最適化 -->
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="パフェRUN">
@@ -266,58 +267,75 @@
       <div class="cardWrap">
         <div class="cardHeader">
           <h2>ランキング</h2>
-        <div class="cardBody commentBody">
-          <form id="commentForm" class="commentForm" novalidate>
-            <label class="commentLabel" for="commentName">
-              <span>名前 <small>(必須・1〜40文字)</small></span>
-              <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
-            </label>
-            <label class="commentLabel" for="commentEmail">
-              <span>メールアドレス <small>(任意・公開されません)</small></span>
-              <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
-            </label>
-            <label class="commentLabel" for="commentMessage">
-              <span>コメント <small>(必須・1〜1000文字)</small></span>
-              <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
-            </label>
-            <div class="commentFormActions">
-              <button id="commentSubmit" class="secondary" type="submit">送信</button>
+          <button id="leaderboardClose" class="ghost">閉じる</button>
+        </div>
+        <div class="cardBody">
+          <div class="leaderboardControls">
+            <span id="leaderboardPlayerName" class="leaderboardPlayerName">現在の名前：-</span>
+            <div class="leaderboardControlButtons">
+              <button id="leaderboardRename" class="ghost">名前変更</button>
+              <button id="leaderboardJump" class="ghost">自分の順位へ</button>
             </div>
-          </form>
+          </div>
+          <p id="leaderboardStatus" class="howLead">読み込み中…</p>
+          <ol id="leaderboardList" class="leaderboardList"></ol>
+        </div>
+        <div class="footerBtns">
+          <button id="leaderboardRefresh" class="secondary">更新</button>
         </div>
       </div>
     </div>
+
+   <!-- コメント -->
+<div id="commentOverlay" class="overlay" hidden>
+  <div class="cardWrap">
+    <div class="cardHeader">
+      <h2>コメント</h2>
+      <button id="commentClose" class="ghost">閉じる</button>
+    </div>
+
+    <div class="cardBody commentBody">
+      <!-- ▼ 追加：一覧と状態表示 -->
+      <p id="commentStatus" class="howLead"></p>
+      <ul id="commentList" class="commentList"></ul>
+      <div class="footerBtns">
+        <button id="commentMore" class="ghost" hidden>もっと見る</button>
+      </div>
+      <!-- ▲ ここまで -->
+
+      <form id="commentForm" class="commentForm" novalidate>
+        <label class="commentLabel" for="commentName">
+          <span>名前 <small>(必須・1〜40文字)</small></span>
+          <input id="commentName" name="name" type="text" maxlength="40" placeholder="お名前" autocomplete="name" required />
+        </label>
+        <label class="commentLabel" for="commentEmail">
+          <span>メールアドレス <small>(任意・公開されません)</small></span>
+          <input id="commentEmail" name="email" type="email" inputmode="email" placeholder="example@example.com" autocomplete="email" />
+        </label>
+        <label class="commentLabel" for="commentMessage">
+          <span>コメント <small>(必須・1〜1000文字)</small></span>
+          <textarea id="commentMessage" name="message" rows="4" maxlength="1000" placeholder="ゲームの感想をどうぞ！" required></textarea>
+        </label>
+        <div class="commentFormActions">
+          <button id="commentSubmit" class="secondary" type="submit">送信</button>
+        </div>
+      </form>
+    </div>
   </div>
+</div>
+
 
   <!-- === Scripts: body の最後にまとめる === -->
+<script type="module" src="js/version.js"></script>
+<script type="module" src="js/scene-scale.js"></script>
+<script type="module" src="main.js"></script>
+
+<!-- コメント機能 -->
+<script type="module" src="js/comments.js"></script>
+<script>
+  // 明示初期化（comments.jsが自動初期化を持たない場合の保険）
+  try { window.PSR?.Comments?.init?.(); } catch(e){ console.error(e); }
+</script>
 </body>
 </html>
-  rootStyle.setProperty('--scene-base-h', BASE_H + 'px');
 
-  function getVisualHeight(){
-    if (window.visualViewport && typeof window.visualViewport.height === 'number') {
-      return Math.max(1, window.visualViewport.height);
-    }
-    return Math.max(1, window.innerHeight);
-  }
-
-  function fitScene(){
-    const vw = Math.max(1, window.innerWidth);
-    const vh = getVisualHeight();
-    const scale = Math.min(1, vw / BASE_W, vh / BASE_H);
-    rootStyle.setProperty('--scene-scale', scale.toFixed(4));
-  }
-
-  window.addEventListener('resize', fitScene, {passive:true});
-  window.addEventListener('orientationchange', fitScene, {passive:true});
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', fitScene, {passive:true});
-    window.visualViewport.addEventListener('scroll', fitScene, {passive:true});
-  }
-  document.addEventListener('DOMContentLoaded', fitScene);
-  fitScene();
-})();
-  </script>
-
-</body>
-</html>
