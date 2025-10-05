@@ -60,7 +60,9 @@ window.PSRUN_START = function PSRUN_START(){
   hideResultOverlay();
   resetRunStats();
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
-  coins=0; autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
+  coins=0;
+  saveCoinBalance(coins);
+  autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
   items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0; bossProjectiles.length=0;
   bossState = null;
   defeatedBossStages = new Set();
@@ -313,7 +315,26 @@ let runStartTimestamp = 0;
 let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
 let score=0, level=1, lives=3, invUntil=0, hurtUntil=0;
 let ult=0, ultReady=false, ultActiveUntil=0;
-let coins=0; // ガチャ用
+const COIN_KEY = 'psrun_coin_balance_v1';
+function loadCoinBalance(){
+  try {
+    const raw = localStorage.getItem(COIN_KEY);
+    if (raw != null){
+      const value = Number(raw);
+      if (Number.isFinite(value)){
+        return Math.max(0, Math.floor(value));
+      }
+    }
+  } catch {}
+  return 0;
+}
+function saveCoinBalance(value){
+  try {
+    localStorage.setItem(COIN_KEY, `${Math.max(0, Math.floor(Number(value) || 0))}`);
+  } catch {}
+}
+
+let coins = loadCoinBalance(); // ガチャ用
 let autoShootUntil=0, bulletBoostUntil=0, scoreMulUntil=0;
 
 let runStats; // ★ 追加：ラン集計の入れ物（resetRunStatsで初期化）
@@ -407,6 +428,7 @@ function doGacha(n){
   const cost = n===10?100:10;
   if (coins<cost) return;
   coins -= cost;
+  saveCoinBalance(coins);
 
   
   let rarities = [];
@@ -729,6 +751,7 @@ function registerItemGain(key, gained){
 function awardEnemyDefeat(enemy){
   score += enemyBonus;
   coins += 2;
+  saveCoinBalance(coins);
   if (!runStats?.enemies) return;
   runStats.enemies.totalCount += 1;
   runStats.enemies.totalScore += enemyBonus;
@@ -1154,6 +1177,7 @@ function awardBossDefeat(config){
   const rewardCoins = Number(config.rewardCoins || 10);
   score += rewardScore;
   coins += rewardCoins;
+  saveCoinBalance(coins);
   if (runStats?.enemies){
     runStats.enemies.totalCount += 1;
     runStats.enemies.totalScore += rewardScore;
@@ -1449,6 +1473,7 @@ function update(t){
       const mul = now()<scoreMulUntil ? 2 : 1;
       const gained = it.score*mul;
       score += gained; coins += 1 * mul;
+      saveCoinBalance(coins);
       // items フィルタ内
       const itemKey = it.char === '🍨' ? 'parfait' : 'fish';  // '??' ではなく実際の絵文字で判定
       registerItemGain(itemKey, gained);
