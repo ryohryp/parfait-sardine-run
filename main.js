@@ -8,8 +8,9 @@
 import './js/utils.js';
 import './js/howto.js';
 import './js/leaderboard.js';
-import './js/settings.js';
+import { Settings } from './js/settings.js';
 import './js/comments.js';
+import { RunLog } from './js/api/runlog.js';
 
 import { showStageTitle, cameraShake, floatText, speedSE } from './js/presentation.js';
 import { initAudio, playBgm, stopBgm, playSfx } from './js/audio.js';
@@ -18,6 +19,9 @@ import { ITEM_CATALOG } from './js/game-data/items.js';
 import { characters, rarOrder, rarClass, SPECIAL_LABELS, ULT_DETAILS } from './js/game-data/characters.js';
 import { stages, stageForLevel, stageBosses } from './js/game-data/stages.js';
 import { registerSW, checkLatestAndBadge, initUpdateUI, ensureUpdateBtnOutside } from './js/app-update.js';
+
+RunLog.setNicknameProvider(() => Settings.getNickname());
+RunLog.setShareProvider(() => Settings.getShare());
 
 // 先頭付近に置く（PSRUN_STARTより前）
 function now(){ return performance.now(); }
@@ -68,12 +72,18 @@ window.PSRUN_START = function PSRUN_START(){
   resetPlayerAnimation();
   btnStart.style.display='none'; btnRestart.style.display='none';
   setStartScreenVisible(false);
-  t0=now(); gameOn=true;
+  t0=now();
+  runStartTimestamp = t0;
+  if (typeof window !== 'undefined'){
+    window.__psrRunStart = runStartTimestamp;
+  }
+  gameOn=true;
   playBgm({ reset: true });
   lastItem=lastEnemy=lastPower=lastShot=t0;
   currentStats = getEffectiveStats(currentCharKey);
   setHUD(GAME_TIME); draw(GAME_TIME, stageForLevel(level));
   requestAnimationFrame(update);
+  void RunLog.start();
 };
 
 function startGame(){ window.PSRUN_START(); }
@@ -299,6 +309,7 @@ function populateCodex(){
 
 // 物理 & ゲーム基本
 let gameOn=false, t0=0;
+let runStartTimestamp = 0;
 let lastItem=0, lastEnemy=0, lastPower=0, lastShot=0;
 let score=0, level=1, lives=3, invUntil=0, hurtUntil=0;
 let ult=0, ultReady=false, ultActiveUntil=0;
@@ -1798,6 +1809,33 @@ function endGame(){
   const finalResult = { score, level, coins, char: currentCharKey };
   const didUpdateBest = updateBestScore(finalResult.score);
   finalResult.didUpdateBest = didUpdateBest;
+  const durationMs = Math.max(0, Math.floor(now() - (runStartTimestamp || t0 || now())));
+  const stageMeta = st || stageForLevel(level);
+  const stageIdentifier = currentStageKey || stageMeta?.key || `level-${level}`;
+  const extras = {
+    level,
+    lives,
+    character: currentCharKey,
+    bestScore,
+    stageKey: stageIdentifier,
+    stageName: stageMeta?.displayName || stageMeta?.name || undefined,
+    items: runStats?.items || undefined,
+    enemies: runStats?.enemies || undefined
+  };
+  Object.keys(extras).forEach((key)=>{
+    if (extras[key] === undefined){
+      delete extras[key];
+    }
+  });
+  void RunLog.finish({
+    score: finalResult.score,
+    stage: String(stageIdentifier),
+    duration: durationMs,
+    coins,
+    result: 'gameover',
+    extras
+  });
+  runStartTimestamp = 0;
   setHUD(0);
   showResultOverlay(finalResult);
   setStartScreenVisible(true);
