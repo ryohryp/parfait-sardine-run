@@ -1,5 +1,6 @@
 ﻿// main.js  (Parfait & Sardine RUN!)
 // 修正点：
+// - event.target.closest が無いノード(Text など)でも安全に動くようヘルパ＆Polyfill追加
 // - モーダル検知の対象をID限定にして modal-open の誤判定を防止
 // - #touchControls を .scene-wrap の外へ退避（pointer-events 無効化の巻き添え防止）
 // - その他のロジックは現行を維持
@@ -23,6 +24,31 @@ function now(){ return performance.now(); }
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 function rand(a, b){ return a + Math.random() * (b - a); }
 function AABB(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+
+// ==== Polyfill & 安全ヘルパ（closestエラー対策） ====
+// Polyfill: Element.prototype.closest（古環境保険）
+if (typeof Element !== 'undefined' && !Element.prototype.closest) {
+  // eslint-disable-next-line no-extend-native
+  Element.prototype.closest = function(sel){
+    let el = this;
+    while (el && el.nodeType === 1) {
+      if (el.matches && el.matches(sel)) return el;
+      el = el.parentElement || el.parentNode;
+    }
+    return null;
+  };
+}
+// event から安全に Element を得る
+function getEventElement(ev){
+  if (ev && ev.target instanceof Element) return ev.target;
+  if (ev && typeof ev.composedPath === 'function') {
+    const n = ev.composedPath().find(n => n instanceof Element);
+    if (n) return n;
+  }
+  const t = ev && ev.target;
+  if (t && t.parentElement instanceof Element) return t.parentElement;
+  return null;
+}
 
 (()=>{
 // ====== 開始/終了 ======
@@ -113,8 +139,10 @@ window.PSR.UI = Object.assign(window.PSR.UI || {}, {
   isOverlayOpen: () => !!document.querySelector(`${OVERLAY_SELECTOR}:not([hidden])`)
 });
 
-document.addEventListener('selectstart', event => {
-  if (event.target.closest('button')){
+// selectstart 時に Text ノード等が来ても安全に closest できるように
+document.addEventListener('selectstart', (event) => {
+  const el = getEventElement(event);
+  if (el && el.closest('button')){
     event.preventDefault();
   }
 });
