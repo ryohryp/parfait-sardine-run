@@ -60,8 +60,7 @@ window.PSRUN_START = function PSRUN_START(){
   hideResultOverlay();
   resetRunStats();
   score=0; level=1; lives=3; invUntil=0; hurtUntil=0; ult=0; ultReady=false; ultActiveUntil=0;
-  coins=0;
-  saveCoinBalance(coins);
+  coins = loadCoinBalance();
   autoShootUntil=0; bulletBoostUntil=0; scoreMulUntil=0;
   items.length=0; enemies.length=0; bullets.length=0; powers.length=0; ultProjectiles.length=0; bossProjectiles.length=0;
   bossState = null;

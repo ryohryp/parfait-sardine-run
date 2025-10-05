@@ -1,6 +1,7 @@
 const API_BASE = 'https://howasaba-code.com/wp-json/psr/v1';
 const FP_KEY = 'psr_fp';
 const QUEUE_KEY = 'psr_run_queue_v1';
+const SESSION_KEY = 'psr_run_session_v1';
 const SHARE_KEY = 'psr_share_metrics';
 const NICK_KEY = 'psr_nickname';
 
@@ -21,6 +22,13 @@ const storage = (() => {
 
 let memoryFP = null;
 let memoryQueue = [];
+let cachedSession = null;
+
+function normalizeSessionValue(value){
+  if (typeof value === 'string' && value) return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+}
 
 function readStorage(key){
   if (!storage) return null;
@@ -125,6 +133,46 @@ function defaultShare(){
   return true;
 }
 
+function loadSession(){
+  if (cachedSession){
+    return { ...cachedSession };
+  }
+  if (!storage){
+    return cachedSession ? { ...cachedSession } : null;
+  }
+  try {
+    const raw = storage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const runId = normalizeSessionValue(parsed?.run_id);
+    const nonce = normalizeSessionValue(parsed?.nonce);
+    if (runId && nonce){
+      cachedSession = { run_id: runId, nonce };
+      return { ...cachedSession };
+    }
+  } catch {
+    // ignore malformed session
+  }
+  return null;
+}
+
+function persistSession(session){
+  const runId = normalizeSessionValue(session?.run_id);
+  const nonce = normalizeSessionValue(session?.nonce);
+  if (!runId || !nonce){
+    cachedSession = null;
+    if (storage){
+      try { storage.removeItem(SESSION_KEY); } catch {}
+    }
+    return;
+  }
+  cachedSession = { run_id: runId, nonce };
+  const payload = JSON.stringify(cachedSession);
+  if (storage){
+    try { storage.setItem(SESSION_KEY, payload); } catch {}
+  }
+}
+
 class RunLogger {
   constructor(){
     this.active = null;
@@ -187,6 +235,7 @@ class RunLogger {
       this.active = null;
       return null;
     }
+    const previousSession = loadSession();
     const nickname = (() => {
       try {
         return this.nicknameProvider?.() ?? null;
@@ -199,19 +248,27 @@ class RunLogger {
       fingerprint: this.fingerprint,
       nickname,
       device: this.device,
-      build: this.build
+      build: this.build,
+      run_id: previousSession?.run_id || undefined
     };
+    if (previousSession?.nonce){
+      payload.resume_nonce = previousSession.nonce;
+    }
 
     try {
       const json = await postJson('/run/start', payload);
-      if (json && json.run_id && json.nonce){
+      const resolvedRunId = normalizeSessionValue(json?.run_id) || previousSession?.run_id || null;
+      const resolvedNonce = normalizeSessionValue(json?.nonce) || previousSession?.nonce || null;
+      if (resolvedRunId && resolvedNonce){
         this.active = {
-          run_id: json.run_id,
-          nonce: json.nonce,
+          run_id: resolvedRunId,
+          nonce: resolvedNonce,
           startedAt: performance.now()
         };
+        persistSession({ run_id: resolvedRunId, nonce: resolvedNonce });
       } else {
         this.active = null;
+        persistSession(null);
       }
       return json ?? null;
     } catch (error) {
@@ -249,6 +306,7 @@ class RunLogger {
 
     try {
       await postJson('/run/finish', payload);
+      persistSession({ run_id: this.active.run_id, nonce: this.active.nonce });
     } catch (error) {
       const queue = loadQueue();
       queue.push({ kind: 'finish', body: payload });
