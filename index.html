@@ -268,7 +268,7 @@
     </div>
 
     <!-- コメント -->
-    <div id="commentOverlay" class="overlay" hidden>
+    <div id="leaderboardOverlay" class="overlay" hidden>
       <div class="cardWrap">
         <div class="cardHeader">
           <h2>ランキング</h2>
@@ -328,6 +328,25 @@
     </div>
   </div>
 </div>
+    <!-- 設定 -->
+      <div id="settingsOverlay" class="overlay" hidden>
+        <div class="cardWrap">
+          <div class="cardHeader">
+            <h2>設定</h2>
+            <button id="settingsClose" class="ghost">閉じる</button>
+          </div>
+          <div class="cardBody settingsBody">
+            <section class="settingsSection">
+              <h3>プレイヤー名</h3>
+              <p id="settingsPlayerName" class="settingsPlayerName">現在の名前：-</p>
+              <button id="settingsRename" class="secondary">名前を変更</button>
+              <p class="settingsHelp">ランキングに送信される名前です。1〜40文字で設定できます。</p>
+            </section>
+          </div>
+        </div>
+      </div>
+
+
 
 <script>
   // 明示初期化（comments.jsが自動初期化を持たない場合の保険）
