@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>パフェとイワシ RUN! – Character Gacha EX</title>
+<link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="styles.css">
 
 <!-- === Presentation Enhancements (Splash / Meta) === -->
@@ -13,14 +14,18 @@
 <!-- iOS PWA最適化 -->
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="パフェRUN">
 <!-- === /Presentation Enhancements === -->
-
-
 </head>
+<script type="module">
+  // ここを唯一の入口にする（読み込み順を完全固定）
+  import './js/version.js';
+  import './js/scene-scale.js';
+  import './js/comments.js';   // ← コメント機能（必要なら）
+  import './main.js';          // ← ゲーム本体
+</script>
 
 <body>
   <div class="scene-wrap" id="sceneWrap">
@@ -324,14 +329,6 @@
   </div>
 </div>
 
-
-  <!-- === Scripts: body の最後にまとめる === -->
-<script type="module" src="js/version.js"></script>
-<script type="module" src="js/scene-scale.js"></script>
-<script type="module" src="main.js"></script>
-
-<!-- コメント機能 -->
-<script type="module" src="js/comments.js"></script>
 <script>
   // 明示初期化（comments.jsが自動初期化を持たない場合の保険）
   try { window.PSR?.Comments?.init?.(); } catch(e){ console.error(e); }
