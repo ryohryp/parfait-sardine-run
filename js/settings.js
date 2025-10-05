@@ -1,3 +1,80 @@
+const hasWindow = typeof window !== 'undefined';
+const storage = (() => {
+  if (!hasWindow) return null;
+  try {
+    const ls = window.localStorage;
+    if (!ls) return null;
+    const probeKey = '__psr_settings_probe__';
+    ls.setItem(probeKey, '1');
+    ls.removeItem(probeKey);
+    return ls;
+  } catch {
+    return null;
+  }
+})();
+
+const memoryStore = new Map();
+
+function readSetting(key, fallback){
+  if (storage){
+    try {
+      const value = storage.getItem(key);
+      if (value !== null) {
+        memoryStore.set(key, value);
+        return value;
+      }
+    } catch {
+      // ignore and fall back
+    }
+  }
+  if (memoryStore.has(key)) return memoryStore.get(key);
+  return fallback;
+}
+
+function writeSetting(key, value){
+  if (storage){
+    try {
+      storage.setItem(key, value);
+    } catch {
+      // ignore quota errors
+    }
+  }
+  memoryStore.set(key, value);
+}
+
+const KEY_NICKNAME = 'psr_nickname';
+const KEY_SHARE = 'psr_share_metrics';
+
+function normalizeNickname(value){
+  if (value == null) return '';
+  return String(value).slice(0, 64);
+}
+
+export const Settings = {
+  getNickname(){
+    const raw = readSetting(KEY_NICKNAME, '');
+    return typeof raw === 'string' ? raw.slice(0, 64) : '';
+  },
+  setNickname(value){
+    const normalized = normalizeNickname(value);
+    writeSetting(KEY_NICKNAME, normalized);
+    return normalized;
+  },
+  getShare(){
+    const raw = readSetting(KEY_SHARE, '1');
+    return raw !== '0';
+  },
+  setShare(on){
+    writeSetting(KEY_SHARE, on ? '1' : '0');
+    return !!on;
+  }
+};
+
+if (hasWindow){
+  window.PSR = window.PSR || {};
+  window.PSR.Settings = Settings;
+}
+
 (function(){
   const elements = {
     button: document.getElementById('settingsBtn'),
@@ -12,6 +89,8 @@
   }
 
   function resolvePlayerName(){
+    const stored = Settings.getNickname();
+    if (stored) return stored;
     const lb = leaderboardModule();
     if (!lb) return 'ゲスト';
     if (typeof lb.ensurePlayerName === 'function'){
@@ -30,7 +109,8 @@
 
   function updateNameDisplay(name){
     const target = elements.name;
-    const finalName = typeof name === 'string' && name ? name : resolvePlayerName();
+    const resolved = typeof name === 'string' && name ? name : resolvePlayerName();
+    const finalName = resolved || 'ゲスト';
     if (target){
       target.textContent = `現在の名前：${finalName}`;
     }
@@ -86,7 +166,9 @@
     const saved = typeof lb.savePlayerName === 'function'
       ? lb.savePlayerName(sanitized)
       : sanitized;
-    updateNameDisplay(saved);
+    const persisted = typeof saved === 'string' && saved ? saved : sanitized;
+    Settings.setNickname(persisted);
+    updateNameDisplay(persisted);
   }
 
   if (elements.button){
@@ -101,6 +183,9 @@
 
   window.addEventListener('psr:playerNameChanged', event => {
     const detailName = event?.detail?.name;
+    if (typeof detailName === 'string'){
+      Settings.setNickname(detailName);
+    }
     updateNameDisplay(detailName);
   });
 
