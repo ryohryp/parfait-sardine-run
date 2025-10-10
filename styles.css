@@ -84,7 +84,6 @@
     display:flex;
     flex-direction:column;
     gap:16px;
-    margin:18px auto 14px;
     max-width:var(--maxw);
   }
   .primaryBtns{
@@ -125,7 +124,16 @@
   .leaderboardPlayerName{font-size:14px;color:rgba(255,255,255,.78)}
   #leaderboardJump{display:none}
   .muted{opacity:.75}
-  .controls{max-width:var(--maxw);margin:0 auto;line-height:1.6;text-align:left}
+  .controls{
+    max-width:var(--maxw);
+    margin:0 auto;
+    line-height:1.6;
+    text-align:left;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    overflow-x: auto;
+  }
   #objective{
     max-width:var(--maxw);
     margin:0 auto 14px;
