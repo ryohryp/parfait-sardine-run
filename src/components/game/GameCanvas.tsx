@@ -113,17 +113,16 @@ export const GameCanvas: React.FC = () => {
 
     return (
         <div>
-            <div className="playArea" style={{ position: 'relative', width: '900px', height: '430px', margin: '0 auto' }}>
-                <div id="charInfo" className="muted" style={{ position: 'absolute', top: '-20px', left: '0' }}>
+            <div className="playArea">
+                <div id="charInfo" className="hud-pill" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 20 }}>
                     {gameState ? `CHAR: ${gameState.currentCharKey}` : 'CHAR: -'}
                 </div>
 
                 <canvas
                     ref={canvasRef}
                     id="cv"
-                    width={900}
-                    height={430}
-                    style={{ display: 'block', background: '#000' }}
+                    width={920}
+                    height={517}
                 />
                 {gameState && <HUD state={gameState} onUlt={handleUlt} />}
                 <StartScreen onStart={handleStart} visible={showStartScreen} />
@@ -131,27 +130,17 @@ export const GameCanvas: React.FC = () => {
             </div>
 
             {/* Gacha and Character Select Buttons - Fixed at bottom */}
-            <div style={{
-                position: 'fixed',
-                bottom: '20px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                gap: '10px',
-                zIndex: 1000,
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                padding: '12px 20px',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-            }}>
+            <div className="mobile-controls" style={{ pointerEvents: 'none', justifyContent: 'center', gap: '20px' }}>
                 <button
                     className="secondary"
+                    style={{ pointerEvents: 'auto' }}
                     onClick={() => setShowCharSelectModal(true)}
                 >
                     👤 キャラ選択
                 </button>
                 <button
                     className="secondary"
+                    style={{ pointerEvents: 'auto' }}
                     onClick={() => setShowGachaModal(true)}
                 >
                     🎰 ガチャ

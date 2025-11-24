@@ -29,6 +29,10 @@ export class EnemyManager {
             'boss-abyss': { icon: stageBosses.abyss.icon || '👑', label: 'Boss - Abyss Sovereign', base: stageBosses.abyss.rewardScore || ENEMY_BONUS }
         };
         this.enemyTypeIcons = Object.fromEntries(Object.entries(this.enemyTypeMeta).map(([type, meta]) => [type, meta.icon]));
+
+        // Load Assets
+        this.droneImage = new Image();
+        this.droneImage.src = 'assets/sprite/enemy_drone.png';
     }
 
     reset() {
@@ -292,9 +296,15 @@ export class EnemyManager {
 
     draw(ctx) {
         // Draw Enemies
-        ctx.font = '32px serif';
         this.enemies.forEach(en => {
-            ctx.fillText(en.icon || '??', en.x, en.y - 4);
+            if (this.droneImage.complete && this.droneImage.naturalWidth > 0) {
+                // Draw drone sprite
+                ctx.drawImage(this.droneImage, en.x, en.y, en.w, en.h);
+            } else {
+                // Fallback
+                ctx.font = '32px serif';
+                ctx.fillText(en.icon || '??', en.x, en.y - 4);
+            }
         });
 
         // Draw Boss

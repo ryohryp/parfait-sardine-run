@@ -14,23 +14,27 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible }) =>
 
     return (
         <>
-            <div id="startScreen" className="startScreen" aria-hidden="false">
-                <div className="startScreenInner">
-                    <p className="startScreenTitle">走る準備はいい？</p>
-                    <div className="primaryBtns">
-                        <button id="start" onClick={onStart} className="cta">スタート</button>
-                        <button id="howto" className="ghost" onClick={() => setShowHowTo(true)}>遊び方</button>
+            <div id="startScreen" className="overlay visible" style={{ pointerEvents: 'auto' }}>
+                <div className="modal-content" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                    <h1 className="startScreenTitle">PARFAIT SARDINE RUN</h1>
+                    <p style={{ opacity: 0.8 }}>Ready to run?</p>
+
+                    <div className="primaryBtns" style={{ display: 'flex', gap: '12px', justifyContent: 'center', width: '100%' }}>
+                        <button id="start" onClick={onStart} className="primary" style={{ flex: 1, fontSize: '18px', padding: '16px' }}>START</button>
                     </div>
 
-                    <div className="footerBtns resultLinks" style={{ marginTop: '16px', justifyContent: 'center', gap: '8px' }}>
-                        <Link to="/leaderboard"><button className="secondary" style={{ minWidth: 'auto', padding: '8px 12px', fontSize: '14px' }}>🏆 ランキング</button></Link>
-                        <Link to="/comments"><button className="secondary" style={{ minWidth: 'auto', padding: '8px 12px', fontSize: '14px' }}>💬 コメント</button></Link>
+                    <button id="howto" className="secondary" onClick={() => setShowHowTo(true)} style={{ width: '100%' }}>
+                        📖 How to Play
+                    </button>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', marginTop: '8px' }}>
+                        <Link to="/leaderboard"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>🏆 Ranking</button></Link>
+                        <Link to="/comments"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>💬 Comments</button></Link>
+                        <Link to="/history"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>📜 History</button></Link>
+                        <Link to="/stats"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>📊 Stats</button></Link>
                     </div>
-                    <div className="footerBtns resultLinks" style={{ marginTop: '8px', justifyContent: 'center', gap: '8px' }}>
-                        <Link to="/history"><button className="ghost" style={{ minWidth: 'auto', padding: '8px 12px', fontSize: '13px' }}>📜 履歴</button></Link>
-                        <Link to="/stats"><button className="ghost" style={{ minWidth: 'auto', padding: '8px 12px', fontSize: '13px' }}>📊 統計</button></Link>
-                        <Link to="/settings"><button className="ghost" style={{ minWidth: 'auto', padding: '8px 12px', fontSize: '13px' }}>⚙️ 設定</button></Link>
-                    </div>
+
+                    <Link to="/settings" style={{ width: '100%' }}><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>⚙️ Settings</button></Link>
                 </div>
             </div>
 

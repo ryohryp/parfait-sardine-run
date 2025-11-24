@@ -23,9 +23,9 @@ export class Player {
             loaded: false,
             frameWidth: 0,
             frameHeight: 0,
-            path: 'assets/player-cube-sheet.png',
-            cols: 3,
-            rows: 2
+            path: 'assets/sprite/player_neon.png',
+            cols: 1,
+            rows: 1
         };
 
         this.anim = {

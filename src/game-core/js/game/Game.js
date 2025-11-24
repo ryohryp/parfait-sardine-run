@@ -4,6 +4,7 @@ import { EnemyManager } from './EnemyManager.js';
 import { ItemManager } from './ItemManager.js';
 import { ProjectileManager } from './ProjectileManager.js';
 import { GachaSystem } from './GachaSystem.js';
+import { Companion } from './Companion.js';
 import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
 import { GAME_TIME, INVINCIBILITY_DURATION, BASE_JUMP, SHOOT_COOLDOWN, POWER_DURATION, ITEM_LEVEL } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
@@ -24,6 +25,7 @@ export class Game {
         this.items = new ItemManager(this.canvas);
         this.projectiles = new ProjectileManager(this.canvas);
         this.gacha = new GachaSystem();
+        this.companion = new Companion(this.player);
 
         this.gameOn = false;
         this.t0 = 0;
@@ -41,6 +43,9 @@ export class Game {
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
         this.scoreMulUntil = 0;
+
+        this.feverGauge = 0;
+        this.feverModeUntil = 0;
 
         this.lastShot = 0;
         this.currentStageKey = null;
@@ -92,7 +97,9 @@ export class Game {
             scoreMulUntil: this.scoreMulUntil,
             ultActiveUntil: this.ultActiveUntil,
             gameOn: this.gameOn,
-            stageName: stageForLevel(this.level).name
+            stageName: stageForLevel(this.level).name,
+            fever: this.feverGauge,
+            isFever: now() < this.feverModeUntil
         };
     }
 
@@ -107,7 +114,11 @@ export class Game {
         this.ultActiveUntil = 0;
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
+        this.autoShootUntil = 0;
+        this.bulletBoostUntil = 0;
         this.scoreMulUntil = 0;
+        this.feverGauge = 0;
+        this.feverModeUntil = 0;
 
         this.enemies.reset();
         this.items.reset();
@@ -189,6 +200,8 @@ export class Game {
             (dmg) => this.damageBoss(dmg),
             hasSlow
         );
+
+        this.companion.update(t, this.items.items);
 
         // Filter out dead enemies hit by bullets
         this.enemies.enemies = this.enemies.enemies.filter(en => !en._dead);
@@ -279,10 +292,18 @@ export class Game {
         // Player vs Items
         this.items.items = this.items.items.filter(it => {
             if (this.AABB(this.player, it)) {
-                const mul = now() < this.scoreMulUntil ? 2 : 1;
+                const isFever = now() < this.feverModeUntil;
+                const mul = (now() < this.scoreMulUntil || isFever) ? 2 : 1;
                 const gained = it.score * mul;
                 this.score += gained;
                 this.gacha.addCoins(1 * mul);
+
+                if (!isFever) {
+                    this.feverGauge = Math.min(100, this.feverGauge + 2);
+                    if (this.feverGauge >= 100) {
+                        this.activateFever();
+                    }
+                }
 
                 const stats = this.getEffectiveStats(this.gacha.collection.current);
                 this.ult = clamp(this.ult + (it.char === '🍨' ? 10 : 6) * stats.ultRate, 0, 100);
@@ -305,7 +326,7 @@ export class Game {
         // Player vs Enemies
         this.enemies.enemies = this.enemies.enemies.filter(en => {
             if (this.AABB(this.player, en)) {
-                if (now() < this.invUntil) {
+                if (now() < this.invUntil || now() < this.feverModeUntil) {
                     this.awardEnemyDefeat(en);
                     return false;
                 }
@@ -356,7 +377,7 @@ export class Game {
         if (this.enemies.bossState && this.enemies.bossState.state !== 'defeated') {
             const boss = this.enemies.bossState;
             if (this.AABB(this.player, boss)) {
-                if (now() < this.invUntil) {
+                if (now() < this.invUntil || now() < this.feverModeUntil) {
                     this.damageBoss(2);
                 } else if (now() > this.hurtUntil) {
                     this.lives = Math.max(0, this.lives - 1);
@@ -412,6 +433,12 @@ export class Game {
         }
     }
 
+    activateFever() {
+        this.feverGauge = 0;
+        this.feverModeUntil = now() + 10000; // 10 seconds
+        playSfx('powerup'); // Placeholder
+    }
+
     AABB(a, b) {
         return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     }
@@ -449,11 +476,46 @@ export class Game {
         const st = stageForLevel(this.level);
 
         // BG
-        const g = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        g.addColorStop(0, st.bg1);
-        g.addColorStop(1, st.bg2);
-        this.ctx.fillStyle = g;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // BG
+        if (!this.bgImage) {
+            this.bgImage = new Image();
+            this.bgImage.src = './assets/bg/bg_fantasy_nature.png';
+        }
+
+        if (this.bgImage.complete) {
+            // Parallax or simple scrolling
+            const speed = 2; // Background scroll speed
+            const offset = (now() * 0.05 * speed) % this.bgImage.width;
+
+            // Draw repeated background
+            // Assuming bgImage height fits or we scale it
+            // Let's just draw it to cover
+            const scale = Math.max(this.canvas.width / this.bgImage.width, this.canvas.height / this.bgImage.height);
+            // Simple tiling for now if seamless
+
+            // Actually, let's just draw it static or simple loop for now to ensure it works
+            // Better: Draw 2 copies for scrolling
+            const w = this.bgImage.width;
+            const h = this.bgImage.height;
+            const aspect = w / h;
+            const drawH = this.canvas.height;
+            const drawW = drawH * aspect;
+
+            const x = -(now() * 0.1) % drawW;
+
+            this.ctx.drawImage(this.bgImage, x, 0, drawW, drawH);
+            this.ctx.drawImage(this.bgImage, x + drawW, 0, drawW, drawH);
+            if (x + drawW < this.canvas.width) {
+                this.ctx.drawImage(this.bgImage, x + drawW * 2, 0, drawW, drawH);
+            }
+        } else {
+            // Fallback gradient
+            const g = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            g.addColorStop(0, '#0f172a');
+            g.addColorStop(1, '#334155');
+            this.ctx.fillStyle = g;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
 
         this.ctx.fillStyle = st.ground;
         this.ctx.fillRect(0, this.canvas.height - 72, this.canvas.width, 72); // GROUND constant
@@ -463,6 +525,21 @@ export class Game {
         this.enemies.draw(this.ctx);
         this.items.draw(this.ctx);
         this.projectiles.draw(this.ctx);
+        this.companion.draw(this.ctx);
+
+        // Fever Effect
+        if (now() < this.feverModeUntil) {
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'overlay';
+            this.ctx.fillStyle = `hsla(${(now() * 0.1) % 360}, 70%, 50%, 0.2)`;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Rainbow border
+            this.ctx.strokeStyle = `hsl(${(now() * 0.2) % 360}, 80%, 60%)`;
+            this.ctx.lineWidth = 8;
+            this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.restore();
+        }
 
         // Ult Effects
         if (now() < this.ultActiveUntil) {

@@ -26,91 +26,77 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
     const hearts = Array.from({ length: 3 }, (_, i) => (i < lives ? '❤️' : '♡')).join('');
 
     return (
-        <div id="hud" className="hudOverlay">
-            <div className="hudRow hudRowPrimary">
-                <div className="hudItem hudLife">
-                    <span className="hudLabel">ライフ</span>
-                    <span className="hudValue hudHearts">{hearts}</span>
-                    <span className="hudGauge">必殺 {Math.floor(ult)}%</span>
+        <div id="hud">
+            {/* Top Info Bar */}
+            <div style={{
+                position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                display: 'flex', gap: '12px', fontSize: '12px', opacity: 0.8,
+                background: 'rgba(0,0,0,0.4)', padding: '4px 12px', borderRadius: '0 0 8px 8px',
+                whiteSpace: 'nowrap'
+            }}>
+                <span>{stageName}</span>
+                <span>Lv.{level}</span>
+                <span>🪙 {coins.toLocaleString()}</span>
+            </div>
+
+            <div className="hud-group">
+                <div className="hud-pill">
+                    <span>❤️</span>
+                    <span>{hearts}</span>
                 </div>
-                <div className="hudItem hudTime">
-                    <span className="hudLabel">残り時間</span>
-                    <span className="hudValue">{sec}秒</span>
-                </div>
-                <div className="hudItem hudScore">
-                    <span className="hudLabel">スコア</span>
-                    <span className="hudValue hudScoreValue">{score.toLocaleString()}</span>
+                <div className="hud-pill">
+                    <span>⏰</span>
+                    <span>{sec}s</span>
                 </div>
             </div>
-            <div className="hudRow hudRowSecondary">
-                <div className="hudItem hudStage">
-                    <span className="hudLabel">ステージ</span>
-                    <span className="hudValue">{stageName}</span>
-                    <span className="hudSub">Lv.{level}</span>
-                </div>
-                <div className="hudItem hudCoins">
-                    <span className="hudLabel">コイン</span>
-                    <span className="hudValue">🪙{coins.toLocaleString()}</span>
-                </div>
-                <div className="hudItem hudBest">
-                    <span className="hudLabel">ベスト</span>
-                    <span className="hudValue">{bestScore.toLocaleString()}</span>
+
+            <div className="hud-group" style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
+                <div className="hud-score">{score.toLocaleString()}</div>
+                <div className="hud-pill" style={{ fontSize: '12px', padding: '4px 8px' }}>
+                    <span>🏆</span>
+                    <span>{bestScore.toLocaleString()}</span>
                 </div>
             </div>
-            <div className={clsx('hudEffects', { isHidden: effects.length === 0 })}>
+
+            {/* Effects Bar */}
+            <div className={clsx('hudEffects', { isHidden: effects.length === 0 })} style={{
+                position: 'absolute', top: '60px', left: '0', right: '0',
+                display: 'flex', justifyContent: 'center', gap: '8px'
+            }}>
                 {effects.map((effect, i) => (
-                    <span key={i} className="hudEffect">
-                        <span className="icon">{effect.icon}</span>
-                        <span className="label">{effect.label}</span>
-                        <span className="time">{Math.max(0, effect.remain).toFixed(1)}s</span>
+                    <span key={i} className="hud-pill" style={{ background: 'var(--primary-dim)', color: '#fff' }}>
+                        <span>{effect.icon}</span>
+                        <span>{Math.max(0, effect.remain).toFixed(1)}s</span>
                     </span>
                 ))}
             </div>
 
             {/* Ultimate Button */}
-            {state.ultReady && onUlt && (
-                <button
-                    className="ultButton"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onUlt();
-                    }}
-                    onMouseDown={(e) => {
-                        e.stopPropagation();
-                        e.currentTarget.style.transform = 'scale(0.95)';
-                    }}
-                    onMouseUp={(e) => {
-                        e.stopPropagation();
-                        e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    style={{
-                        position: 'fixed',
-                        bottom: '20px',
-                        right: '20px',
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '50%',
-                        border: '4px solid #fbbf24',
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
-                        color: '#fff',
-                        fontSize: '32px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.6), 0 0 20px rgba(251, 191, 36, 0.4)',
-                        zIndex: 10000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        animation: 'pulse 1s infinite',
-                        transition: 'transform 0.1s',
-                        pointerEvents: 'auto'
-                    }}
-                    title="必殺技発動 (100%)"
-                >
-                    💫
-                </button>
+            {onUlt && (
+                <div style={{ position: 'fixed', bottom: '30px', right: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', pointerEvents: 'none' }}>
+                    {!state.ultReady && (
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: '4px' }}>
+                            {Math.floor(ult)}%
+                        </div>
+                    )}
+                    {state.ultReady && (
+                        <button
+                            className="control-btn ult"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onUlt();
+                            }}
+                            style={{
+                                pointerEvents: 'auto',
+                                animation: 'pulse 1s infinite'
+                            }}
+                        >
+                            💫
+                        </button>
+                    )}
+                </div>
             )}
         </div>
     );
 };
+

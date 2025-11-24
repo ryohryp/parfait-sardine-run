@@ -1,7 +1,8 @@
-const BGM_SRC = '/assets/bgm/stage.ogg';
+const BGM_SRC = '';
 const SFX_SOURCES = {
-  jump: '/assets/sfx/jump.ogg',
-  hit: '/assets/sfx/hit.ogg',
+  jump: '',
+  hit: '',
+  powerup: ''
 };
 
 const SFX_POOL_SIZE = 4;
@@ -35,7 +36,7 @@ function tryUnlockAudio(audio) {
 }
 
 function ensureStageBgm() {
-  if (typeof Audio === 'undefined') return null;
+  if (typeof Audio === 'undefined' || !BGM_SRC) return null;
   if (!stageBgm) {
     stageBgm = new Audio(BGM_SRC);
     stageBgm.loop = true;
@@ -76,7 +77,7 @@ function bindUnlockListeners() {
 }
 
 function getSfxPool(name) {
-  if (!SFX_SOURCES[name] || typeof Audio === 'undefined') return null;
+  if (!SFX_SOURCES[name] || typeof Audio === 'undefined' || !SFX_SOURCES[name]) return null;
   if (!sfxPools.has(name)) {
     const src = SFX_SOURCES[name];
     const pool = Array.from({ length: SFX_POOL_SIZE }, () => {
@@ -120,7 +121,7 @@ function playBgm({ reset = false } = {}) {
           stageBgmWarned = true;
         }
       } else if (!stageBgmWarned) {
-        console.warn('[PSR] BGM play failed:', err);
+        console.warn('[PSR] Bgm play failed:', err);
         stageBgmWarned = true;
       }
     });
@@ -139,10 +140,4 @@ function initAudio() {
 
 initAudio();
 
-export {
-  initAudio,
-  playBgm,
-  stopBgm,
-  playSfx,
-  registerUnlockableAudio
-};
+export { initAudio, playBgm, stopBgm, playSfx, registerUnlockableAudio };
