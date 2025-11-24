@@ -5,10 +5,10 @@
  * 各種衝突判定を管理します。
  */
 
-import { playSfx } from '../audio.js';
-import { characters } from '../game-data/characters.js';
-import { POWER_DURATION } from '../game-constants.js';
-import { logger } from '../utils/Logger.js';
+import { playSfx } from '../../audio.js';
+import { characters } from '../../game-data/characters.js';
+import { POWER_DURATION } from '../../game-constants.js';
+import { logger } from '../../utils/Logger.js';
 
 function now() { return performance.now(); }
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -33,9 +33,10 @@ export class CollisionSystem {
 
         game.items.items = game.items.items.filter(it => {
             if (this.AABB(game.player, it)) {
-                const isFever = now() < game.feverModeUntil;
+                const scoreState = game.scoreSystem.getState();
+                const isFever = scoreState.isFever;
                 const mul = (now() < game.scoreMulUntil || isFever) ? 2 : 1;
-                const gained = it.score * mul * game.comboMultiplier;
+                const gained = it.score * mul * scoreState.comboMultiplier;
                 game.score += gained;
 
                 // コイン報酬
@@ -45,19 +46,16 @@ export class CollisionSystem {
 
                 // 空中でのコンボ
                 if (game.player.y < game.canvas.height - 72 - game.player.h) {
-                    game.comboCount++;
-                    game.updateComboMultiplier();
-                    game.lastComboTime = now();
+                    game.scoreSystem.comboCount++;
+                    game.scoreSystem.updateComboMultiplier();
+                    game.scoreSystem.lastComboTime = now();
                 }
 
                 game.particles.createSparkle(it.x + it.w / 2, it.y + it.h / 2, '#ffd700');
 
                 // フィーバーゲージ
                 if (!isFever) {
-                    game.feverGauge = Math.min(100, game.feverGauge + 2);
-                    if (game.feverGauge >= 100) {
-                        game.activateFever();
-                    }
+                    game.scoreSystem.addFeverGauge(2);
                 }
 
                 // 必殺技ゲージ

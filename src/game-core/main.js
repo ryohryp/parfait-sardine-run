@@ -5,7 +5,7 @@ import './js/leaderboard.js';
 import { Settings } from './js/settings.js';
 import './js/comments.js';
 import { RunLog } from './js/api/runlog.js';
-import { Game } from './js/game/Game.js';
+import { GameFactory } from './js/game/GameFactory.js';
 import { registerSW, checkLatestAndBadge, initUpdateUI, ensureUpdateBtnOutside } from './js/app-update.js';
 
 // Polyfill & Helpers
@@ -62,7 +62,8 @@ RunLog.setNicknameProvider(() => Settings.getNickname());
 RunLog.setShareProvider(() => Settings.getShare());
 
 // Initialize Game
-const game = new Game();
+const canvas = document.getElementById('cv');
+const game = canvas ? GameFactory.create(canvas) : null;
 
 // Expose for debugging if needed
 window.PSR = window.PSR || {};

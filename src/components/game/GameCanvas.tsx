@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Game } from '../../game-core/js/game/Game.js';
+import { GameFactory } from '../../game-core/js/game/GameFactory.js';
 import type { GameState } from '../../types/game';
 import { HUD } from './HUD';
 import { StartScreen } from './StartScreen';
@@ -26,7 +27,7 @@ export const GameCanvas: React.FC = () => {
     useEffect(() => {
         if (!canvasRef.current) return;
 
-        const game = new Game(canvasRef.current, {
+        const game = GameFactory.create(canvasRef.current, {
             onStateUpdate: (state: GameState) => {
                 setGameState(state);
             },

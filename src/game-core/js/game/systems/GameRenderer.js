@@ -5,8 +5,8 @@
  * 背景、エンティティ、エフェクトの描画を管理します。
  */
 
-import { stageForLevel } from '../game-data/stages.js';
-import { characters } from '../game-data/characters.js';
+import { stageForLevel } from '../../game-data/stages.js';
+import { characters } from '../../game-data/characters.js';
 
 function now() { return performance.now(); }
 

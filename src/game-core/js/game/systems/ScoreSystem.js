@@ -5,8 +5,8 @@
  * ロジックを分離します。
  */
 
-import { playSfx } from '../audio.js';
-import { logger } from '../utils/Logger.js';
+import { playSfx } from '../../audio.js';
+import { logger } from '../../utils/Logger.js';
 
 function now() { return performance.now(); }
 

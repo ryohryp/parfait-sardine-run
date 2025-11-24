@@ -137,13 +137,13 @@ export class Player {
         const hasDouble = characters[this.charKey]?.special?.includes('doubleJump');
 
         if (this.onGround) {
-            this.vy = this.stats.jump;
+            this.vy = BASE_JUMP * (this.stats?.jump || 1);
             this.onGround = false;
             this.canDouble = hasDouble;
             if (this.particles) this.particles.createJumpDust(this.x + this.w / 2, this.y + this.h);
             return true; // Jumped
         } else if (hasDouble && this.canDouble) {
-            this.vy = this.stats.jump * 0.9;
+            this.vy = BASE_JUMP * (this.stats?.jump || 1) * 0.9;
             this.canDouble = false;
             if (this.particles) this.particles.createJumpDust(this.x + this.w / 2, this.y + this.h);
             return true; // Double jumped
