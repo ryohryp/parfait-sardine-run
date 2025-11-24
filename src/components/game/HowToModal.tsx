@@ -19,26 +19,26 @@ export const HowToModal: React.FC<HowToModalProps> = ({ visible, onClose }) => {
                     <button className="ghost" onClick={onClose}>✕</button>
                 </div>
 
-                <div className="cardBody" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div className="cardBody" style={{ maxHeight: '70vh', overflowY: 'auto', background: '#fff' }}>
                     <div style={{ padding: '16px' }}>
                         <p style={{ marginBottom: '20px', fontSize: '15px', lineHeight: '1.6' }}>
                             {t('howToDesc')}
                         </p>
 
                         <div style={{ marginBottom: '24px' }}>
-                            <h3 style={{ fontSize: '16px', marginBottom: '12px', color: '#60a5fa' }}>Basic Controls</h3>
+                            <h3 style={{ fontSize: '16px', marginBottom: '12px', color: '#60a5fa' }}>{t('howToControlsTitle')}</h3>
                             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                                 <li style={{ marginBottom: '12px', paddingLeft: '8px', borderLeft: '3px solid #60a5fa' }}>
-                                    <strong>Jump:</strong> {t('howToJump')}
+                                    <strong>{t('howToJumpTitle')}:</strong> {t('howToJump')}
                                 </li>
                                 <li style={{ marginBottom: '12px', paddingLeft: '8px', borderLeft: '3px solid #60a5fa' }}>
-                                    <strong>Attack:</strong> {t('howToAttack')}
+                                    <strong>{t('howToAttackTitle')}:</strong> {t('howToAttack')}
                                 </li>
                                 <li style={{ marginBottom: '12px', paddingLeft: '8px', borderLeft: '3px solid #60a5fa' }}>
-                                    <strong>Items:</strong> {t('howToItems')}
+                                    <strong>{t('howToItemsTitle')}:</strong> {t('howToItems')}
                                 </li>
                                 <li style={{ marginBottom: '12px', paddingLeft: '8px', borderLeft: '3px solid #60a5fa' }}>
-                                    <strong>Gacha:</strong> {t('howToGacha')}
+                                    <strong>{t('howToGachaTitle')}:</strong> {t('howToGacha')}
                                 </li>
                             </ul>
                         </div>

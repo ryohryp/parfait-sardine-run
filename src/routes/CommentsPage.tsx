@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../hooks/useTranslation';
 import { commentsApi } from '../api/comments';
 import type { Comment } from '../api/comments';
 import { useFingerprint } from '../hooks/useFingerprint';
 
 export const CommentsPage: React.FC = () => {
+    const { t } = useTranslation();
     const fingerprint = useFingerprint();
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export const CommentsPage: React.FC = () => {
             const data = await commentsApi.getComments(fingerprint);
             setComments(data);
         } catch (err) {
-            setError('コメントの読み込みに失敗しました。');
+            setError(t('loadError'));
             setComments([]);
         } finally {
             setLoading(false);
@@ -53,13 +55,13 @@ export const CommentsPage: React.FC = () => {
                 fingerprint
             });
 
-            setSubmitResult({ success: res.success, message: res.message });
+            setSubmitResult({ success: res.success, message: res.success ? t('submitSuccess') : res.message });
             if (res.success) {
                 setMessage('');
                 loadComments();
             }
         } catch (err) {
-            setSubmitResult({ success: false, message: '送信に失敗しました。' });
+            setSubmitResult({ success: false, message: t('submitError') });
         } finally {
             setSubmitting(false);
         }
@@ -81,15 +83,15 @@ export const CommentsPage: React.FC = () => {
     return (
         <div className="page-container">
             <div className="page-header">
-                <h1>コメント</h1>
-                <Link to="/" className="ghost">ゲームに戻る</Link>
+                <h1>{t('comments')}</h1>
+                <Link to="/" className="ghost">{t('backToGame')}</Link>
             </div>
 
             <div className="settings-section">
-                <h2>コメントを投稿</h2>
+                <h2>{t('postComment')}</h2>
                 <form onSubmit={handleSubmit} className="commentForm">
                     <div className="commentLabel">
-                        <span>名前 <small>(必須)</small></span>
+                        <span>{t('nameRequired')}</span>
                         <input
                             type="text"
                             value={name}
@@ -99,7 +101,7 @@ export const CommentsPage: React.FC = () => {
                         />
                     </div>
                     <div className="commentLabel">
-                        <span>メール <small>(任意・非公開)</small></span>
+                        <span>{t('emailOptional')}</span>
                         <input
                             type="email"
                             value={email}
@@ -107,7 +109,7 @@ export const CommentsPage: React.FC = () => {
                         />
                     </div>
                     <div className="commentLabel">
-                        <span>メッセージ <small>(必須)</small></span>
+                        <span>{t('messageRequired')}</span>
                         <textarea
                             value={message}
                             onChange={e => setMessage(e.target.value)}
@@ -118,7 +120,7 @@ export const CommentsPage: React.FC = () => {
                     </div>
                     <div className="commentFormActions">
                         <button type="submit" className="secondary" disabled={submitting}>
-                            {submitting ? '送信中...' : '送信'}
+                            {submitting ? t('submitting') : t('submit')}
                         </button>
                     </div>
                     {submitResult && (
@@ -130,8 +132,8 @@ export const CommentsPage: React.FC = () => {
             </div>
 
             <div className="comment-list-section">
-                <h3>みんなのコメント</h3>
-                {loading && <p>読み込み中...</p>}
+                <h3>{t('recentComments')}</h3>
+                {loading && <p>{t('loading')}</p>}
                 {error && <p style={{ color: '#f44336' }}>{error}</p>}
                 <ul className="commentList">
                     {comments.map(comment => (

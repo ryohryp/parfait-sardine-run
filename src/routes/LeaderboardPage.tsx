@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../hooks/useTranslation';
 import { leaderboardApi } from '../api/leaderboard';
 import type { LeaderboardEntry } from '../api/leaderboard';
 
 export const LeaderboardPage: React.FC = () => {
+    const { t } = useTranslation();
     const [ranking, setRanking] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export const LeaderboardPage: React.FC = () => {
             // Ensure data is an array
             setRanking(Array.isArray(data) ? data : []);
         } catch (err) {
-            setError('ランキングの読み込みに失敗しました。');
+            setError(t('errorRanking'));
             setRanking([]); // Ensure ranking is empty array on error
         } finally {
             setLoading(false);
@@ -31,22 +33,22 @@ export const LeaderboardPage: React.FC = () => {
     return (
         <div className="page-container">
             <div className="page-header">
-                <h1>ランキング</h1>
-                <Link to="/" className="ghost">ゲームに戻る</Link>
+                <h1>{t('ranking')}</h1>
+                <Link to="/" className="ghost">{t('backToGame')}</Link>
             </div>
 
             <div className="data-table-section">
-                {loading && <p>読み込み中...</p>}
+                {loading && <p>{t('loading')}</p>}
                 {error && <p style={{ color: '#f44336' }}>{error}</p>}
 
                 <table className="data-table">
                     <thead>
                         <tr>
-                            <th>順位</th>
-                            <th>名前</th>
-                            <th className="text-right">スコア</th>
-                            <th className="text-right">Lv</th>
-                            <th className="text-center">キャラ</th>
+                            <th>{t('rank')}</th>
+                            <th>{t('name')}</th>
+                            <th className="text-right">{t('score')}</th>
+                            <th className="text-right">{t('level')}</th>
+                            <th className="text-center">{t('char')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -61,7 +63,7 @@ export const LeaderboardPage: React.FC = () => {
                         ))}
                         {!loading && ranking.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="text-center" style={{ padding: '20px' }}>データがありません</td>
+                                <td colSpan={5} className="text-center" style={{ padding: '20px' }}>{t('noData')}</td>
                             </tr>
                         )}
                     </tbody>

@@ -44,6 +44,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible }) =>
     };
 
     const handleGameStart = (characterKey: string) => {
+        localStorage.setItem('psrun_selected_char', characterKey);
         setShowCharSelect(false);
         onStart(characterKey, playerName);
     };
@@ -156,6 +157,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible }) =>
                 onStart={handleGameStart}
                 onBack={() => setShowCharSelect(false)}
                 gachaSystem={gachaSystem}
+                initialChar={localStorage.getItem('psrun_selected_char') || 'parfen'}
             />
         </>
     );

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../hooks/useTranslation';
 import { runsApi } from '../api/runs';
 import type { RunLogEntry } from '../api/runs';
 import { useFingerprint } from '../hooks/useFingerprint';
 
 export const HistoryPage: React.FC = () => {
+    const { t } = useTranslation();
     const fingerprint = useFingerprint();
     const [runs, setRuns] = useState<RunLogEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -40,9 +42,9 @@ export const HistoryPage: React.FC = () => {
         } catch (err: any) {
             // Handle rate limit errors specifically
             if (err?.message?.includes('429')) {
-                setError('リクエストが多すぎます。しばらく時間をおいてから再度お試しください。');
+                setError(t('errorRateLimit'));
             } else {
-                setError('履歴の読み込みに失敗しました。');
+                setError(t('errorHistory'));
             }
             setRuns([]);
         } finally {
@@ -53,22 +55,22 @@ export const HistoryPage: React.FC = () => {
     return (
         <div className="page-container">
             <div className="page-header">
-                <h1>プレイ履歴</h1>
-                <Link to="/" className="ghost">ゲームに戻る</Link>
+                <h1>{t('history')}</h1>
+                <Link to="/" className="ghost">{t('backToGame')}</Link>
             </div>
 
             <div className="data-table-section">
-                {loading && <p>読み込み中...</p>}
+                {loading && <p>{t('loading')}</p>}
                 {error && <p style={{ color: '#f44336' }}>{error}</p>}
 
                 <table className="data-table">
                     <thead>
                         <tr>
-                            <th>日付</th>
-                            <th>ステージ</th>
-                            <th className="text-right">スコア</th>
-                            <th className="text-right">コイン</th>
-                            <th className="text-right">時間</th>
+                            <th>{t('date')}</th>
+                            <th>{t('stage')}</th>
+                            <th className="text-right">{t('score')}</th>
+                            <th className="text-right">{t('coins')}</th>
+                            <th className="text-right">{t('time')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -83,7 +85,7 @@ export const HistoryPage: React.FC = () => {
                         ))}
                         {!loading && runs.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="text-center" style={{ padding: '20px' }}>履歴がありません</td>
+                                <td colSpan={5} className="text-center" style={{ padding: '20px' }}>{t('noHistory')}</td>
                             </tr>
                         )}
                     </tbody>

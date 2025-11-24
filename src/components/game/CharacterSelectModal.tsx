@@ -8,9 +8,10 @@ interface CharacterSelectModalProps {
     onStart: (characterKey: string) => void;
     onBack: () => void;
     gachaSystem: GachaSystem;
+    initialChar?: string;
 }
 
-export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({ visible, onStart, onBack, gachaSystem }) => {
+export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({ visible, onStart, onBack, gachaSystem, initialChar = 'parfen' }) => {
     const { t } = useTranslation();
     const [selectedChar, setSelectedChar] = useState('parfen');
     const [collection, setCollection] = useState<any>(null);
@@ -19,11 +20,19 @@ export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({ visi
         if (visible) {
             // Reload collection from the shared GachaSystem instance
             setCollection(gachaSystem.collection);
-            if (!gachaSystem.collection.owned[selectedChar]) {
+
+            // If we have an initial char and we own it, select it.
+            // Otherwise check if we own the currently selected char (which defaults to 'parfen' or previous selection)
+            // If not owned, fallback to current equipped or 'parfen'
+
+            const charToSelect = initialChar;
+            if (gachaSystem.collection.owned[charToSelect]) {
+                setSelectedChar(charToSelect);
+            } else if (!gachaSystem.collection.owned[selectedChar]) {
                 setSelectedChar(gachaSystem.collection.current || 'parfen');
             }
         }
-    }, [visible]);
+    }, [visible, initialChar]);
 
     if (!visible) return null;
 
