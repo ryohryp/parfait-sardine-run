@@ -61,6 +61,7 @@ export class Game {
         this.ult = 0;
         this.ultReady = false;
         this.ultActiveUntil = 0;
+        this.sessionCoins = 0;
 
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
@@ -109,7 +110,9 @@ export class Game {
             remainMs: this.gameOn ? (GAME_TIME - (now() - this.t0)) : 0,
             level: this.level,
             score: this.score,
-            coins: this.gacha.coins,
+            score: this.score,
+            coins: this.sessionCoins,
+            lives: this.lives,
             lives: this.lives,
             ult: this.ult,
             ultReady: this.ultReady,
@@ -144,6 +147,7 @@ export class Game {
         this.ult = 0;
         this.ultReady = false;
         this.ultActiveUntil = 0;
+        this.sessionCoins = 0;
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
         this.autoShootUntil = 0;
@@ -194,7 +198,7 @@ export class Game {
 
         // Ensure numeric values to prevent NaN errors
         const finalLevel = Number(this.level) || 1;
-        const finalCoins = Number(this.gacha.coins) || 0;
+        const finalCoins = Number(this.sessionCoins) || 0;
         const finalScore = Number(this.score) || 0;
 
         if (this.callbacks.onRunFinish) {
@@ -361,7 +365,9 @@ export class Game {
         const score = this.scoreSystem.awardEnemyDefeat(3);
         this.score += score;
 
-        this.gacha.addCoins(Math.floor(1 * this.scoreSystem.comboMultiplier));
+        const coins = Math.floor(1 * this.scoreSystem.comboMultiplier);
+        this.gacha.addCoins(coins);
+        this.sessionCoins += coins;
         this.handleMissionUpdate('defeat_enemy', 1);
         this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
     }
@@ -378,6 +384,7 @@ export class Game {
             this.enemies.bossState.state = 'defeated';
             this.score += 500;
             this.gacha.addCoins(50);
+            this.sessionCoins += 50;
             this.handleMissionUpdate('defeat_boss', 1);
             playSfx('powerup'); // Placeholder for boss defeat
         } else {

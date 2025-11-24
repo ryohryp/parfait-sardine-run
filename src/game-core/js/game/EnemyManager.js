@@ -49,7 +49,7 @@ export class EnemyManager {
         // Balance: Reduced base speed from 2.2 to 1.5, scaling from 0.25 to 0.15
         // Cap level at 10 for speed calculation to prevent late-game difficulty spike
         const cappedLevel = Math.min(level, 10);
-        const baseSpeed = (1.5 + (cappedLevel - 1) * 0.15) * st.enemyMul;
+        const baseSpeed = (0.6 + (cappedLevel - 1) * 0.05) * st.enemyMul;
         const type = this.pickEnemyType(level);
         const baseY = this.canvas.height - GROUND - 36;
 

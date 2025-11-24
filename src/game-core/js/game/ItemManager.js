@@ -27,7 +27,7 @@ export class ItemManager {
             x: this.canvas.width + 24,
             y: this.canvas.height - GROUND - 44 - rand(0, 95),
             w: 30, h: 30,
-            v: 3.0 + rand(0.6, 1.8) + (level - 1) * 0.22,
+            v: 1.2 + rand(0.3, 0.8) + (level - 1) * 0.05,
             char: isParfait ? '🍨' : '🐟',
             score: isParfait ? 2 : 1
         });
@@ -38,7 +38,7 @@ export class ItemManager {
             x: this.canvas.width + 26,
             y: this.canvas.height - GROUND - 44 - rand(0, 120),
             w: 26, h: 26,
-            v: 3.0 + (level - 1) * 0.25,
+            v: 1.2 + (level - 1) * 0.05,
             char: '⭐'
         });
     }
