@@ -68,6 +68,10 @@ export const GameCanvas: React.FC = () => {
                     currentRunId.current = null;
                     currentNonce.current = null;
                 }
+            },
+            onStageClear: (data: any) => {
+                // Stage cleared, show result or continue
+                setResult({ ...data, stageClear: true });
             }
         });
 
@@ -79,11 +83,16 @@ export const GameCanvas: React.FC = () => {
     }, [fingerprint]);
 
     const handleStart = (characterKey: string, playerName: string) => {
+        console.log('[GameCanvas] handleStart called');
+        console.log('[GameCanvas] Arguments:', { characterKey, playerName });
         if (gameRef.current) {
             playerNameRef.current = playerName;
             gameRef.current.start(characterKey);
             setShowStartScreen(false);
             setResult(null);
+            console.log('[GameCanvas] Game started, hiding start screen');
+        } else {
+            console.error('[GameCanvas] gameRef.current is null!');
         }
     };
 

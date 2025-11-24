@@ -7,22 +7,23 @@ interface CharacterSelectModalProps {
     visible: boolean;
     onStart: (characterKey: string) => void;
     onBack: () => void;
+    gachaSystem: GachaSystem;
 }
 
-export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({ visible, onStart, onBack }) => {
+export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({ visible, onStart, onBack, gachaSystem }) => {
     const { t } = useTranslation();
     const [selectedChar, setSelectedChar] = useState('parfen');
     const [collection, setCollection] = useState<any>(null);
-    const [gachaSystem] = useState(() => new GachaSystem());
 
     useEffect(() => {
         if (visible) {
+            // Reload collection from the shared GachaSystem instance
             setCollection(gachaSystem.collection);
             if (!gachaSystem.collection.owned[selectedChar]) {
                 setSelectedChar(gachaSystem.collection.current || 'parfen');
             }
         }
-    }, [visible, gachaSystem]);
+    }, [visible]);
 
     if (!visible) return null;
 

@@ -98,13 +98,13 @@ export class GachaSystem {
 
         const results = rarities.map(r => {
             const ch = this.rollCharByRar(r);
-            this.addToCollection(ch.key);
+            const status = this.addToCollection(ch.key);
 
             if (r === 'M') { this.pity.sinceM = 0; this.pity.sinceL = 0; }
             else if (r === 'L') { this.pity.sinceL = 0; this.pity.sinceM++; }
             else { this.pity.sinceL++; this.pity.sinceM++; }
 
-            return ch;
+            return { char: ch, ...status };
         });
 
         this.savePity();
@@ -112,15 +112,21 @@ export class GachaSystem {
     }
 
     addToCollection(key) {
+        let isNew = false;
+        let isLimitBreak = false;
+
         if (!this.collection.owned[key]) {
             this.collection.owned[key] = { owned: true, dup: 0, limit: 0 };
+            isNew = true;
         } else {
             this.collection.owned[key].dup++;
             const rar = characters[key].rar;
             const inc = rar === 'M' ? 0.04 : rar === 'L' ? 0.03 : rar === 'E' ? 0.025 : rar === 'R' ? 0.015 : 0.005;
             this.collection.owned[key].limit = +(this.collection.owned[key].limit + inc).toFixed(3);
+            isLimitBreak = true;
         }
         this.saveCollection();
+        return { isNew, isLimitBreak };
     }
 
     setCurrentChar(key) {

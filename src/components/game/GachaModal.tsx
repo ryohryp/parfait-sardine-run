@@ -86,19 +86,23 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 overflowY: 'auto',
                                 padding: '8px'
                             }}>
-                                {results.map((char, idx) => (
-                                    <div key={idx} className={`gacha-result-item ${rarClass(char.rar)}`} style={{
+                                {results.map((item, idx) => (
+                                    <div key={idx} className={`gacha-result-item ${rarClass(item.char.rar)}`} style={{
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         padding: '8px',
                                         borderRadius: '8px',
                                         border: '1px solid #ccc',
-                                        background: '#fff'
+                                        background: '#fff',
+                                        position: 'relative'
                                     }}>
-                                        <div style={{ fontSize: '32px' }}>{char.emoji}</div>
-                                        <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{char.name}</div>
-                                        <div style={{ fontSize: '10px', color: '#666' }}>{char.rar}</div>
+                                        {item.isNew && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#facc15', color: '#000', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>NEW!</div>}
+                                        {item.isLimitBreak && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#60a5fa', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>UP!</div>}
+
+                                        <div style={{ fontSize: '32px' }}>{item.char.emoji}</div>
+                                        <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{item.char.name}</div>
+                                        <div style={{ fontSize: '10px', color: '#666' }}>{item.char.rar}</div>
                                     </div>
                                 ))}
                             </div>

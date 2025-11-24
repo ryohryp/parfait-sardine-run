@@ -32,7 +32,7 @@ export class EnemyManager {
 
         // Load Assets
         this.droneImage = new Image();
-        this.droneImage.src = 'assets/sprite/enemy_drone.png';
+        this.droneImage.src = 'assets/sprite/enemy_cupcake.png';
     }
 
     reset() {
@@ -46,7 +46,7 @@ export class EnemyManager {
 
     spawnEnemy(level, offset = 0) {
         const st = stageForLevel(level);
-        const baseSpeed = (2.7 + (level - 1) * 0.35) * st.enemyMul;
+        const baseSpeed = (2.2 + (level - 1) * 0.25) * st.enemyMul;
         const type = this.pickEnemyType(level);
         const baseY = this.canvas.height - GROUND - 36;
 
@@ -132,10 +132,11 @@ export class EnemyManager {
         speedSE();
     }
 
-    update(t, level, player) {
-        const st = stageForLevel(level);
+    update(t, level, player, stageKey, isBossBattle) {
+        const st = stageForLevel(level); // Note: level might be decoupled from stageKey in future
 
-        // Boss Spawning Logic
+        // Boss Spawning Logic - Handled by Game.js now
+        /*
         const stageBoss = stageBosses[st.key];
         if (!this.bossState && stageBoss && !this.defeatedBossStages.has(st.key)) {
             if (!this.bossNextSpawnAt) {
@@ -145,6 +146,7 @@ export class EnemyManager {
                 this.bossNextSpawnAt = 0;
             }
         }
+        */
 
         // Boss Update
         if (this.bossState) {
@@ -155,7 +157,7 @@ export class EnemyManager {
 
         // Enemy Spawning
         const enemyIv = clamp(1600 - (level - 1) * 120, 520, 1600);
-        if (!bossBattleActive && t - this.lastEnemyTime > enemyIv) {
+        if (!bossBattleActive && !isBossBattle && t - this.lastEnemyTime > enemyIv) {
             this.spawnEnemy(level);
             const extraChance = clamp(0.06 + level * 0.018, 0.06, 0.45);
             if (Math.random() < extraChance) {

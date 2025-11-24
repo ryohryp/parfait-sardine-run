@@ -155,6 +155,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible }) =>
                 visible={showCharSelect}
                 onStart={handleGameStart}
                 onBack={() => setShowCharSelect(false)}
+                gachaSystem={gachaSystem}
             />
         </>
     );
