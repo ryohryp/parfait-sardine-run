@@ -29,7 +29,7 @@ export async function apiClient<T>(endpoint: string, options: ApiOptions = {}): 
                 if (errorBody.message) {
                     errorMessage += ` - ${errorBody.message}`;
                 }
-            } catch (e) {
+            } catch {
                 // Ignore json parse error
             }
             throw new Error(errorMessage);

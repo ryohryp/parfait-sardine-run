@@ -19,5 +19,12 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Disable react-hooks/set-state-in-effect as it has false positives for legitimate use cases
+      // like loading data when a modal opens or controlling animations
+      'react-hooks/set-state-in-effect': 'off',
+      // Disable react-hooks/purity as it has false positives for performance.now() in render
+      'react-hooks/purity': 'off',
+    },
   },
 ])

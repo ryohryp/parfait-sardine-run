@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import { runsApi } from '../api/runs';
@@ -12,36 +12,15 @@ export const HistoryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        let isMounted = true;
-        let timeoutId: ReturnType<typeof setTimeout>;
-
-        const loadData = async () => {
-            if (fingerprint && isMounted) {
-                await loadRuns();
-            }
-        };
-
-        // Debounce the call to prevent double execution in Strict Mode
-        timeoutId = setTimeout(() => {
-            loadData();
-        }, 100);
-
-        return () => {
-            isMounted = false;
-            clearTimeout(timeoutId);
-        };
-    }, [fingerprint]);
-
-    const loadRuns = async () => {
+    const loadRuns = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const data = await runsApi.getRuns(fingerprint);
             setRuns(data);
-        } catch (err: any) {
+        } catch (err) {
             // Handle rate limit errors specifically
-            if (err?.message?.includes('429')) {
+            if (err instanceof Error && err.message?.includes('429')) {
                 setError(t('errorRateLimit'));
             } else {
                 setError(t('errorHistory'));
@@ -50,7 +29,21 @@ export const HistoryPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [fingerprint, t]);
+
+    useEffect(() => {
+        let isMounted = true;
+        const timeoutId = setTimeout(() => {
+            if (fingerprint && isMounted) {
+                loadRuns();
+            }
+        }, 100);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
+    }, [fingerprint, loadRuns]);
 
     return (
         <div className="page-container">

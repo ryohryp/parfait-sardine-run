@@ -1,5 +1,7 @@
 
 import { characters, rarOrder, rarClass } from '../game-data/characters.js';
+import { equipmentItems } from '../game-data/equipment-data.js';
+import { CharacterProgression } from './CharacterProgression.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { logger } from '../utils/Logger.js';
 
@@ -12,12 +14,16 @@ export class GachaSystem {
         this.coins = this.loadCoinBalance();
         this.collection = this.loadCollection();
         this.pity = this.loadPity();
+        this.progression = new CharacterProgression();
 
         if (!this.collection.owned[this.collection.current]) {
             this.collection.current = 'parfen';
             this.collection.owned.parfen = { owned: true, dup: 0, limit: 0 };
             this.saveCollection();
         }
+
+        // Initialize progression for starter character
+        this.progression.initializeCharacter('parfen');
     }
 
     loadCoinBalance() {
@@ -141,6 +147,16 @@ export class GachaSystem {
             else if (r === 'L') { this.pity.sinceL = 0; this.pity.sinceM++; }
             else { this.pity.sinceL++; this.pity.sinceM++; }
 
+            // Randomly add equipment item (10% chance for single pull, guaranteed in 10-pull)
+            let equipment = null;
+            if (n === 10 || Math.random() < 0.1) {
+                equipment = this.rollEquipment(r);
+                if (equipment) {
+                    const isNewEquip = this.progression.addEquipmentToInventory(equipment.id);
+                    status.equipment = { item: equipment, isNew: isNewEquip };
+                }
+            }
+
             return { char: ch, ...status };
         });
 
@@ -151,27 +167,70 @@ export class GachaSystem {
     addToCollection(key) {
         let isNew = false;
         let isLimitBreak = false;
+        let limitBreakPerformed = false;
 
         if (!this.collection.owned[key]) {
             this.collection.owned[key] = { owned: true, dup: 0, limit: 0 };
             isNew = true;
+            // Initialize progression for new character
+            this.progression.initializeCharacter(key);
         } else {
             this.collection.owned[key].dup++;
             const rar = characters[key].rar;
             const inc = rar === 'M' ? 0.04 : rar === 'L' ? 0.03 : rar === 'E' ? 0.025 : rar === 'R' ? 0.015 : 0.005;
             this.collection.owned[key].limit = +(this.collection.owned[key].limit + inc).toFixed(3);
-            isLimitBreak = true;
+
+            // NEW: Perform limit break on duplicate
+            limitBreakPerformed = this.progression.limitBreak(key);
+            isLimitBreak = limitBreakPerformed;
+
+            // If max limit breaks reached, exp is already added by CharacterProgression
+            logger.info('Duplicate character obtained', {
+                key,
+                limitBreakPerformed,
+                dup: this.collection.owned[key].dup
+            });
         }
         this.saveCollection();
-        return { isNew, isLimitBreak };
+        return { isNew, isLimitBreak, limitBreakPerformed };
     }
 
     setCurrentChar(key) {
         if (this.collection.owned[key]) {
             this.collection.current = key;
             this.saveCollection();
+            // Initialize progression if not exists
+            this.progression.initializeCharacter(key);
             return true;
         }
         return false;
+    }
+
+    /**
+     * Roll for equipment item based on character rarity
+     * @param {string} charRarity 
+     * @returns {Object|null}
+     */
+    rollEquipment(charRarity) {
+        // Match equipment rarity to character rarity with some variation
+        let targetRarity;
+        const roll = Math.random();
+
+        if (charRarity === 'M') {
+            targetRarity = roll < 0.5 ? 'L' : 'E';
+        } else if (charRarity === 'L') {
+            targetRarity = roll < 0.3 ? 'L' : roll < 0.8 ? 'E' : 'R';
+        } else if (charRarity === 'E') {
+            targetRarity = roll < 0.4 ? 'E' : 'R';
+        } else if (charRarity === 'R') {
+            targetRarity = roll < 0.3 ? 'R' : 'C';
+        } else {
+            targetRarity = 'C';
+        }
+
+        const pool = Object.values(equipmentItems).filter(e => e.rarity === targetRarity);
+        if (pool.length === 0) return null;
+
+        return pool[Math.floor(Math.random() * pool.length)];
     }
 }

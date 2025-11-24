@@ -1,38 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { HowToModal } from './HowToModal';
 import { GachaModal } from './GachaModal';
 import { CharacterSelectModal } from './CharacterSelectModal';
+import { SkillTreeModal } from './SkillTreeModal';
+import { EquipmentModal } from './EquipmentModal';
 import { useTranslation } from '../../hooks/useTranslation';
 import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
 
 interface StartScreenProps {
     onStart: (characterKey: string, playerName: string) => void;
     visible: boolean;
+    gachaSystem: GachaSystem;
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem }) => {
     const { t, language, setLanguage } = useTranslation();
     const [showHowTo, setShowHowTo] = useState(false);
     const [showGacha, setShowGacha] = useState(false);
     const [showCharSelect, setShowCharSelect] = useState(false);
-    const [playerName, setPlayerName] = useState('');
-    const [gachaSystem] = useState(() => new GachaSystem());
+    const [showSkillTree, setShowSkillTree] = useState(false);
+    const [showEquipment, setShowEquipment] = useState(false);
+    const [selectedCharForProgression, setSelectedCharForProgression] = useState('parfen');
+    const [playerName, setPlayerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || '');
     const [coins, setCoins] = useState(0);
+
+    const updateGachaState = useCallback(() => {
+        const currentCoins = gachaSystem.loadCoinBalance();
+        gachaSystem.saveCoinBalance(currentCoins);
+        setCoins(currentCoins);
+    }, [gachaSystem]);
 
     useEffect(() => {
         if (visible) {
-            const savedName = localStorage.getItem('psrun_player_name_v1');
-            if (savedName) setPlayerName(savedName);
             updateGachaState();
         }
-    }, [visible]);
-
-    const updateGachaState = () => {
-        const currentCoins = gachaSystem.loadCoinBalance();
-        gachaSystem.coins = currentCoins;
-        setCoins(currentCoins);
-    };
+    }, [visible, updateGachaState]);
 
     const handleStartClick = () => {
         if (!playerName.trim()) {
@@ -158,6 +161,26 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible }) =>
                 onBack={() => setShowCharSelect(false)}
                 gachaSystem={gachaSystem}
                 initialChar={localStorage.getItem('psrun_selected_char') || 'parfen'}
+                onOpenSkillTree={(charKey) => {
+                    setSelectedCharForProgression(charKey);
+                    setShowSkillTree(true);
+                }}
+                onOpenEquipment={(charKey) => {
+                    setSelectedCharForProgression(charKey);
+                    setShowEquipment(true);
+                }}
+            />
+            <SkillTreeModal
+                visible={showSkillTree}
+                characterKey={selectedCharForProgression}
+                onClose={() => setShowSkillTree(false)}
+                progression={gachaSystem.progression}
+            />
+            <EquipmentModal
+                visible={showEquipment}
+                characterKey={selectedCharForProgression}
+                onClose={() => setShowEquipment(false)}
+                progression={gachaSystem.progression}
             />
         </>
     );

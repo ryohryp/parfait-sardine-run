@@ -189,7 +189,7 @@ export class GameRenderer {
         this.ctx.font = 'bold 24px sans-serif';
         this.ctx.fillStyle = '#ffffff';
         this.ctx.shadowBlur = 5;
-        this.ctx.fillText('Time & Life Restored!', centerX, centerY + 60);
+        this.ctx.fillText('Time & HP Restored!', centerX, centerY + 60);
 
         this.ctx.restore();
     }

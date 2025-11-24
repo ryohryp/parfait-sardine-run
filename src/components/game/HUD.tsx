@@ -9,7 +9,7 @@ interface HUDProps {
 
 export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
     const {
-        remainMs, level, score, coins, lives, ult,
+        remainMs, level, score, coins, hp, maxHp, ult,
         bestScore, invUntil, autoShootUntil, bulletBoostUntil, scoreMulUntil, ultActiveUntil, gameOn, stageName
     } = state;
 
@@ -23,7 +23,8 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
     if (nowTs < scoreMulUntil) effects.push({ icon: '✖️2', label: 'スコアUP', remain: (scoreMulUntil - nowTs) / 1000 });
     if (gameOn && nowTs < ultActiveUntil) effects.push({ icon: '🌈', label: '必殺', remain: (ultActiveUntil - nowTs) / 1000 });
 
-    const hearts = Array.from({ length: 3 }, (_, i) => (i < lives ? '❤️' : '♡')).join('');
+    const hpPercent = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+    const hpColor = hpPercent > 50 ? '#22c55e' : hpPercent > 20 ? '#eab308' : '#ef4444';
 
     return (
         <div id="hud">
@@ -40,8 +41,24 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
             </div>
 
             <div className="hud-group">
-                <div className="hud-pill">
-                    <span>{hearts}</span>
+                <div className="hud-pill" style={{ padding: '4px 8px', gap: '6px' }}>
+                    <span>❤️</span>
+                    <div style={{ width: '100px', height: '14px', background: '#1e293b', borderRadius: '7px', overflow: 'hidden', position: 'relative', border: '1px solid #475569' }}>
+                        <div style={{
+                            width: `${hpPercent}%`,
+                            height: '100%',
+                            background: hpColor,
+                            transition: 'width 0.2s ease-out, background 0.3s'
+                        }} />
+                        <div style={{
+                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '10px', color: '#fff', fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                            lineHeight: '14px'
+                        }}>
+                            {hp}/{maxHp}
+                        </div>
+                    </div>
                 </div>
                 <div className="hud-pill">
                     <span>⏰</span>

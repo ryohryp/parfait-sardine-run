@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import { leaderboardApi } from '../api/leaderboard';
@@ -10,25 +10,25 @@ export const LeaderboardPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadRanking();
-    }, []);
-
-    const loadRanking = async () => {
+    const loadRanking = useCallback(async () => {
         setLoading(true);
         try {
             const response = await leaderboardApi.getLeaderboard();
             // API returns { leaderboard: [...] } according to API spec
-            const data = (response as any)?.leaderboard || response;
+            const data = (response as { leaderboard?: LeaderboardEntry[] })?.leaderboard || response;
             // Ensure data is an array
             setRanking(Array.isArray(data) ? data : []);
-        } catch (err) {
+        } catch {
             setError(t('errorRanking'));
             setRanking([]); // Ensure ranking is empty array on error
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
+
+    useEffect(() => {
+        loadRanking();
+    }, [loadRanking]);
 
     return (
         <div className="page-container">

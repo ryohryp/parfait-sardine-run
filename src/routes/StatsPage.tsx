@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import { runsApi } from '../api/runs';
@@ -12,23 +12,23 @@ export const StatsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (fingerprint) {
-            loadStats();
-        }
-    }, [fingerprint]);
-
-    const loadStats = async () => {
+    const loadStats = useCallback(async () => {
         setLoading(true);
         try {
             const data = await runsApi.getStats(fingerprint);
             setStats(data);
-        } catch (err) {
+        } catch {
             setError(t('errorStats'));
         } finally {
             setLoading(false);
         }
-    };
+    }, [fingerprint, t]);
+
+    useEffect(() => {
+        if (fingerprint) {
+            loadStats();
+        }
+    }, [fingerprint, loadStats]);
 
     return (
         <div className="page-container">

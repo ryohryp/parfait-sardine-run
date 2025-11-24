@@ -98,7 +98,12 @@ export class CollisionSystem {
                     return false;
                 }
                 if (now() > game.hurtUntil) {
-                    game.lives = Math.max(0, game.lives - 1);
+                    // Calculate damage with reduction
+                    const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
+                    const baseDamage = 20; // Base damage per hit
+                    const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
+
+                    game.hp = Math.max(0, game.hp - finalDamage);
                     game.hurtUntil = now() + 900;
                     playSfx('hit');
                     game.particles.createExplosion(
@@ -106,10 +111,24 @@ export class CollisionSystem {
                         game.player.y + game.player.h / 2,
                         '#ff0000'
                     );
-                    logger.debug('Player hit by enemy', { lives: game.lives });
-                    if (game.lives === 0) {
-                        game.endGame();
-                        return false;
+                    logger.debug('Player hit by enemy', { hp: game.hp, damage: finalDamage });
+
+                    if (game.hp <= 0) {
+                        // Check for auto-revive
+                        if (skillBonuses.hasAutoRevive && !game.hasUsedAutoRevive) {
+                            game.hp = Math.floor(game.maxHp * 0.5); // Revive with 50% HP
+                            game.hasUsedAutoRevive = true;
+                            game.invUntil = now() + 3000; // 3 seconds invincibility
+                            game.particles.createExplosion(
+                                game.player.x + game.player.w / 2,
+                                game.player.y + game.player.h / 2,
+                                '#00ff00'
+                            );
+                            logger.info('Auto-revive activated!');
+                        } else {
+                            game.endGame();
+                            return false;
+                        }
                     }
                 }
             }
@@ -170,7 +189,12 @@ export class CollisionSystem {
             if (now() < game.invUntil || now() < game.feverModeUntil) {
                 game.damageBoss(2);
             } else if (now() > game.hurtUntil) {
-                game.lives = Math.max(0, game.lives - 1);
+                // Calculate damage with reduction
+                const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
+                const baseDamage = 20;
+                const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
+
+                game.hp = Math.max(0, game.hp - finalDamage);
                 game.hurtUntil = now() + 900;
                 playSfx('hit');
                 game.particles.createExplosion(
@@ -178,7 +202,23 @@ export class CollisionSystem {
                     game.player.y + game.player.h / 2,
                     '#ff0000'
                 );
-                if (game.lives === 0) game.endGame();
+
+                if (game.hp <= 0) {
+                    // Check for auto-revive
+                    if (skillBonuses.hasAutoRevive && !game.hasUsedAutoRevive) {
+                        game.hp = Math.floor(game.maxHp * 0.5);
+                        game.hasUsedAutoRevive = true;
+                        game.invUntil = now() + 3000;
+                        game.particles.createExplosion(
+                            game.player.x + game.player.w / 2,
+                            game.player.y + game.player.h / 2,
+                            '#00ff00'
+                        );
+                        logger.info('Auto-revive activated!');
+                    } else {
+                        game.endGame();
+                    }
+                }
             }
         }
 
@@ -215,7 +255,12 @@ export class CollisionSystem {
                     return false;
                 }
                 if (now() > game.hurtUntil) {
-                    game.lives = Math.max(0, game.lives - 1);
+                    // Calculate damage with reduction
+                    const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
+                    const baseDamage = 20;
+                    const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
+
+                    game.hp = Math.max(0, game.hp - finalDamage);
                     game.hurtUntil = now() + 900;
                     playSfx('hit');
                     game.particles.createExplosion(
@@ -223,8 +268,22 @@ export class CollisionSystem {
                         game.player.y + game.player.h / 2,
                         '#ff0000'
                     );
-                    if (game.lives === 0) {
-                        game.endGame();
+
+                    if (game.hp <= 0) {
+                        // Check for auto-revive
+                        if (skillBonuses.hasAutoRevive && !game.hasUsedAutoRevive) {
+                            game.hp = Math.floor(game.maxHp * 0.5);
+                            game.hasUsedAutoRevive = true;
+                            game.invUntil = now() + 3000;
+                            game.particles.createExplosion(
+                                game.player.x + game.player.w / 2,
+                                game.player.y + game.player.h / 2,
+                                '#00ff00'
+                            );
+                            logger.info('Auto-revive activated!');
+                        } else {
+                            game.endGame();
+                        }
                     }
                 }
                 return false;

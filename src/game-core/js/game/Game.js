@@ -1,3 +1,4 @@
+// Game core implementation
 import { Player } from './Player.js';
 import { InputManager } from './InputManager.js';
 import { EnemyManager } from './EnemyManager.js';
@@ -14,6 +15,7 @@ import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
 import { GAME_TIME, INVINCIBILITY_DURATION, BASE_JUMP, SHOOT_COOLDOWN, POWER_DURATION, ITEM_LEVEL } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
 import { stageForLevel } from '../game-data/stages.js';
+import { equipmentItems } from '../game-data/equipment-data.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { logger } from '../utils/Logger.js';
 
@@ -26,7 +28,7 @@ export class Game {
         this.ctx = this.canvas.getContext('2d');
         this.callbacks = callbacks; // { onStateUpdate, onGameOver, onPlaySfx, onRunStart, onRunFinish }
 
-        // 依存関係の注入 (デフォルト値付きで後方互換性を維持)
+        // Dependency injection with defaults
         this.input = dependencies.input || new InputManager();
         this.particles = dependencies.particles || new ParticleSystem(this.canvas);
         this.player = dependencies.player || new Player(this.canvas, this.particles);
@@ -37,25 +39,22 @@ export class Game {
         this.companion = dependencies.companion || new Companion(this.player);
         this.missions = dependencies.missions || new MissionManager();
 
-        // システムクラスの初期化
-        // 依存関係としてインスタンスが渡された場合はそれを使用し、
-        // クラス定義が渡された場合はそれを使ってインスタンス化する (テスト用モック対応)
-
+        // System classes
         this.scoreSystem = dependencies.scoreSystem || new ScoreSystem();
-
         const CollisionSystemClass = dependencies.collisionSystemClass || CollisionSystem;
         this.collisionSystem = dependencies.collisionSystem || new CollisionSystemClass(this);
-
         const GameRendererClass = dependencies.rendererClass || GameRenderer;
         this.renderer = dependencies.renderer || new GameRendererClass(this.canvas, this);
 
+        // Game state variables
         this.gameOn = false;
         this.t0 = 0;
         this.runStartTimestamp = 0;
-
         this.score = 0;
         this.level = 1;
-        this.lives = 3;
+        this.hp = 100;
+        this.maxHp = 100;
+        this.hasUsedAutoRevive = false;
         this.invUntil = 0;
         this.hurtUntil = 0;
         this.ult = 0;
@@ -64,40 +63,24 @@ export class Game {
         this.sessionCoins = 0;
         this.stageClearUntil = 0;
         this.levelOffset = 0;
-
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
         this.scoreMulUntil = 0;
-
-        // Note: feverGauge, feverModeUntil, comboCount, comboMultiplier, lastComboTime
-        // are now managed by scoreSystem
-
         this.lastShot = 0;
         this.currentStageKey = null;
-
         this.bestScore = this.loadBestScore();
-
-        // Note: bgLayers moved to GameRenderer
 
         this.init();
     }
 
     init() {
         this.input.init(this.canvas);
-
-        this.input.on('jump', () => {
-            if (this.gameOn) this.player.jump();
-        });
+        this.input.on('jump', () => { if (this.gameOn) this.player.jump(); });
         this.input.on('shoot', () => this.shoot());
         this.input.on('ult', () => this.tryUlt());
-
         initAudio();
-
-        // Initial State Update
         this.notifyState();
-
-        // Start Loop
-        requestAnimationFrame((t) => this.loop(t));
+        requestAnimationFrame(t => this.loop(t));
     }
 
     notifyState() {
@@ -112,10 +95,9 @@ export class Game {
             remainMs: this.gameOn ? (GAME_TIME - (now() - this.t0)) : 0,
             level: this.level,
             score: this.score,
-            score: this.score,
             coins: this.sessionCoins,
-            lives: this.lives,
-            lives: this.lives,
+            hp: this.hp,
+            maxHp: this.maxHp,
             ult: this.ult,
             ultReady: this.ultReady,
             currentCharKey: this.gacha.collection.current,
@@ -137,14 +119,15 @@ export class Game {
         };
     }
 
-    /**
-     * Start the game
-     * @param {string} [characterKey] - Optional character key to start with
-     */
+    /** Start the game */
     start(characterKey) {
         this.score = 0;
         this.level = 1;
-        this.lives = 3;
+        // Calculate max HP from skill bonuses
+        const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current || 'parfen');
+        this.maxHp = 100 + skillBonuses.maxHpBonus;
+        this.hp = this.maxHp;
+        this.hasUsedAutoRevive = false;
         this.invUntil = 0;
         this.hurtUntil = 0;
         this.ult = 0;
@@ -155,35 +138,23 @@ export class Game {
         this.levelOffset = 0;
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
-        this.autoShootUntil = 0;
-        this.bulletBoostUntil = 0;
         this.scoreMulUntil = 0;
 
-        // Reset systems
         this.scoreSystem.reset();
-
         this.enemies.reset();
         this.items.reset();
         this.projectiles.reset();
         this.player.reset();
-        this.particles.particles = []; // Clear particles
+        this.particles.particles = [];
 
-        // Set character from argument if provided, otherwise use current
-        if (characterKey) {
-            this.gacha.collection.current = characterKey;
-        }
+        if (characterKey) this.gacha.collection.current = characterKey;
         this.player.setCharacter(this.gacha.collection.current, this.getEffectiveStats(this.gacha.collection.current));
 
         this.t0 = now();
         this.runStartTimestamp = this.t0;
         this.gameOn = true;
-
         playBgm({ reset: true });
-
-        if (this.callbacks.onRunStart) {
-            this.callbacks.onRunStart();
-        }
-
+        if (this.callbacks.onRunStart) this.callbacks.onRunStart();
         this.notifyState();
     }
 
@@ -191,21 +162,14 @@ export class Game {
         if (!this.gameOn) return;
         this.gameOn = false;
         stopBgm();
-
         const durationMs = Math.max(0, Math.floor(now() - this.runStartTimestamp));
-
         if (this.score > this.bestScore) {
             this.bestScore = this.score;
-            this.saveBestScore();
         }
-
-        this.handleMissionUpdate('score_points', this.score);
-
-        // Ensure numeric values to prevent NaN errors
-        const finalLevel = Number(this.level) || 1;
-        const finalCoins = Number(this.sessionCoins) || 0;
+        // No experience grant here – EXP is handled per enemy defeat
         const finalScore = Number(this.score) || 0;
-
+        const finalCoins = Number(this.sessionCoins) || 0;
+        const finalLevel = Number(this.level) || 1;
         if (this.callbacks.onRunFinish) {
             this.callbacks.onRunFinish({
                 score: finalScore,
@@ -215,7 +179,6 @@ export class Game {
                 result: 'gameover'
             });
         }
-
         if (this.callbacks.onGameOver) {
             this.callbacks.onGameOver({
                 score: finalScore,
@@ -224,56 +187,39 @@ export class Game {
                 newBest: this.score === this.bestScore
             });
         }
-
         this.notifyState();
     }
 
     update(t) {
         if (!this.gameOn) return;
-
         const elapsed = t - this.t0;
         const remain = GAME_TIME - elapsed;
         if (remain <= 0) return this.endGame();
-
-        // Level Up
+        // Level progression based on score
         this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1) + this.levelOffset;
-
-        // Update Entities
-        this.player.update(16); // Fixed delta for now
-
-        // Reset combo if on ground
+        // Update entities
+        this.player.update(16);
         if (this.player.y >= this.canvas.height - 72 - this.player.h && this.player.vy >= 0) {
             this.scoreSystem.resetCombo();
         }
-
         this.enemies.update(t, this.level, this.player);
         this.particles.update(t);
-
         const hasMagnet = characters[this.gacha.collection.current]?.special?.includes('magnet');
         this.items.update(t, this.level, this.player, hasMagnet);
-
         const hasSlow = characters[this.gacha.collection.current]?.special?.includes('slowEnemy');
         this.projectiles.update(
             this.player,
             this.enemies.bossState,
             this.enemies.enemies,
-            (en) => this.awardEnemyDefeat(en),
-            (dmg) => this.damageBoss(dmg),
+            en => this.awardEnemyDefeat(en),
+            dmg => this.damageBoss(dmg),
             hasSlow
         );
-
         this.companion.update(t, this.items.items);
-
-        // Filter out dead enemies hit by bullets
         this.enemies.enemies = this.enemies.enemies.filter(en => !en._dead);
-
-        // Collisions
         this.collisionSystem.checkAll();
-
-        // Ult Ready
         if (this.ult >= 100) this.ultReady = true;
-
-        // Draw
+        // Render
         this.renderer.render({
             level: this.level,
             player: this.player,
@@ -292,26 +238,22 @@ export class Game {
             lastComboTime: this.scoreSystem.lastComboTime,
             stageClearUntil: this.stageClearUntil
         });
-
-        // UI Update
         this.notifyState();
     }
 
     loop(t) {
         this.update(t);
-        requestAnimationFrame((t) => this.loop(t));
+        requestAnimationFrame(t2 => this.loop(t2));
     }
 
     shoot() {
         if (!this.gameOn) return;
-        const t = now();
-        if (t - this.lastShot < SHOOT_COOLDOWN) return;
-        this.lastShot = t;
-
+        const nowTime = now();
+        if (nowTime - this.lastShot < SHOOT_COOLDOWN) return;
+        this.lastShot = nowTime;
         const pierce = characters[this.gacha.collection.current]?.special?.includes('pierce');
         const v = 9 + this.level * 0.6 + (now() < this.bulletBoostUntil ? 4 : 0);
         const stats = this.getEffectiveStats(this.gacha.collection.current);
-
         this.projectiles.addBullet(
             this.player.x + this.player.w,
             this.player.y + this.player.h / 2 - 3,
@@ -322,27 +264,15 @@ export class Game {
 
     tryUlt() {
         if (!this.gameOn || !this.ultReady) return;
-
         this.ultReady = false;
         this.ult = 0;
-
         const type = characters[this.gacha.collection.current].ult;
-
-        // Play sound effect
-        playSfx('hit'); // Using hit sound as placeholder for ult sound
+        playSfx('hit');
         this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#00ffff');
-
-        if (!type) {
-            // Character has no ult, just show some effect
-            this.ultActiveUntil = now() + 1000;
-            return;
-        }
-
-        if (type === 'storm') {
-            this.ultActiveUntil = now() + 1600;
-        } else if (type === 'ncha') {
-            this.ultActiveUntil = now() + 1500;
-        } else if (type === 'yadon') {
+        if (!type) { this.ultActiveUntil = now() + 1000; return; }
+        if (type === 'storm') this.ultActiveUntil = now() + 1600;
+        else if (type === 'ncha') this.ultActiveUntil = now() + 1500;
+        else if (type === 'yadon') {
             this.ultActiveUntil = now() + 2600;
             const baseY = this.player.y + this.player.h / 2;
             const count = 6;
@@ -362,7 +292,6 @@ export class Game {
                 });
             }
         } else {
-            // Rainbow
             this.ultActiveUntil = now() + 3000;
         }
     }
@@ -370,10 +299,17 @@ export class Game {
     awardEnemyDefeat(enemy) {
         const score = this.scoreSystem.awardEnemyDefeat(3);
         this.score += score;
-
-        const coins = Math.floor(1 * this.scoreSystem.comboMultiplier);
-        this.gacha.addCoins(coins);
-        this.sessionCoins += coins;
+        // Coin bonus
+        const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
+        const baseCoins = Math.floor(1 * this.scoreSystem.comboMultiplier);
+        const finalCoins = Math.floor(baseCoins * (1 + skillBonuses.coinBonus));
+        this.gacha.addCoins(finalCoins);
+        this.sessionCoins += finalCoins;
+        // Experience for enemy defeat (5 EXP base, modified by expBonus)
+        const baseExp = 5;
+        const finalExp = Math.floor(baseExp * (1 + skillBonuses.expBonus));
+        const charKey = this.gacha.collection.current;
+        this.gacha.progression.addExperience(charKey, finalExp);
         this.handleMissionUpdate('defeat_enemy', 1);
         this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
     }
@@ -392,14 +328,15 @@ export class Game {
             this.gacha.addCoins(50);
             this.sessionCoins += 50;
             this.handleMissionUpdate('defeat_boss', 1);
-
-            // Boss Defeat Effects
-            this.stageClearUntil = now() + 4000; // Show "STAGE CLEAR" for 4s
-            this.t0 = now(); // Reset timer to 60s
-            this.lives = 3; // Restore max life
-            this.levelOffset++; // Increment level
-
-            playSfx('powerup'); // Placeholder for boss defeat
+            this.stageClearUntil = now() + 4000;
+            this.t0 = now();
+            // Restore HP on stage clear
+            const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
+            this.maxHp = 100 + skillBonuses.maxHpBonus;
+            this.hp = this.maxHp;
+            this.hasUsedAutoRevive = false; // Reset auto-revive on stage clear
+            this.levelOffset++;
+            playSfx('powerup');
         } else {
             playSfx('hit');
         }
@@ -408,10 +345,7 @@ export class Game {
     handleMissionUpdate(type, amount) {
         const updates = this.missions.updateProgress(type, amount);
         if (updates.length > 0) {
-            updates.forEach(m => {
-                logger.info('Mission completed!', { id: m.id });
-                // Show notification?
-            });
+            updates.forEach(m => logger.info('Mission completed!', { id: m.id }));
             this.missions.save();
         }
     }
@@ -419,13 +353,33 @@ export class Game {
     getEffectiveStats(charKey) {
         const c = characters[charKey];
         if (!c) return { speed: 1, jump: 1, bullet: 1, inv: 0, ultRate: 1 };
-        return {
-            speed: c.move || 1, // 'move' in characters.js maps to 'speed' here
+        let stats = {
+            speed: c.move || 1,
             jump: c.jump || 1,
             bullet: c.bullet || 1,
             inv: c.inv || 0,
             ultRate: c.ultRate || 1
         };
+        const charData = this.gacha.progression.getCharacterData(charKey);
+        const levelBonus = 1 + (charData.level * 0.005);
+        stats.speed *= levelBonus;
+        stats.jump *= levelBonus;
+        stats.bullet *= levelBonus;
+        stats.ultRate *= levelBonus;
+        const skillBonuses = this.gacha.progression.calculateSkillBonuses(charKey);
+        stats.bullet *= (1 + skillBonuses.bulletSpeedBonus);
+        stats.ultRate *= (1 + skillBonuses.ultChargeBonus);
+        const equippedItems = charData.equippedItems;
+        equippedItems.forEach(itemId => {
+            const item = equipmentItems[itemId];
+            if (!item) return;
+            const e = item.effects;
+            if (e.moveSpeed) stats.speed *= e.moveSpeed;
+            if (e.jumpPower) stats.jump *= e.jumpPower;
+            if (e.bulletSpeed) stats.bullet *= e.bulletSpeed;
+            if (e.ultChargeRate) stats.ultRate *= e.ultChargeRate;
+        });
+        return stats;
     }
 
     loadBestScore() {
@@ -433,13 +387,10 @@ export class Game {
             const raw = localStorage.getItem('psrun_best_score_v1');
             if (raw !== null) {
                 const value = Number(raw);
-                if (Number.isFinite(value)) {
-                    return Math.max(0, Math.floor(value));
-                }
+                if (Number.isFinite(value)) return Math.max(0, Math.floor(value));
             }
             return null;
         }, 'Game.loadBestScore', null);
-
         if (score !== null) {
             logger.info('Best score loaded', { score });
             return score;
@@ -456,7 +407,6 @@ export class Game {
     }
 
     updateCharInfo() {
-        // This is handled in UI setHUD mostly, but if we need to force update:
-        // this.ui.updateCharInfo(this.gacha.collection.current, this.gacha.collection);
+        // UI updates handled elsewhere
     }
 }

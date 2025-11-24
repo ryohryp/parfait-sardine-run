@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { locales } from '../i18n/locales';
 import type { Language } from '../i18n/locales';
@@ -12,17 +12,13 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [language, setLanguageState] = useState<Language>('ja');
-
-    useEffect(() => {
+    const [language, setLanguageState] = useState<Language>(() => {
         const savedLang = localStorage.getItem('psrun_language');
         if (savedLang && (savedLang === 'en' || savedLang === 'ja')) {
-            setLanguageState(savedLang);
-        } else {
-            const browserLang = navigator.language.startsWith('ja') ? 'ja' : 'en';
-            setLanguageState(browserLang);
+            return savedLang as Language;
         }
-    }, []);
+        return navigator.language.startsWith('ja') ? 'ja' : 'en';
+    });
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);

@@ -1,7 +1,33 @@
+import { CharacterProgression } from './CharacterProgression';
+
+export interface EquipmentEffects {
+    moveSpeed?: number;
+    jumpPower?: number;
+    bulletSpeed?: number;
+    coinBonus?: number;
+    expBonus?: number;
+    ultChargeRate?: number;
+    damageReduction?: number;
+}
+
+export interface EquipmentItem {
+    id: string;
+    name: string;
+    nameEn: string;
+    emoji: string;
+    rarity: 'C' | 'R' | 'E' | 'L';
+    effects: EquipmentEffects;
+    unlockCondition?: any;
+}
+
 export interface CharacterOwned {
     owned: boolean;
     dup: number;
     limit: number;
+    equipment?: {
+        item: EquipmentItem;
+        isNew: boolean;
+    };
 }
 
 export interface CharacterCollection {
@@ -32,6 +58,7 @@ export class GachaSystem {
     coins: number;
     collection: CharacterCollection;
     pity: PityState;
+    progression: CharacterProgression;
 
     constructor();
 
@@ -44,7 +71,8 @@ export class GachaSystem {
     addCoins(amount: number): void;
     rollRarity(): string;
     rollCharByRar(r: string): Character;
-    doGacha(n: number): Character[] | null;
-    addToCollection(key: string): void;
+    doGacha(n: number): (CharacterOwned & { char: Character; isLimitBreak: boolean; limitBreakPerformed: boolean; isNew: boolean })[] | null;
+    addToCollection(key: string): CharacterOwned & { isNew: boolean; isLimitBreak: boolean; limitBreakPerformed: boolean };
     setCurrentChar(key: string): boolean;
+    rollEquipment(charRarity: string): EquipmentItem | null;
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
+import { GachaSystem, type CharacterOwned, type Character } from '../../game-core/js/game/GachaSystem.js';
 import { useTranslation } from '../../hooks/useTranslation';
 import { rarClass } from '../../game-core/js/game-data/characters.js';
 
@@ -11,10 +11,11 @@ interface GachaModalProps {
 }
 
 type AnimationState = 'idle' | 'rolling' | 'cutscene' | 'ultra-cutscene' | 'result';
+type GachaResultItem = CharacterOwned & { char: Character; isLimitBreak: boolean; limitBreakPerformed: boolean; isNew: boolean };
 
 export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaSystem, onUpdate }) => {
     const { t } = useTranslation();
-    const [results, setResults] = useState<any[] | null>(null);
+    const [results, setResults] = useState<GachaResultItem[] | null>(null);
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
 
     if (!visible) return null;
@@ -31,13 +32,18 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
         setTimeout(() => {
             const res = gachaSystem.doGacha(n);
 
+            if (!res) {
+                setAnimationState('idle');
+                return;
+            }
+
             // Check rarity levels
-            const hasUltraRarity = res.some((item: any) => {
+            const hasUltraRarity = res.some((item) => {
                 const rar = item.char.rar;
                 return rar === 'M' || rar === 'XL';
             });
 
-            const hasHighRarity = res.some((item: any) => {
+            const hasHighRarity = res.some((item) => {
                 const rar = item.char.rar;
                 return rar === 'L';
             });

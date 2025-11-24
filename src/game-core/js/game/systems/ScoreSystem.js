@@ -20,6 +20,9 @@ export class ScoreSystem {
         // フィーバーシステム
         this.feverGauge = 0;
         this.feverModeUntil = 0;
+
+        // 統計情報
+        this.totalEnemiesDefeated = 0; // For EXP calculation
     }
 
     /**
@@ -29,6 +32,7 @@ export class ScoreSystem {
      */
     awardEnemyDefeat(baseScore = 3) {
         this.comboCount++;
+        this.totalEnemiesDefeated++; // Track total enemies defeated
         this.updateComboMultiplier();
         this.lastComboTime = now();
 
@@ -37,6 +41,7 @@ export class ScoreSystem {
         logger.debug('Enemy defeated', {
             combo: this.comboCount,
             multiplier: this.comboMultiplier,
+            totalDefeated: this.totalEnemiesDefeated,
             score
         });
 
@@ -131,6 +136,7 @@ export class ScoreSystem {
         this.lastComboTime = 0;
         this.feverGauge = 0;
         this.feverModeUntil = 0;
+        this.totalEnemiesDefeated = 0; // Reset total count
         logger.debug('ScoreSystem reset');
     }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import { commentsApi } from '../api/comments';
@@ -18,24 +18,24 @@ export const CommentsPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
 
-    useEffect(() => {
-        if (fingerprint) {
-            loadComments();
-        }
-    }, [fingerprint]);
-
-    const loadComments = async () => {
+    const loadComments = useCallback(async () => {
         setLoading(true);
         try {
             const data = await commentsApi.getComments(fingerprint);
             setComments(data);
-        } catch (err) {
+        } catch {
             setError(t('loadError'));
             setComments([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [fingerprint, t]);
+
+    useEffect(() => {
+        if (fingerprint) {
+            loadComments();
+        }
+    }, [fingerprint, loadComments]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -60,7 +60,7 @@ export const CommentsPage: React.FC = () => {
                 setMessage('');
                 loadComments();
             }
-        } catch (err) {
+        } catch {
             setSubmitResult({ success: false, message: t('submitError') });
         } finally {
             setSubmitting(false);

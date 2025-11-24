@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Game } from '../../game-core/js/game/Game.js';
 import { GameFactory } from '../../game-core/js/game/GameFactory.js';
-import type { GameState } from '../../types/game';
+import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
+import type { GameState, GameResult, GameRunData } from '../../types/game';
 import { HUD } from './HUD';
 import { StartScreen } from './StartScreen';
 import { ResultScreen } from './ResultScreen';
@@ -17,12 +18,15 @@ export const GameCanvas: React.FC = () => {
     const gameRef = useRef<Game | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [showStartScreen, setShowStartScreen] = useState(true);
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<GameResult | null>(null);
     const [missionNotification, setMissionNotification] = useState<Mission | null>(null);
     const fingerprint = useFingerprint();
     const currentRunId = useRef<string | null>(null);
     const currentNonce = useRef<string | null>(null);
     const playerNameRef = useRef<string>('');
+
+    // Initialize GachaSystem once to share between Game and UI
+    const [gachaSystem] = useState(() => new GachaSystem());
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -31,7 +35,7 @@ export const GameCanvas: React.FC = () => {
             onStateUpdate: (state: GameState) => {
                 setGameState(state);
             },
-            onGameOver: (res: any) => {
+            onGameOver: (res: GameResult) => {
                 setResult(res);
             },
             onRunStart: async () => {
@@ -47,7 +51,7 @@ export const GameCanvas: React.FC = () => {
                     }
                 }
             },
-            onRunFinish: async (data: any) => {
+            onRunFinish: async (data: GameRunData) => {
                 if (fingerprint && currentRunId.current && currentNonce.current) {
                     try {
                         await runsApi.finishRun(currentRunId.current, {
@@ -74,13 +78,15 @@ export const GameCanvas: React.FC = () => {
                     currentNonce.current = null;
                 }
             },
-            onStageClear: (data: any) => {
+            onStageClear: (data: GameResult) => {
                 // Stage cleared, show result or continue
                 setResult({ ...data, stageClear: true });
             },
             onMissionComplete: (mission: Mission) => {
                 setMissionNotification(mission);
             }
+        }, {
+            gacha: gachaSystem
         });
 
         gameRef.current = game;
@@ -88,7 +94,7 @@ export const GameCanvas: React.FC = () => {
         return () => {
             // game.destroy(); // Implement destroy if needed
         };
-    }, [fingerprint]);
+    }, [fingerprint, gachaSystem]);
 
     const handleStart = (characterKey: string, playerName: string) => {
         console.log('[GameCanvas] handleStart called');
@@ -136,7 +142,7 @@ export const GameCanvas: React.FC = () => {
                     height={640}
                 />
                 {gameState && <HUD state={gameState} onUlt={handleUlt} />}
-                <StartScreen onStart={handleStart} visible={showStartScreen} />
+                <StartScreen onStart={handleStart} visible={showStartScreen} gachaSystem={gachaSystem} />
                 {result && <ResultScreen result={result} onRetry={handleRetry} onMenu={handleMenu} />}
                 <MissionNotification mission={missionNotification} onClose={() => setMissionNotification(null)} />
             </div>

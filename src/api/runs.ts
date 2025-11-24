@@ -10,6 +10,21 @@ export interface RunLogEntry {
     date: string;
 }
 
+interface ApiRunItem {
+    run_id: string;
+    stage?: string;
+    score?: number;
+    duration_ms?: number;
+    coins?: number;
+    result?: string;
+    finished_gmt?: string;
+    started_gmt?: string;
+}
+
+interface ApiRunsResponse {
+    runs?: ApiRunItem[];
+}
+
 export interface StatsSummary {
     total_users?: number;
     played_users?: number;
@@ -54,25 +69,21 @@ export const runsApi = {
     getRuns: async (fingerprint: string) => {
         if (!fingerprint) return [];
 
-        const response = await apiClient<any>(`/runs?fingerprint=${encodeURIComponent(fingerprint)}`);
+        const response = await apiClient<ApiRunsResponse | ApiRunItem[]>(`/runs?fingerprint=${encodeURIComponent(fingerprint)}`);
 
-        // API returns { runs: [...], page, per_page, total } according to API spec
-        const data = response?.runs || response;
+        // API returns { runs: [...], page, per_page, total } or array directly
+        const data = Array.isArray(response) ? response : (response?.runs || []);
 
         // Transform API response to match RunLogEntry interface
-        if (Array.isArray(data)) {
-            return data.map((item: any) => ({
-                id: item.run_id,
-                stage: item.stage || 'Unknown',
-                score: item.score || 0,
-                duration: item.duration_ms || 0,
-                coins: item.coins || 0,
-                result: item.result || 'unknown',
-                date: item.finished_gmt || item.started_gmt || ''
-            } as RunLogEntry));
-        }
-
-        return [];
+        return data.map((item: ApiRunItem) => ({
+            id: item.run_id,
+            stage: item.stage || 'Unknown',
+            score: item.score || 0,
+            duration: item.duration_ms || 0,
+            coins: item.coins || 0,
+            result: item.result || 'unknown',
+            date: item.finished_gmt || item.started_gmt || ''
+        } as RunLogEntry));
     },
 
     getStats: async (fingerprint: string) => {
