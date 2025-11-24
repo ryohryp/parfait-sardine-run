@@ -44,7 +44,8 @@ export class ItemManager {
     }
 
     update(t, level, player, hasMagnet) {
-        const itemIv = clamp(1200 - (level - 1) * 100, 480, 1200);
+        // Balance Tweak: Reduced item frequency - start at 2500ms, decrease by 100ms per level
+        const itemIv = clamp(2500 - (level - 1) * 100, 800, 2500);
         const powerIv = 11000;
 
         if (t - this.lastItemTime > itemIv) {

@@ -33,6 +33,16 @@ export interface GachaResult {
     isNew: boolean;
 }
 
+export interface Mission {
+    id: string;
+    type: string;
+    target: number;
+    current: number;
+    reward: number;
+    completed: boolean;
+    description: string;
+}
+
 export interface GameState {
     remainMs: number;
     level: number;
@@ -51,6 +61,9 @@ export interface GameState {
     ultActiveUntil: number;
     gameOn: boolean;
     stageName: string;
+    fever: number;
+    isFever: boolean;
+    missions: Mission[];
 }
 
 export interface GameCallbacks {
@@ -59,5 +72,6 @@ export interface GameCallbacks {
     onPlaySfx?: (name: string) => void;
     onRunStart?: () => void;
     onRunFinish?: (data: any) => void;
+    onMissionComplete?: (mission: Mission) => void;
 }
 

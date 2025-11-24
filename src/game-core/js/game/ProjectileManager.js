@@ -15,9 +15,9 @@ export class ProjectileManager {
         this.ultProjectiles = [];
     }
 
-    addBullet(x, y, v, hitsLeft) {
+    addBullet(x, y, v, hitsLeft, isCompanionShot = false) {
         this.bullets.push({
-            x, y, w: 12, h: 6, v, hitsLeft
+            x, y, w: 12, h: 6, v, hitsLeft, isCompanionShot
         });
     }
 
@@ -32,7 +32,7 @@ export class ProjectileManager {
 
             // Hit Boss
             if (bossState && bossState.state !== 'defeated' && this.AABB(bossState, b)) {
-                damageBoss(1);
+                damageBoss(b.isCompanionShot ? 0.5 : 1); // Companion deals less damage
                 b.hitsLeft -= 1;
                 if (b.hitsLeft <= 0) return false;
             }
@@ -81,11 +81,18 @@ export class ProjectileManager {
             ctx.lineCap = 'round';
             this.bullets.forEach(b => {
                 const grad = ctx.createLinearGradient(b.x, b.y, b.x + b.w, b.y + b.h);
-                grad.addColorStop(0, '#fef3c7');
-                grad.addColorStop(1, '#f97316');
+                if (b.isCompanionShot) {
+                    grad.addColorStop(0, '#e0f2fe');
+                    grad.addColorStop(1, '#38bdf8'); // Blue for companion
+                    ctx.strokeStyle = 'rgba(14, 165, 233, 0.75)';
+                } else {
+                    grad.addColorStop(0, '#fef3c7');
+                    grad.addColorStop(1, '#f97316'); // Orange for player
+                    ctx.strokeStyle = 'rgba(124,45,18,0.75)';
+                }
+
                 ctx.fillStyle = grad;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
-                ctx.strokeStyle = 'rgba(124,45,18,0.75)';
                 ctx.lineWidth = 1.2;
                 ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
             });

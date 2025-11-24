@@ -3,8 +3,9 @@ import { G, BASE_JUMP, GROUND } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
 
 export class Player {
-    constructor(canvas) {
+    constructor(canvas, particleSystem) {
         this.canvas = canvas;
+        this.particles = particleSystem;
         this.w = 46;
         this.h = 46;
         this.x = 50;
@@ -139,10 +140,12 @@ export class Player {
             this.vy = this.stats.jump;
             this.onGround = false;
             this.canDouble = hasDouble;
+            if (this.particles) this.particles.createJumpDust(this.x + this.w / 2, this.y + this.h);
             return true; // Jumped
         } else if (hasDouble && this.canDouble) {
             this.vy = this.stats.jump * 0.9;
             this.canDouble = false;
+            if (this.particles) this.particles.createJumpDust(this.x + this.w / 2, this.y + this.h);
             return true; // Double jumped
         }
         return false;

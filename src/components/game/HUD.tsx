@@ -41,7 +41,6 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
 
             <div className="hud-group">
                 <div className="hud-pill">
-                    <span>❤️</span>
                     <span>{hearts}</span>
                 </div>
                 <div className="hud-pill">
@@ -68,6 +67,23 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
                         <span>{effect.icon}</span>
                         <span>{Math.max(0, effect.remain).toFixed(1)}s</span>
                     </span>
+                ))}
+            </div>
+
+            {/* Mission List */}
+            <div className="hud-group" style={{ position: 'absolute', top: '70px', left: '16px', alignItems: 'flex-start', gap: '4px' }}>
+                {state.missions && state.missions.map(m => (
+                    <div key={m.id} className="hud-pill" style={{
+                        fontSize: '10px',
+                        padding: '4px 8px',
+                        opacity: m.completed ? 0.6 : 1,
+                        background: m.completed ? '#f1f5f9' : 'rgba(255,255,255,0.9)',
+                        color: m.completed ? 'var(--text-muted)' : 'var(--text-main)'
+                    }}>
+                        <span>{m.completed ? '✅' : '⬜'}</span>
+                        <span>{m.description}</span>
+                        <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>{m.current}/{m.target}</span>
+                    </div>
                 ))}
             </div>
 

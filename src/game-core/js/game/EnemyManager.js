@@ -46,7 +46,10 @@ export class EnemyManager {
 
     spawnEnemy(level, offset = 0) {
         const st = stageForLevel(level);
-        const baseSpeed = (2.2 + (level - 1) * 0.25) * st.enemyMul;
+        // Balance: Reduced base speed from 2.2 to 1.5, scaling from 0.25 to 0.15
+        // Cap level at 10 for speed calculation to prevent late-game difficulty spike
+        const cappedLevel = Math.min(level, 10);
+        const baseSpeed = (1.5 + (cappedLevel - 1) * 0.15) * st.enemyMul;
         const type = this.pickEnemyType(level);
         const baseY = this.canvas.height - GROUND - 36;
 
@@ -135,8 +138,7 @@ export class EnemyManager {
     update(t, level, player, stageKey, isBossBattle) {
         const st = stageForLevel(level); // Note: level might be decoupled from stageKey in future
 
-        // Boss Spawning Logic - Handled by Game.js now
-        /*
+        // Boss Spawning Logic
         const stageBoss = stageBosses[st.key];
         if (!this.bossState && stageBoss && !this.defeatedBossStages.has(st.key)) {
             if (!this.bossNextSpawnAt) {
@@ -146,7 +148,6 @@ export class EnemyManager {
                 this.bossNextSpawnAt = 0;
             }
         }
-        */
 
         // Boss Update
         if (this.bossState) {
@@ -156,7 +157,8 @@ export class EnemyManager {
         const bossBattleActive = this.bossState && this.bossState.state !== 'defeated';
 
         // Enemy Spawning
-        const enemyIv = clamp(1600 - (level - 1) * 120, 520, 1600);
+        // Balance Tweak: Make easier - start at 2500ms, ramp up slower (120ms per level)
+        const enemyIv = clamp(2500 - (level - 1) * 120, 600, 2500);
         if (!bossBattleActive && !isBossBattle && t - this.lastEnemyTime > enemyIv) {
             this.spawnEnemy(level);
             const extraChance = clamp(0.06 + level * 0.018, 0.06, 0.45);

@@ -5,6 +5,8 @@ import { ItemManager } from './ItemManager.js';
 import { ProjectileManager } from './ProjectileManager.js';
 import { GachaSystem } from './GachaSystem.js';
 import { Companion } from './Companion.js';
+import { MissionManager } from './MissionManager.js';
+import { ParticleSystem } from './ParticleSystem.js';
 import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
 import { GAME_TIME, INVINCIBILITY_DURATION, BASE_JUMP, SHOOT_COOLDOWN, POWER_DURATION, ITEM_LEVEL } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
@@ -19,13 +21,15 @@ export class Game {
         this.ctx = this.canvas.getContext('2d');
         this.callbacks = callbacks; // { onStateUpdate, onGameOver, onPlaySfx, onRunStart, onRunFinish }
 
+        this.particles = new ParticleSystem(this.canvas);
         this.input = new InputManager();
-        this.player = new Player(this.canvas);
+        this.player = new Player(this.canvas, this.particles);
         this.enemies = new EnemyManager(this.canvas);
         this.items = new ItemManager(this.canvas);
         this.projectiles = new ProjectileManager(this.canvas);
         this.gacha = new GachaSystem();
         this.companion = new Companion(this.player);
+        this.missions = new MissionManager();
 
         this.gameOn = false;
         this.t0 = 0;
@@ -51,6 +55,13 @@ export class Game {
         this.currentStageKey = null;
 
         this.bestScore = this.loadBestScore();
+
+        // Background Layers
+        this.bgLayers = [
+            { src: './assets/bg/bg_layer_1_sky.png', speed: 0.2, img: new Image(), alpha: 1.0 },
+            { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, img: new Image(), alpha: 1.0 }
+        ];
+        this.bgLayers.forEach(l => l.img.src = l.src);
 
         this.init();
     }
@@ -99,7 +110,8 @@ export class Game {
             gameOn: this.gameOn,
             stageName: stageForLevel(this.level).name,
             fever: this.feverGauge,
-            isFever: now() < this.feverModeUntil
+            isFever: now() < this.feverModeUntil,
+            missions: this.missions.getMissions()
         };
     }
 
@@ -128,6 +140,12 @@ export class Game {
         this.items.reset();
         this.projectiles.reset();
         this.player.reset();
+        this.particles.particles = []; // Clear particles
+
+        // Combo System
+        this.comboCount = 0;
+        this.comboMultiplier = 1;
+        this.lastComboTime = 0;
 
         // Set character from argument if provided, otherwise use current
         if (characterKey) {
@@ -159,6 +177,8 @@ export class Game {
             this.bestScore = this.score;
             this.saveBestScore();
         }
+
+        this.handleMissionUpdate('score_points', this.score);
 
         if (this.callbacks.onRunFinish) {
             this.callbacks.onRunFinish({
@@ -193,8 +213,16 @@ export class Game {
         this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1);
 
         // Update Entities
+        // Update Entities
         this.player.update(16); // Fixed delta for now
+
+        // Reset combo if on ground
+        if (this.player.y >= this.canvas.height - 72 - this.player.h && this.player.vy >= 0) {
+            this.resetCombo();
+        }
+
         this.enemies.update(t, this.level, this.player);
+        this.particles.update(t);
 
         const hasMagnet = characters[this.gacha.collection.current]?.special?.includes('magnet');
         this.items.update(t, this.level, this.player, hasMagnet);
@@ -260,6 +288,7 @@ export class Game {
 
         // Play sound effect
         playSfx('hit'); // Using hit sound as placeholder for ult sound
+        this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#00ffff');
 
         if (!type) {
             // Character has no ult, just show some effect
@@ -302,9 +331,21 @@ export class Game {
             if (this.AABB(this.player, it)) {
                 const isFever = now() < this.feverModeUntil;
                 const mul = (now() < this.scoreMulUntil || isFever) ? 2 : 1;
-                const gained = it.score * mul;
+                const gained = it.score * mul * this.comboMultiplier; // Apply combo multiplier to item score too
                 this.score += gained;
-                this.gacha.addCoins(1 * mul);
+                // Balance: Reduced coin reward from 1 to 0.5 per item
+                const coinReward = Math.floor(0.5 * mul);
+                if (coinReward > 0) this.gacha.addCoins(coinReward);
+                this.handleMissionUpdate('collect_coin', 1 * mul);
+
+                // Increment combo if in air
+                if (this.player.y < this.canvas.height - 72 - this.player.h) {
+                    this.comboCount++;
+                    this.updateComboMultiplier();
+                    this.lastComboTime = now();
+                }
+
+                this.particles.createSparkle(it.x + it.w / 2, it.y + it.h / 2, '#ffd700');
 
                 if (!isFever) {
                     this.feverGauge = Math.min(100, this.feverGauge + 2);
@@ -326,6 +367,7 @@ export class Game {
                 const stats = this.getEffectiveStats(this.gacha.collection.current);
                 this.invUntil = now() + Math.max(POWER_DURATION, stats.inv);
                 this.ult = Math.min(100, this.ult + 12 * stats.ultRate);
+                this.particles.createExplosion(pw.x + pw.w / 2, pw.y + pw.h / 2, '#ffffff');
                 return false;
             }
             return true;
@@ -342,11 +384,14 @@ export class Game {
                     this.lives = Math.max(0, this.lives - 1);
                     this.hurtUntil = now() + 900;
                     playSfx('hit');
+                    this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#ff0000');
+                    console.log('[Game] Player hit! Lives:', this.lives, 'hurtUntil:', this.hurtUntil);
                     if (this.lives === 0) {
                         this.endGame();
                         return false;
                     }
                 }
+                // Don't remove enemy, just continue checking ult effects
             }
 
             // Ult vs Enemies (Storm/Ncha/Beam)
@@ -391,6 +436,7 @@ export class Game {
                     this.lives = Math.max(0, this.lives - 1);
                     this.hurtUntil = now() + 900;
                     playSfx('hit');
+                    this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#ff0000');
                     if (this.lives === 0) this.endGame();
                 }
             }
@@ -415,12 +461,14 @@ export class Game {
                     if (now() < this.invUntil || now() < this.feverModeUntil) {
                         // Invincible - projectile passes through or is destroyed? 
                         // Let's destroy it but no damage
+                        this.particles.createExplosion(shot.x + shot.w / 2, shot.y + shot.h / 2, '#aaaaaa');
                         return false;
                     }
                     if (now() > this.hurtUntil) {
                         this.lives = Math.max(0, this.lives - 1);
                         this.hurtUntil = now() + 900;
                         playSfx('hit');
+                        this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#ff0000');
                         if (this.lives === 0) {
                             this.endGame();
                         }
@@ -433,16 +481,73 @@ export class Game {
     }
 
     awardEnemyDefeat(enemy) {
-        this.score += 3; // ENEMY_BONUS
-        this.gacha.addCoins(2);
+        this.comboCount++;
+        this.updateComboMultiplier();
+        this.lastComboTime = now();
+
+        const baseScore = 3;
+        this.score += baseScore * this.comboMultiplier;
+
+        // Balance: Reduced coin reward from 2 to 1 per enemy
+        this.gacha.addCoins(Math.floor(1 * this.comboMultiplier));
+        this.handleMissionUpdate('defeat_enemy', 1);
+        this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
+
+        // Show combo text if significant
+        if (this.comboCount > 1) {
+            // Visual feedback could be added here or handled in draw
+        }
+    }
+
+    updateComboMultiplier() {
+        if (this.comboCount < 5) this.comboMultiplier = 1;
+        else if (this.comboCount < 10) this.comboMultiplier = 1.5;
+        else if (this.comboCount < 20) this.comboMultiplier = 2;
+        else if (this.comboCount < 50) this.comboMultiplier = 3;
+        else this.comboMultiplier = 5;
+    }
+
+    resetCombo() {
+        if (this.comboCount > 0) {
+            this.comboCount = 0;
+            this.comboMultiplier = 1;
+        }
     }
 
     damageBoss(amount) {
         const config = this.enemies.damageBoss(amount);
+        if (this.enemies.bossState) {
+            this.particles.createExplosion(this.enemies.bossState.x + this.enemies.bossState.w / 2, this.enemies.bossState.y + this.enemies.bossState.h / 2, '#ff00ff');
+        }
         if (config) {
-            // Boss defeated
+            // Boss defeated - Stage Clear!
             this.score += (config.rewardScore || 150);
             this.gacha.addCoins(config.rewardCoins || 10);
+
+            // Big explosion effect
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    if (this.enemies.bossState) {
+                        this.particles.createExplosion(
+                            this.enemies.bossState.x + Math.random() * this.enemies.bossState.w,
+                            this.enemies.bossState.y + Math.random() * this.enemies.bossState.h,
+                            i % 2 === 0 ? '#ffaa00' : '#ff00ff'
+                        );
+                    }
+                }, i * 80);
+            }
+
+            // Stage Clear callback
+            if (this.callbacks.onStageClear) {
+                setTimeout(() => {
+                    this.callbacks.onStageClear({
+                        stage: config.displayName || 'Boss',
+                        score: this.score,
+                        coins: this.gacha.coins,
+                        reward: config.rewardCoins || 10
+                    });
+                }, 1000);
+            }
         }
     }
 
@@ -450,6 +555,7 @@ export class Game {
         this.feverGauge = 0;
         this.feverModeUntil = now() + 10000; // 10 seconds
         playSfx('powerup'); // Placeholder
+        this.particles.createExplosion(this.player.x, this.player.y, '#ffffff');
     }
 
     AABB(a, b) {
@@ -486,43 +592,34 @@ export class Game {
     }
 
     draw(remain) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         const st = stageForLevel(this.level);
 
-        // BG
-        // BG
-        if (!this.bgImage) {
-            this.bgImage = new Image();
-            this.bgImage.src = './assets/bg/bg_fantasy_nature.png';
-        }
+        // Parallax BG
+        this.bgLayers.forEach(layer => {
+            if (layer.img.complete) {
+                const offset = (now() * 0.05 * layer.speed) % layer.img.width;
+                const drawW = this.canvas.width; // Stretch to width? No, keep aspect or tile
+                // Let's tile horizontally
+                const scale = this.canvas.height / layer.img.height;
+                const w = layer.img.width * scale;
+                const h = this.canvas.height;
 
-        if (this.bgImage.complete) {
-            // Parallax or simple scrolling
-            const speed = 2; // Background scroll speed
-            const offset = (now() * 0.05 * speed) % this.bgImage.width;
+                const x = -(now() * 0.1 * layer.speed) % w;
 
-            // Draw repeated background
-            // Assuming bgImage height fits or we scale it
-            // Let's just draw it to cover
-            const scale = Math.max(this.canvas.width / this.bgImage.width, this.canvas.height / this.bgImage.height);
-            // Simple tiling for now if seamless
-
-            // Actually, let's just draw it static or simple loop for now to ensure it works
-            // Better: Draw 2 copies for scrolling
-            const w = this.bgImage.width;
-            const h = this.bgImage.height;
-            const aspect = w / h;
-            const drawH = this.canvas.height;
-            const drawW = drawH * aspect;
-
-            const x = -(now() * 0.1) % drawW;
-
-            this.ctx.drawImage(this.bgImage, x, 0, drawW, drawH);
-            this.ctx.drawImage(this.bgImage, x + drawW, 0, drawW, drawH);
-            if (x + drawW < this.canvas.width) {
-                this.ctx.drawImage(this.bgImage, x + drawW * 2, 0, drawW, drawH);
+                this.ctx.save();
+                this.ctx.globalAlpha = layer.alpha || 1.0;
+                this.ctx.drawImage(layer.img, x, 0, w, h);
+                this.ctx.drawImage(layer.img, x + w, 0, w, h);
+                if (x + w < this.canvas.width) {
+                    this.ctx.drawImage(layer.img, x + w * 2, 0, w, h);
+                }
+                this.ctx.restore();
             }
-        } else {
-            // Fallback gradient
+        });
+
+        // Fallback if no bg layers loaded yet (shouldn't happen often if preloaded, but ok)
+        if (!this.bgLayers[0].img.complete) {
             const g = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
             g.addColorStop(0, '#0f172a');
             g.addColorStop(1, '#334155');
@@ -539,6 +636,9 @@ export class Game {
         this.items.draw(this.ctx);
         this.projectiles.draw(this.ctx);
         this.companion.draw(this.ctx);
+
+        // Particles
+        this.particles.draw(this.ctx);
 
         // Fever Effect
         if (now() < this.feverModeUntil) {
@@ -597,11 +697,50 @@ export class Game {
             }
             this.ctx.restore();
         }
+
+        // Combo Text
+        // Show combo if count > 0 and recently active (within 2 seconds)
+        const comboActive = this.comboCount > 0 && (now() - this.lastComboTime < 2000);
+        if (comboActive) {
+            this.ctx.save();
+            this.ctx.fillStyle = '#ffeb3b';
+            this.ctx.strokeStyle = '#000';
+            this.ctx.lineWidth = 3;
+            this.ctx.font = 'bold 32px sans-serif';
+            this.ctx.textAlign = 'right';
+            const comboText = `${this.comboCount} COMBO!`;
+            this.ctx.strokeText(comboText, this.canvas.width - 20, 80);
+            this.ctx.fillText(comboText, this.canvas.width - 20, 80);
+
+            if (this.comboMultiplier > 1) {
+                this.ctx.fillStyle = '#00e676';
+                this.ctx.font = 'bold 24px sans-serif';
+                const mulText = `x${this.comboMultiplier.toFixed(1)}`;
+                this.ctx.strokeText(mulText, this.canvas.width - 20, 110);
+                this.ctx.fillText(mulText, this.canvas.width - 20, 110);
+            }
+            this.ctx.restore();
+        }
+
+
     }
 
     updateCharacter(key) {
         if (this.gacha.setCurrentChar(key)) {
             this.player.setCharacter(key, this.getEffectiveStats(key));
+            this.notifyState();
+        }
+    }
+
+    handleMissionUpdate(type, amount) {
+        const completed = this.missions.updateProgress(type, amount);
+        if (completed.length > 0) {
+            completed.forEach(m => {
+                this.gacha.addCoins(m.reward);
+                if (this.callbacks.onMissionComplete) {
+                    this.callbacks.onMissionComplete(m);
+                }
+            });
             this.notifyState();
         }
     }

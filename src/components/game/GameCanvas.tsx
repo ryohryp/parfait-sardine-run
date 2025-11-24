@@ -8,12 +8,16 @@ import { runsApi } from '../../api/runs';
 import { leaderboardApi } from '../../api/leaderboard';
 import { useFingerprint } from '../../hooks/useFingerprint';
 
+import { MissionNotification } from './MissionNotification';
+import type { Mission } from '../../types/game';
+
 export const GameCanvas: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gameRef = useRef<Game | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [showStartScreen, setShowStartScreen] = useState(true);
     const [result, setResult] = useState<any>(null);
+    const [missionNotification, setMissionNotification] = useState<Mission | null>(null);
     const fingerprint = useFingerprint();
     const currentRunId = useRef<string | null>(null);
     const currentNonce = useRef<string | null>(null);
@@ -72,6 +76,9 @@ export const GameCanvas: React.FC = () => {
             onStageClear: (data: any) => {
                 // Stage cleared, show result or continue
                 setResult({ ...data, stageClear: true });
+            },
+            onMissionComplete: (mission: Mission) => {
+                setMissionNotification(mission);
             }
         });
 
@@ -130,6 +137,7 @@ export const GameCanvas: React.FC = () => {
                 {gameState && <HUD state={gameState} onUlt={handleUlt} />}
                 <StartScreen onStart={handleStart} visible={showStartScreen} />
                 {result && <ResultScreen result={result} onRetry={handleRetry} onMenu={handleMenu} />}
+                <MissionNotification mission={missionNotification} onClose={() => setMissionNotification(null)} />
             </div>
         </div>
     );
