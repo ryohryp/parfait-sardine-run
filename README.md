@@ -1,6 +1,32 @@
 # React + TypeScript + Vite
 
+![Deploy Status](https://github.com/[username]/parfait-sardine-run/actions/workflows/deploy.yml/badge.svg)
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+## Deployment
+
+This project is automatically deployed to GitHub Pages when changes are pushed to the `main` branch.
+
+### Setup GitHub Pages
+
+1. Go to your repository Settings > Pages
+2. Under "Build and deployment", set Source to **GitHub Actions**
+3. Push to the `main` branch to trigger deployment
+4. Your site will be available at `https://[username].github.io/parfait-sardine-run/`
+
+### Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+### Build for Production
+
+```bash
+npm run build
+```
 
 Currently, two official plugins are available:
 

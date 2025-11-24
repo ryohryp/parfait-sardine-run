@@ -6,7 +6,7 @@ import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/parfait-sardine-run/">
       <App />
     </BrowserRouter>
   </StrictMode>,
