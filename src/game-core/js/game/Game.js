@@ -62,6 +62,8 @@ export class Game {
         this.ultReady = false;
         this.ultActiveUntil = 0;
         this.sessionCoins = 0;
+        this.stageClearUntil = 0;
+        this.levelOffset = 0;
 
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
@@ -130,7 +132,8 @@ export class Game {
             isFever: scoreState.isFever,
             missions: this.missions.getMissions(),
             comboCount: scoreState.comboCount,
-            comboMultiplier: scoreState.comboMultiplier
+            comboMultiplier: scoreState.comboMultiplier,
+            stageClearUntil: this.stageClearUntil
         };
     }
 
@@ -148,6 +151,8 @@ export class Game {
         this.ultReady = false;
         this.ultActiveUntil = 0;
         this.sessionCoins = 0;
+        this.stageClearUntil = 0;
+        this.levelOffset = 0;
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
         this.autoShootUntil = 0;
@@ -231,7 +236,7 @@ export class Game {
         if (remain <= 0) return this.endGame();
 
         // Level Up
-        this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1);
+        this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1) + this.levelOffset;
 
         // Update Entities
         this.player.update(16); // Fixed delta for now
@@ -284,7 +289,8 @@ export class Game {
             currentCharKey: this.gacha.collection.current,
             comboCount: this.scoreSystem.comboCount,
             comboMultiplier: this.scoreSystem.comboMultiplier,
-            lastComboTime: this.scoreSystem.lastComboTime
+            lastComboTime: this.scoreSystem.lastComboTime,
+            stageClearUntil: this.stageClearUntil
         });
 
         // UI Update
@@ -386,6 +392,13 @@ export class Game {
             this.gacha.addCoins(50);
             this.sessionCoins += 50;
             this.handleMissionUpdate('defeat_boss', 1);
+
+            // Boss Defeat Effects
+            this.stageClearUntil = now() + 4000; // Show "STAGE CLEAR" for 4s
+            this.t0 = now(); // Reset timer to 60s
+            this.lives = 3; // Restore max life
+            this.levelOffset++; // Increment level
+
             playSfx('powerup'); // Placeholder for boss defeat
         } else {
             playSfx('hit');

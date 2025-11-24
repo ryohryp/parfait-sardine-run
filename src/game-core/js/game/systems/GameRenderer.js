@@ -141,6 +141,60 @@ export class GameRenderer {
     }
 
     /**
+     * ステージクリアエフェクトの描画
+     */
+    drawStageClear(stageClearUntil) {
+        if (now() >= stageClearUntil) return;
+
+        this.ctx.save();
+        // Semi-transparent overlay
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // "STAGE CLEAR" text
+        const fadeProgress = 1 - (stageClearUntil - now()) / 4000;
+        const scale = 0.8 + Math.sin(now() * 0.005) * 0.1;
+
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+
+        // Shadow
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowOffsetX = 4;
+        this.ctx.shadowOffsetY = 4;
+
+        // Main text
+        this.ctx.font = `bold ${48 * scale}px sans-serif`;
+        const gradient = this.ctx.createLinearGradient(
+            this.canvas.width / 2 - 150,
+            this.canvas.height / 2,
+            this.canvas.width / 2 + 150,
+            this.canvas.height / 2
+        );
+        gradient.addColorStop(0, '#ffd700');
+        gradient.addColorStop(0.5, '#ffed4e');
+        gradient.addColorStop(1, '#ffd700');
+        this.ctx.fillStyle = gradient;
+        this.ctx.strokeStyle = '#8b4513';
+        this.ctx.lineWidth = 4;
+
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2 - 40;
+
+        this.ctx.strokeText('STAGE CLEAR!', centerX, centerY);
+        this.ctx.fillText('STAGE CLEAR!', centerX, centerY);
+
+        // Subtitle
+        this.ctx.font = 'bold 24px sans-serif';
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.shadowBlur = 5;
+        this.ctx.fillText('Time & Life Restored!', centerX, centerY + 60);
+
+        this.ctx.restore();
+    }
+
+    /**
      * コンボテキストの描画
      */
     drawComboText(comboCount, comboMultiplier, lastComboTime) {
@@ -205,5 +259,10 @@ export class GameRenderer {
             gameState.comboMultiplier,
             gameState.lastComboTime
         );
+
+        // Draw stage clear effect
+        if (gameState.stageClearUntil && now() < gameState.stageClearUntil) {
+            this.drawStageClear(gameState.stageClearUntil);
+        }
     }
 }
