@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
 import { leaderboardApi } from '../api/leaderboard';
 import type { LeaderboardEntry } from '../api/leaderboard';
+import { PageTransition } from '../components/common/PageTransition';
 
 export const LeaderboardPage: React.FC = () => {
     const { t } = useTranslation();
@@ -31,44 +32,46 @@ export const LeaderboardPage: React.FC = () => {
     }, [loadRanking]);
 
     return (
-        <div className="page-container">
-            <div className="page-header">
-                <h1>{t('ranking')}</h1>
-                <Link to="/" className="ghost">{t('backToGame')}</Link>
-            </div>
+        <PageTransition transitionKey="leaderboard">
+            <div className="page-container">
+                <div className="page-header">
+                    <h1>{t('ranking')}</h1>
+                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                </div>
 
-            <div className="data-table-section">
-                {loading && <p>{t('loading')}</p>}
-                {error && <p style={{ color: '#f44336' }}>{error}</p>}
+                <div className="data-table-section">
+                    {loading && <p>{t('loading')}</p>}
+                    {error && <p style={{ color: '#f44336' }}>{error}</p>}
 
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>{t('rank')}</th>
-                            <th>{t('name')}</th>
-                            <th className="text-right">{t('score')}</th>
-                            <th className="text-right">{t('level')}</th>
-                            <th className="text-center">{t('char')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {ranking.map((entry, index) => (
-                            <tr key={index}>
-                                <td>{index + 1}</td>
-                                <td>{entry.name}</td>
-                                <td className="text-right">{entry.score.toLocaleString()}</td>
-                                <td className="text-right">{entry.level}</td>
-                                <td className="text-center">{entry.char}</td>
-                            </tr>
-                        ))}
-                        {!loading && ranking.length === 0 && (
+                    <table className="data-table">
+                        <thead>
                             <tr>
-                                <td colSpan={5} className="text-center" style={{ padding: '20px' }}>{t('noData')}</td>
+                                <th>{t('rank')}</th>
+                                <th>{t('name')}</th>
+                                <th className="text-right">{t('score')}</th>
+                                <th className="text-right">{t('level')}</th>
+                                <th className="text-center">{t('char')}</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {ranking.map((entry, index) => (
+                                <tr key={index}>
+                                    <td>{index + 1}</td>
+                                    <td>{entry.name}</td>
+                                    <td className="text-right">{entry.score.toLocaleString()}</td>
+                                    <td className="text-right">{entry.level}</td>
+                                    <td className="text-center">{entry.char}</td>
+                                </tr>
+                            ))}
+                            {!loading && ranking.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="text-center" style={{ padding: '20px' }}>{t('noData')}</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </PageTransition>
     );
 };

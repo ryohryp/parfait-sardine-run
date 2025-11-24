@@ -123,6 +123,15 @@ export const locales = {
         ult_ncha_desc: "Fires a massive piercing beam forward.",
         ult_yadon_name: "Yadon Cannon",
         ult_yadon_desc: "Summons a giant ally to rain down bullets.",
+
+        // Loading Screen
+        tip: "💡 TIP",
+        tipJump: "Tap left to jump! Some characters can double jump.",
+        tipAttack: "Tap right to attack! Hold for Ultimate when gauge is full.",
+        tipCoins: "Collect coins to unlock new characters in Gacha!",
+        tipGacha: "Higher rarity characters have better stats and abilities.",
+        tipCombo: "Defeat enemies quickly to build up your combo multiplier!",
+        tipBoss: "Boss enemies are tough but give lots of points!",
     },
     ja: {
         gameTitle: "パフェとイワシ RUN!",
@@ -248,6 +257,15 @@ export const locales = {
         ult_ncha_desc: "正面に極太ビームを放ち、貫通ダメージを与える。",
         ult_yadon_name: "ヤドン砲",
         ult_yadon_desc: "巨大な仲間を召喚し、広範囲に多段ヒットする弾をばらまく。",
+
+        // Loading Screen
+        tip: "💡 ヒント",
+        tipJump: "画面左タップでジャンプ！二段ジャンプできるキャラもいます。",
+        tipAttack: "画面右タップで攻撃！ゲージ満タンで長押しすると必殺技発動。",
+        tipCoins: "コインを集めてガチャで新しいキャラをゲットしよう！",
+        tipGacha: "レアリティが高いキャラほど強力なステータスとスキルを持っています。",
+        tipCombo: "敵を素早く倒してコンボを繋げるとスコア倍率アップ！",
+        tipBoss: "ボス敵は強いけど、倒すと大量のポイントがもらえます！",
     }
 };
 

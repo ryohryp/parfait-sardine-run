@@ -4,6 +4,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { runsApi } from '../api/runs';
 import type { RunLogEntry } from '../api/runs';
 import { useFingerprint } from '../hooks/useFingerprint';
+import { PageTransition } from '../components/common/PageTransition';
 
 export const HistoryPage: React.FC = () => {
     const { t } = useTranslation();
@@ -46,44 +47,46 @@ export const HistoryPage: React.FC = () => {
     }, [fingerprint, loadRuns]);
 
     return (
-        <div className="page-container">
-            <div className="page-header">
-                <h1>{t('history')}</h1>
-                <Link to="/" className="ghost">{t('backToGame')}</Link>
-            </div>
+        <PageTransition transitionKey="history">
+            <div className="page-container">
+                <div className="page-header">
+                    <h1>{t('history')}</h1>
+                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                </div>
 
-            <div className="data-table-section">
-                {loading && <p>{t('loading')}</p>}
-                {error && <p style={{ color: '#f44336' }}>{error}</p>}
+                <div className="data-table-section">
+                    {loading && <p>{t('loading')}</p>}
+                    {error && <p style={{ color: '#f44336' }}>{error}</p>}
 
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>{t('date')}</th>
-                            <th>{t('stage')}</th>
-                            <th className="text-right">{t('score')}</th>
-                            <th className="text-right">{t('coins')}</th>
-                            <th className="text-right">{t('time')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {runs.map((run) => (
-                            <tr key={run.id}>
-                                <td>{run.date}</td>
-                                <td>{run.stage}</td>
-                                <td className="text-right">{run.score.toLocaleString()}</td>
-                                <td className="text-right">{run.coins}</td>
-                                <td className="text-right">{(run.duration / 1000).toFixed(1)}s</td>
-                            </tr>
-                        ))}
-                        {!loading && runs.length === 0 && (
+                    <table className="data-table">
+                        <thead>
                             <tr>
-                                <td colSpan={5} className="text-center" style={{ padding: '20px' }}>{t('noHistory')}</td>
+                                <th>{t('date')}</th>
+                                <th>{t('stage')}</th>
+                                <th className="text-right">{t('score')}</th>
+                                <th className="text-right">{t('coins')}</th>
+                                <th className="text-right">{t('time')}</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {runs.map((run) => (
+                                <tr key={run.id}>
+                                    <td>{run.date}</td>
+                                    <td>{run.stage}</td>
+                                    <td className="text-right">{run.score.toLocaleString()}</td>
+                                    <td className="text-right">{run.coins}</td>
+                                    <td className="text-right">{(run.duration / 1000).toFixed(1)}s</td>
+                                </tr>
+                            ))}
+                            {!loading && runs.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="text-center" style={{ padding: '20px' }}>{t('noHistory')}</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </PageTransition>
     );
 };

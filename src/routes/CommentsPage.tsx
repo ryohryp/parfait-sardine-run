@@ -4,6 +4,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { commentsApi } from '../api/comments';
 import type { Comment } from '../api/comments';
 import { useFingerprint } from '../hooks/useFingerprint';
+import { PageTransition } from '../components/common/PageTransition';
 
 export const CommentsPage: React.FC = () => {
     const { t } = useTranslation();
@@ -81,80 +82,80 @@ export const CommentsPage: React.FC = () => {
     };
 
     return (
-        <div className="page-container">
-            <div className="page-header">
-                <h1>{t('comments')}</h1>
-                <Link to="/" className="ghost">{t('backToGame')}</Link>
-            </div>
+        <PageTransition transitionKey="comments">
+            <div className="page-container">
+                <div className="page-header">
+                    <h1>{t('comments')}</h1>
+                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                </div>
 
-            <div className="settings-section">
-                <h2>{t('postComment')}</h2>
-                <form onSubmit={handleSubmit} className="commentForm">
-                    <div className="commentLabel">
-                        <span>{t('nameRequired')}</span>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            maxLength={40}
-                            required
-                        />
+                <div className="comments-section">
+                    <div className="comment-form">
+                        <h3>{t('postComment')}</h3>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>{t('nameRequired')}</label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    maxLength={20}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('emailOptional')}</label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>{t('messageRequired')}</label>
+                                <textarea
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    maxLength={140}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" disabled={submitting} className="primary">
+                                {submitting ? t('submitting') : t('submit')}
+                            </button>
+                            {submitResult && (
+                                <p className={submitResult.success ? 'success-msg' : 'error-msg'}>
+                                    {submitResult.message}
+                                </p>
+                            )}
+                        </form>
                     </div>
-                    <div className="commentLabel">
-                        <span>{t('emailOptional')}</span>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                        />
-                    </div>
-                    <div className="commentLabel">
-                        <span>{t('messageRequired')}</span>
-                        <textarea
-                            value={message}
-                            onChange={e => setMessage(e.target.value)}
-                            rows={4}
-                            maxLength={1000}
-                            required
-                        />
-                    </div>
-                    <div className="commentFormActions">
-                        <button type="submit" className="secondary" disabled={submitting}>
-                            {submitting ? t('submitting') : t('submit')}
-                        </button>
-                    </div>
-                    {submitResult && (
-                        <p style={{ marginTop: '10px', color: submitResult.success ? '#4caf50' : '#f44336' }}>
-                            {submitResult.message}
-                        </p>
-                    )}
-                </form>
-            </div>
 
-            <div className="comment-list-section">
-                <h3>{t('recentComments')}</h3>
-                {loading && <p>{t('loading')}</p>}
-                {error && <p style={{ color: '#f44336' }}>{error}</p>}
-                <ul className="commentList">
-                    {comments.map(comment => (
-                        <li key={comment.id} className="commentItem">
-                            <div className="commentItemHeader">
-                                <span className="commentItemName">{comment.name}</span>
-                                <span className="commentItemDate">{comment.date}</span>
+                    <div className="comments-list">
+                        <h3>{t('recentComments')}</h3>
+                        {loading && <p>{t('loading')}</p>}
+                        {error && <p style={{ color: '#f44336' }}>{error}</p>}
+
+                        {comments.map((comment) => (
+                            <div key={comment.id} className="comment-card">
+                                <div className="comment-header">
+                                    <span className="comment-author">{comment.name}</span>
+                                    <span className="comment-date">{comment.date}</span>
+                                </div>
+                                <div className="comment-body">{comment.message}</div>
+                                <div className="comment-footer">
+                                    <button
+                                        className={`like-btn ${comment.liked ? 'liked' : ''}`}
+                                        onClick={() => handleLike(comment.id)}
+                                    >
+                                        ❤️ {comment.like_count}
+                                    </button>
+                                </div>
                             </div>
-                            <p className="commentItemMessage">{comment.message}</p>
-                            <div style={{ textAlign: 'right' }}>
-                                <button
-                                    onClick={() => handleLike(comment.id)}
-                                    className={`commentLikeBtn ${comment.liked ? 'isLiked' : ''}`}
-                                >
-                                    <span className="commentLikeIcon">❤️</span> {comment.like_count}
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                        ))}
+                    </div>
+                </div>
             </div>
-        </div>
+        </PageTransition>
     );
 };
