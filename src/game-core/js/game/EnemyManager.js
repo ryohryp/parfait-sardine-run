@@ -51,7 +51,7 @@ export class EnemyManager {
         const baseY = this.canvas.height - GROUND - 36;
 
         const enemy = {
-            x: this.canvas.width + 30 + offset,
+            x: this.canvas.width + 60 + offset,
             y: baseY,
             w: 36,
             h: 36,
@@ -116,7 +116,7 @@ export class EnemyManager {
             w: config.width,
             h: config.height,
             vx: config.speed,
-            targetX: Math.max(this.canvas.width - (config.targetOffset || (config.width + 200)), this.canvas.width * 0.34),
+            targetX: Math.max(this.canvas.width - (config.targetOffset || (config.width + 200)), this.canvas.width * 0.6),
             state: 'enter',
             hp: config.hp,
             maxHp: config.hp,

@@ -103,7 +103,11 @@ export class Game {
         };
     }
 
-    start() {
+    /**
+     * Start the game
+     * @param {string} [characterKey] - Optional character key to start with
+     */
+    start(characterKey) {
         this.score = 0;
         this.level = 1;
         this.lives = 3;
@@ -125,6 +129,10 @@ export class Game {
         this.projectiles.reset();
         this.player.reset();
 
+        // Set character from argument if provided, otherwise use current
+        if (characterKey) {
+            this.gacha.collection.current = characterKey;
+        }
         this.player.setCharacter(this.gacha.collection.current, this.getEffectiveStats(this.gacha.collection.current));
 
         this.t0 = now();
@@ -404,6 +412,11 @@ export class Game {
             this.enemies.bossProjectiles = this.enemies.bossProjectiles.filter(shot => {
                 if (this.AABB(this.player, shot)) {
                     // Hit player with boss projectile
+                    if (now() < this.invUntil || now() < this.feverModeUntil) {
+                        // Invincible - projectile passes through or is destroyed? 
+                        // Let's destroy it but no damage
+                        return false;
+                    }
                     if (now() > this.hurtUntil) {
                         this.lives = Math.max(0, this.lives - 1);
                         this.hurtUntil = now() + 900;

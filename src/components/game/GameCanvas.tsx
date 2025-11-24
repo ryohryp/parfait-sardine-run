@@ -4,9 +4,8 @@ import type { GameState } from '../../types/game';
 import { HUD } from './HUD';
 import { StartScreen } from './StartScreen';
 import { ResultScreen } from './ResultScreen';
-import { GachaModal } from './GachaModal';
-import { CharacterSelectModal } from './CharacterSelectModal';
 import { runsApi } from '../../api/runs';
+import { leaderboardApi } from '../../api/leaderboard';
 import { useFingerprint } from '../../hooks/useFingerprint';
 
 export const GameCanvas: React.FC = () => {
@@ -15,11 +14,10 @@ export const GameCanvas: React.FC = () => {
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [showStartScreen, setShowStartScreen] = useState(true);
     const [result, setResult] = useState<any>(null);
-    const [showGachaModal, setShowGachaModal] = useState(false);
-    const [showCharSelectModal, setShowCharSelectModal] = useState(false);
     const fingerprint = useFingerprint();
     const currentRunId = useRef<string | null>(null);
     const currentNonce = useRef<string | null>(null);
+    const playerNameRef = useRef<string>('');
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -52,8 +50,20 @@ export const GameCanvas: React.FC = () => {
                             fingerprint,
                             nonce: currentNonce.current
                         });
+
+                        // Submit to Leaderboard
+                        if (playerNameRef.current) {
+                            await leaderboardApi.submitScore({
+                                name: playerNameRef.current,
+                                score: data.score,
+                                level: parseInt(data.stage.replace('level-', '')) || 1,
+                                coins: data.coins,
+                                char: gameRef.current?.gacha.collection.current || 'parfen',
+                                fingerprint
+                            });
+                        }
                     } catch (e) {
-                        console.error('Failed to finish run log', e);
+                        console.error('Failed to finish run log or submit score', e);
                     }
                     currentRunId.current = null;
                     currentNonce.current = null;
@@ -68,9 +78,10 @@ export const GameCanvas: React.FC = () => {
         };
     }, [fingerprint]);
 
-    const handleStart = () => {
+    const handleStart = (characterKey: string, playerName: string) => {
         if (gameRef.current) {
-            gameRef.current.start();
+            playerNameRef.current = playerName;
+            gameRef.current.start(characterKey);
             setShowStartScreen(false);
             setResult(null);
         }
@@ -78,7 +89,7 @@ export const GameCanvas: React.FC = () => {
 
     const handleRetry = () => {
         if (gameRef.current) {
-            gameRef.current.start();
+            gameRef.current.start(); // Retry uses same character
             setResult(null);
         }
     };
@@ -86,23 +97,6 @@ export const GameCanvas: React.FC = () => {
     const handleMenu = () => {
         setResult(null);
         setShowStartScreen(true);
-    };
-
-    const handleGachaUpdate = () => {
-        // Force game state update
-        if (gameRef.current) {
-            const state = gameRef.current.getState();
-            setGameState(state);
-        }
-    };
-
-    const handleCharacterChange = (key: string) => {
-        // Update game character
-        if (gameRef.current) {
-            gameRef.current.updateCharacter(key);
-            const state = gameRef.current.getState();
-            setGameState(state);
-        }
     };
 
     const handleUlt = () => {
@@ -121,49 +115,13 @@ export const GameCanvas: React.FC = () => {
                 <canvas
                     ref={canvasRef}
                     id="cv"
-                    width={920}
-                    height={517}
+                    width={360}
+                    height={640}
                 />
                 {gameState && <HUD state={gameState} onUlt={handleUlt} />}
                 <StartScreen onStart={handleStart} visible={showStartScreen} />
                 {result && <ResultScreen result={result} onRetry={handleRetry} onMenu={handleMenu} />}
             </div>
-
-            {/* Gacha and Character Select Buttons - Fixed at bottom */}
-            <div className="mobile-controls" style={{ pointerEvents: 'none', justifyContent: 'center', gap: '20px' }}>
-                <button
-                    className="secondary"
-                    style={{ pointerEvents: 'auto' }}
-                    onClick={() => setShowCharSelectModal(true)}
-                >
-                    👤 キャラ選択
-                </button>
-                <button
-                    className="secondary"
-                    style={{ pointerEvents: 'auto' }}
-                    onClick={() => setShowGachaModal(true)}
-                >
-                    🎰 ガチャ
-                </button>
-            </div>
-
-            {/* Modals */}
-            {gameRef.current && (
-                <>
-                    <GachaModal
-                        visible={showGachaModal}
-                        onClose={() => setShowGachaModal(false)}
-                        gachaSystem={gameRef.current.gacha}
-                        onUpdate={handleGachaUpdate}
-                    />
-                    <CharacterSelectModal
-                        visible={showCharSelectModal}
-                        onClose={() => setShowCharSelectModal(false)}
-                        gachaSystem={gameRef.current.gacha}
-                        onCharacterChange={handleCharacterChange}
-                    />
-                </>
-            )}
         </div>
     );
 };

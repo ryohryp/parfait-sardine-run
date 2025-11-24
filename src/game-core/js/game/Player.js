@@ -7,7 +7,7 @@ export class Player {
         this.canvas = canvas;
         this.w = 46;
         this.h = 46;
-        this.x = 120;
+        this.x = 50;
         this.y = this.canvas.height - GROUND - this.h;
         this.vy = 0;
         this.onGround = true;
@@ -73,7 +73,7 @@ export class Player {
     }
 
     reset() {
-        this.x = 120;
+        this.x = 50;
         this.y = this.canvas.height - GROUND - this.h;
         this.vy = 0;
         this.onGround = true;
