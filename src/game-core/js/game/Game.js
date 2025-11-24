@@ -11,6 +11,8 @@ import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
 import { GAME_TIME, INVINCIBILITY_DURATION, BASE_JUMP, SHOOT_COOLDOWN, POWER_DURATION, ITEM_LEVEL } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
 import { stageForLevel } from '../game-data/stages.js';
+import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { logger } from '../utils/Logger.js';
 
 function now() { return performance.now(); }
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -577,18 +579,30 @@ export class Game {
     }
 
     loadBestScore() {
-        try {
+        const score = ErrorHandler.safely(() => {
             const raw = localStorage.getItem('psrun_best_score_v1');
             if (raw !== null) {
                 const value = Number(raw);
-                if (Number.isFinite(value)) return Math.max(0, Math.floor(value));
+                if (Number.isFinite(value)) {
+                    return Math.max(0, Math.floor(value));
+                }
             }
-        } catch { }
+            return null;
+        }, 'Game.loadBestScore', null);
+
+        if (score !== null) {
+            logger.info('Best score loaded', { score });
+            return score;
+        }
+        logger.info('No saved best score found, starting with 0');
         return 0;
     }
 
     saveBestScore() {
-        try { localStorage.setItem('psrun_best_score_v1', `${this.bestScore}`); } catch { }
+        ErrorHandler.safely(() => {
+            localStorage.setItem('psrun_best_score_v1', `${this.bestScore}`);
+            logger.debug('Best score saved', { score: this.bestScore });
+        }, 'Game.saveBestScore');
     }
 
     draw(remain) {

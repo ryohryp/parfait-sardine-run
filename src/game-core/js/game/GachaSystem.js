@@ -1,5 +1,7 @@
 
 import { characters, rarOrder, rarClass } from '../game-data/characters.js';
+import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { logger } from '../utils/Logger.js';
 
 const COIN_KEY = 'psrun_coin_balance_v1';
 const STORE_KEY = 'psrun_char_collection_v1';
@@ -19,49 +21,84 @@ export class GachaSystem {
     }
 
     loadCoinBalance() {
-        try {
+        const coins = ErrorHandler.safely(() => {
             const raw = localStorage.getItem(COIN_KEY);
             if (raw != null) {
                 const value = Number(raw);
-                if (Number.isFinite(value)) return Math.max(0, Math.floor(value));
+                if (Number.isFinite(value)) {
+                    return Math.max(0, Math.floor(value));
+                }
             }
-        } catch { }
+            return null;
+        }, 'GachaSystem.loadCoinBalance', null);
+
+        if (coins !== null) {
+            logger.debug('Coins loaded', { coins });
+            return coins;
+        }
+        logger.info('No saved coins found, starting with 0');
         return 0;
     }
 
     saveCoinBalance(value) {
         this.coins = Math.max(0, Math.floor(Number(value) || 0));
-        try {
+        ErrorHandler.safely(() => {
             localStorage.setItem(COIN_KEY, `${this.coins}`);
-        } catch { }
+            logger.debug('Coins saved', { coins: this.coins });
+        }, 'GachaSystem.saveCoinBalance');
     }
 
     loadCollection() {
-        try {
+        const collection = ErrorHandler.safely(() => {
             const s = localStorage.getItem(STORE_KEY);
-            if (s) return JSON.parse(s);
-        } catch { }
+            if (s) {
+                return JSON.parse(s);
+            }
+            return null;
+        }, 'GachaSystem.loadCollection', null);
+
+        if (collection !== null) {
+            logger.info('Collection loaded', {
+                ownedCount: Object.keys(collection.owned || {}).length,
+                current: collection.current
+            });
+            return collection;
+        }
+        logger.info('No saved collection found, starting with parfen');
         return { current: 'parfen', owned: { parfen: { owned: true, dup: 0, limit: 0 } } };
     }
 
     saveCollection() {
-        try {
+        ErrorHandler.safely(() => {
             localStorage.setItem(STORE_KEY, JSON.stringify(this.collection));
-        } catch { }
+            logger.debug('Collection saved', {
+                ownedCount: Object.keys(this.collection.owned || {}).length
+            });
+        }, 'GachaSystem.saveCollection');
     }
 
     loadPity() {
-        try {
+        const pity = ErrorHandler.safely(() => {
             const s = localStorage.getItem(PITY_KEY);
-            if (s) return JSON.parse(s);
-        } catch { }
+            if (s) {
+                return JSON.parse(s);
+            }
+            return null;
+        }, 'GachaSystem.loadPity', null);
+
+        if (pity !== null) {
+            logger.debug('Pity loaded', pity);
+            return pity;
+        }
+        logger.info('No saved pity found, starting fresh');
         return { sinceL: 0, sinceM: 0 };
     }
 
     savePity() {
-        try {
+        ErrorHandler.safely(() => {
             localStorage.setItem(PITY_KEY, JSON.stringify(this.pity));
-        } catch { }
+            logger.debug('Pity saved', this.pity);
+        }, 'GachaSystem.savePity');
     }
 
     addCoins(amount) {

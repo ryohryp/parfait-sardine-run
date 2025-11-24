@@ -1,4 +1,7 @@
 
+import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { logger } from '../utils/Logger.js';
+
 export class MissionManager {
     constructor() {
         this.missions = [];
@@ -7,33 +10,44 @@ export class MissionManager {
     }
 
     load() {
-        try {
-            const saved = localStorage.getItem('psrun_missions_v1');
-            if (saved) {
-                const data = JSON.parse(saved);
-                this.missions = data.missions || [];
-                this.lastGeneratedDate = data.lastGeneratedDate;
+        const saved = ErrorHandler.safely(() => {
+            const data = localStorage.getItem('psrun_missions_v1');
+            if (data) {
+                return JSON.parse(data);
             }
-        } catch (e) {
-            console.error('Failed to load missions', e);
+            return null;
+        }, 'MissionManager.load', null);
+
+        if (saved) {
+            this.missions = saved.missions || [];
+            this.lastGeneratedDate = saved.lastGeneratedDate;
+            logger.info('Missions loaded successfully', {
+                missionCount: this.missions.length,
+                lastGenerated: this.lastGeneratedDate
+            });
+        } else {
+            logger.info('No saved missions found, will generate new ones');
         }
 
         // Check if we need to generate new missions (daily)
         const today = new Date().toDateString();
         if (this.lastGeneratedDate !== today) {
+            logger.info('Generating new daily missions', { today, lastGenerated: this.lastGeneratedDate });
             this.generateMissions();
         }
     }
 
     save() {
-        try {
-            localStorage.setItem('psrun_missions_v1', JSON.stringify({
+        ErrorHandler.safely(() => {
+            const data = {
                 missions: this.missions,
                 lastGeneratedDate: this.lastGeneratedDate
-            }));
-        } catch (e) {
-            console.error('Failed to save missions', e);
-        }
+            };
+            localStorage.setItem('psrun_missions_v1', JSON.stringify(data));
+            logger.debug('Missions saved successfully', {
+                missionCount: this.missions.length
+            });
+        }, 'MissionManager.save');
     }
 
     generateMissions() {
