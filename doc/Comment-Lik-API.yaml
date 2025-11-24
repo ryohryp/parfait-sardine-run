@@ -1,0 +1,282 @@
+openapi: 3.0.3
+info:
+  title: Parfait & Sardine RUN! Comment/Like API
+  description: |
+    Parfait & Sardine RUN!（PSR）ゲームのコメントと「いいね」機能を提供するAPI。
+    WordPressの`wp-comments`と`wp-commentmeta`を利用しています。
+  version: v1
+servers:
+  - url: /{base_url}/wp-json/psr/v1
+    variables:
+      base_url:
+        default: https://example.com # 実際のWordPressサイトのドメインに置き換えてください
+        description: WordPressサイトのベースURL
+tags:
+  - name: Comment
+    description: コメントの投稿と取得
+  - name: Like
+    description: コメントへの「いいね」操作
+  - name: Admin (Debug)
+    description: 管理者用のデバッグ/レート制限クリア操作
+
+paths:
+  /comment:
+    post:
+      tags:
+        - Comment
+      summary: コメントの登録
+      operationId: postComment
+      description: |
+        新しいコメントをWordPressに登録します。
+        **レート制限** (IPアドレスごと、デフォルト: 5回/300秒) が適用されます。
+        **即時承認** (デフォルト: true) の設定により、スパム判定以外はすぐに公開されます。
+      parameters:
+        - in: header
+          name: X-PSR-Bypass
+          schema: { type: string }
+          required: false
+          description: レート制限をバイパスするための秘密鍵 (設定されている場合)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentPostRequest'
+            example:
+              author_name: "ななしのランナー"
+              content: "スコア更新がんばります！"
+              author_email: "optional@example.com"
+              recaptcha: "recaptcha-token-string"
+              post_id: 103
+      responses:
+        '201':
+          description: コメント登録に成功しました。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  comment_id: { type: integer, description: 登録されたコメントID }
+                  post_id: { type: integer, description: コメントが投稿された記事ID }
+        '400':
+          description: バリデーションエラー、reCAPTCHA失敗、またはコアのコメント不許可。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bad_content: { value: { error: "bad_content_length" } }
+                recaptcha_fail: { value: { error: "recaptcha_failed" } }
+        '403':
+          description: オリジン不許可 (`origin_not_allowed`)。
+        '429':
+          description: レート制限オーバー (`rate_limited`)。
+        '500':
+          description: サーバーエラー (`insert_failed`)。
+
+  /comments:
+    get:
+      tags:
+        - Comment
+      summary: コメント一覧の取得
+      operationId: getCommentsList
+      description: |
+        承認済みのコメント一覧を新しい順にページングで取得します。
+        `X-PSR-Client`ヘッダーを指定することで、「いいね」をしたかどうかの情報 (`liked`) が付加されます。
+      parameters:
+        - in: query
+          name: post_id
+          schema: { type: integer, default: 103 }
+          required: false
+          description: 対象とするWordPress投稿ID
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+          required: false
+          description: 取得するページ番号
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 20 }
+          required: false
+          description: 1ページあたりの件数（最大50件）
+        - in: header
+          name: X-PSR-Client
+          schema: { type: string }
+          required: false
+          description: |
+            クライアント識別子（いいねの付与状況を確認するために使用）。
+            この値のHMACハッシュがコメントメタキーの生成に使用されます。
+      responses:
+        '200':
+          description: 成功。コメントリストとページング情報を返します。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CommentListItem' }
+                  total: { type: integer, description: 全体の承認済みコメント総数 }
+                  page: { type: integer, description: 現在のページ番号 }
+                  per_page: { type: integer, description: 1ページあたりの表示件数 }
+              example:
+                items:
+                  - author: "山田"
+                    content: "楽しいゲームです！"
+                    date_gmt: "2025-11-23 01:23:45"
+                    comment_id: 15
+                    like_count: 5
+                    liked: true
+                total: 50
+                page: 1
+                per_page: 20
+        '403':
+          description: オリジン不許可 (`origin_not_allowed`)。
+
+  /like:
+    post:
+      tags:
+        - Like
+      summary: コメントへの「いいね」操作
+      operationId: postLike
+      description: |
+        指定されたコメントに対して「いいね」を付与、取消、またはトグルします。
+        **レート制限** (IPアドレスごと、デフォルト: 10回/60秒) が適用されます。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LikePostRequest'
+            example:
+              comment_id: 15
+              client_id: "user-uuid-12345"
+              op: "toggle"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LikePostRequest'
+      responses:
+        '200':
+          description: 成功（いいね操作のステータス変更なし、または取消）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+        '201':
+          description: 成功（新しく「いいね」を付与）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeResponse'
+        '400':
+          description: 不正なIDや操作 (`bad_comment_id`, `bad_client_id`, `invalid_op`)。
+        '403':
+          description: オリジン不許可 (`origin_not_allowed`)。
+        '429':
+          description: レート制限オーバー (`rate_limited`)。
+
+  /debug-rate:
+    get:
+      tags:
+        - Admin (Debug)
+      summary: 現在のレート制限カウンタの取得 (管理者限定)
+      operationId: getDebugRate
+      description: |
+        現在のクライアントIPアドレスに対するコメントと「いいね」のレート制限カウンタを取得します。
+        **WordPressの`manage_options`権限を持つユーザー**のみアクセス可能です。
+      responses:
+        '200':
+          description: 成功。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ip: { type: string, description: クライアントIPアドレス }
+                  comment_rate: { type: integer, description: コメントの現在のレートカウンタ }
+                  like_rate: { type: integer, description: いいねの現在のレートカウンタ }
+              example:
+                ip: "192.168.1.1"
+                comment_rate: 2
+                like_rate: 5
+        '403':
+          description: 権限不足。
+
+components:
+  schemas:
+    CommentPostRequest:
+      type: object
+      required:
+        - author_name
+        - content
+      properties:
+        author_name:
+          type: string
+          description: 投稿者名 (1〜40文字)
+          maxLength: 40
+        content:
+          type: string
+          description: コメント本文 (1〜1000文字)
+          maxLength: 1000
+        author_email:
+          type: string
+          format: email
+          description: 投稿者メールアドレス (任意)
+        recaptcha:
+          type: string
+          description: reCAPTCHAトークン (設定されている場合)
+        post_id:
+          type: integer
+          description: コメント対象のWordPress投稿ID (未指定時はデフォルト値)
+
+    CommentListItem:
+      type: object
+      description: コメント一覧の単一のエントリ
+      properties:
+        author: { type: string, description: 投稿者名 }
+        content: { type: string, description: コメント本文 }
+        date_gmt: { type: string, format: date-time, description: 投稿日時 (GMT) }
+        comment_id: { type: integer, description: コメントID }
+        like_count: { type: integer, description: いいねの総数 }
+        liked: { type: boolean, description: `X-PSR-Client`ヘッダーで指定されたクライアントが良いね済みか (ヘッダーがない場合は省略) }
+
+    LikePostRequest:
+      type: object
+      required:
+        - comment_id
+        - client_id
+      properties:
+        comment_id:
+          type: integer
+          description: いいね操作の対象となるコメントID
+        client_id:
+          type: string
+          description: |
+            クライアントを識別するための一意なID (CookieやLocalStorageなどに保存されたUUIDなど)。
+            これを基に「いいね」のメタキーが生成されます。
+          maxLength: 200
+        op:
+          type: string
+          enum: [like, unlike, toggle]
+          default: toggle
+          description: 実行する操作 (付与/取消/トグル)
+
+    LikeResponse:
+      type: object
+      properties:
+        ok: { type: boolean, example: true }
+        liked: { type: boolean, description: 操作後のいいね状態 }
+        like_count: { type: integer, description: 操作後のいいね総数 }
+        comment_id: { type: integer, description: 対象コメントID }
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: エラーコード
+        message:
+          type: string
+          description: エラーメッセージ (コアのコメント不許可時などに含まれる)

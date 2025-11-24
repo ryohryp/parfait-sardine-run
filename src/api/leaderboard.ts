@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, API_BASE_V2 } from './client';
 
 export interface LeaderboardEntry {
     rank: number;
@@ -9,16 +9,14 @@ export interface LeaderboardEntry {
     date: string;
 }
 
-const LEADERBOARD_BASE = 'https://howasaba-code.com/wp-json/psrun/v2';
-
 export const leaderboardApi = {
     getLeaderboard: async () => {
-        return apiClient<LeaderboardEntry[]>('/leaderboard', { baseUrl: LEADERBOARD_BASE });
+        return apiClient<LeaderboardEntry[]>('/leaderboard', { baseUrl: API_BASE_V2 });
     },
 
     submitScore: async (data: { name: string; score: number; level: number; coins: number; char: string; fingerprint: string }) => {
         return apiClient<{ success: boolean }>('/leaderboard', {
-            baseUrl: LEADERBOARD_BASE,
+            baseUrl: API_BASE_V2,
             method: 'POST',
             body: JSON.stringify(data)
         });

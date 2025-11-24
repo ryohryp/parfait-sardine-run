@@ -4,9 +4,10 @@ import clsx from 'clsx';
 
 interface HUDProps {
     state: GameState;
+    onUlt?: () => void;
 }
 
-export const HUD: React.FC<HUDProps> = ({ state }) => {
+export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
     const {
         remainMs, level, score, coins, lives, ult,
         bestScore, invUntil, autoShootUntil, bulletBoostUntil, scoreMulUntil, ultActiveUntil, gameOn, stageName
@@ -65,6 +66,51 @@ export const HUD: React.FC<HUDProps> = ({ state }) => {
                     </span>
                 ))}
             </div>
+
+            {/* Ultimate Button */}
+            {state.ultReady && onUlt && (
+                <button
+                    className="ultButton"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onUlt();
+                    }}
+                    onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.currentTarget.style.transform = 'scale(0.95)';
+                    }}
+                    onMouseUp={(e) => {
+                        e.stopPropagation();
+                        e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    style={{
+                        position: 'fixed',
+                        bottom: '20px',
+                        right: '20px',
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '50%',
+                        border: '4px solid #fbbf24',
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
+                        color: '#fff',
+                        fontSize: '32px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.6), 0 0 20px rgba(251, 191, 36, 0.4)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        animation: 'pulse 1s infinite',
+                        transition: 'transform 0.1s',
+                        pointerEvents: 'auto'
+                    }}
+                    title="必殺技発動 (100%)"
+                >
+                    💫
+                </button>
+            )}
         </div>
     );
 };

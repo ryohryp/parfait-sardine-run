@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export interface RunLogEntry {
-    id: number;
+    id: string;
     stage: string;
     score: number;
     duration: number;
@@ -11,35 +11,68 @@ export interface RunLogEntry {
 }
 
 export interface StatsSummary {
+    total_users?: number;
+    played_users?: number;
+    today_users?: number;
     total_runs: number;
-    total_score: number;
-    total_coins: number;
+    today_runs?: number;
+    avg_score: number;
     max_score: number;
+    device_ratio?: Array<{ device: string; cnt: number }>;
 }
 
 export const runsApi = {
     startRun: async (fingerprint: string) => {
-        return apiClient<{ success: boolean; run_id: number }>('/run/start', {
+        if (!fingerprint) throw new Error('Fingerprint is required');
+
+        return apiClient<{ run_id: string; nonce: string; started_gmt: string }>('/run/start', {
             method: 'POST',
-            body: JSON.stringify({ client_id: fingerprint })
+            body: JSON.stringify({
+                fingerprint: fingerprint,
+                device: 'Web',
+                build: import.meta.env.DEV ? 'dev' : 'prod'
+            })
         });
     },
 
-    finishRun: async (runId: number, data: { score: number; stage: string; duration: number; coins: number; result: string; fingerprint: string }) => {
+    finishRun: async (runId: string, data: { score: number; stage: string; duration: number; coins: number; result: string; fingerprint: string; nonce: string }) => {
         return apiClient<{ success: boolean }>('/run/finish', {
             method: 'POST',
             body: JSON.stringify({
                 run_id: runId,
-                client_id: data.fingerprint,
-                ...data
+                nonce: data.nonce,
+                fingerprint: data.fingerprint,
+                score: data.score,
+                stage: data.stage,
+                duration_ms: data.duration,
+                coins: data.coins,
+                result: data.result
             })
         });
     },
 
     getRuns: async (fingerprint: string) => {
-        return apiClient<RunLogEntry[]>('/runs', {
-            headers: { 'X-PSR-Client': fingerprint }
-        });
+        if (!fingerprint) return [];
+
+        const response = await apiClient<any>(`/runs?fingerprint=${encodeURIComponent(fingerprint)}`);
+
+        // API returns { runs: [...], page, per_page, total } according to API spec
+        const data = response?.runs || response;
+
+        // Transform API response to match RunLogEntry interface
+        if (Array.isArray(data)) {
+            return data.map((item: any) => ({
+                id: item.run_id,
+                stage: item.stage || 'Unknown',
+                score: item.score || 0,
+                duration: item.duration_ms || 0,
+                coins: item.coins || 0,
+                result: item.result || 'unknown',
+                date: item.finished_gmt || item.started_gmt || ''
+            } as RunLogEntry));
+        }
+
+        return [];
     },
 
     getStats: async (fingerprint: string) => {

@@ -53,7 +53,9 @@ export class Game {
     init() {
         this.input.init(this.canvas);
 
-        this.input.on('jump', () => this.player.jump());
+        this.input.on('jump', () => {
+            if (this.gameOn) this.player.jump();
+        });
         this.input.on('shoot', () => this.shoot());
         this.input.on('ult', () => this.tryUlt());
 
@@ -188,6 +190,9 @@ export class Game {
             hasSlow
         );
 
+        // Filter out dead enemies hit by bullets
+        this.enemies.enemies = this.enemies.enemies.filter(en => !en._dead);
+
         // Collisions
         this.checkCollisions();
 
@@ -226,10 +231,20 @@ export class Game {
 
     tryUlt() {
         if (!this.gameOn || !this.ultReady) return;
+
         this.ultReady = false;
         this.ult = 0;
 
         const type = characters[this.gacha.collection.current].ult;
+
+        // Play sound effect
+        playSfx('hit'); // Using hit sound as placeholder for ult sound
+
+        if (!type) {
+            // Character has no ult, just show some effect
+            this.ultActiveUntil = now() + 1000;
+            return;
+        }
 
         if (type === 'storm') {
             this.ultActiveUntil = now() + 1600;
@@ -255,6 +270,7 @@ export class Game {
                 });
             }
         } else {
+            // rainbow or other ults
             this.ultActiveUntil = now() + 2000;
         }
     }
@@ -361,6 +377,25 @@ export class Game {
                 // ... other ults
             }
         }
+
+        // Player vs Boss Projectiles
+        if (this.enemies.bossProjectiles && this.enemies.bossProjectiles.length > 0) {
+            this.enemies.bossProjectiles = this.enemies.bossProjectiles.filter(shot => {
+                if (this.AABB(this.player, shot)) {
+                    // Hit player with boss projectile
+                    if (now() > this.hurtUntil) {
+                        this.lives = Math.max(0, this.lives - 1);
+                        this.hurtUntil = now() + 900;
+                        playSfx('hit');
+                        if (this.lives === 0) {
+                            this.endGame();
+                        }
+                    }
+                    return false; // Remove projectile after hit
+                }
+                return true; // Keep projectile
+            });
+        }
     }
 
     awardEnemyDefeat(enemy) {
@@ -431,7 +466,53 @@ export class Game {
 
         // Ult Effects
         if (now() < this.ultActiveUntil) {
-            // Draw ult effects...
+            const type = characters[this.gacha.collection.current].ult;
+            const px = this.player.x + this.player.w / 2;
+            const py = this.player.y + this.player.h / 2;
+
+            this.ctx.save();
+            if (type === 'storm') {
+                // Draw storm circle around player
+                const fade = (this.ultActiveUntil - now()) / 1600;
+                this.ctx.globalAlpha = 0.3 + Math.sin(now() * 0.01) * 0.2;
+                this.ctx.strokeStyle = '#60a5fa';
+                this.ctx.lineWidth = 8;
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, 120, 0, Math.PI * 2);
+                this.ctx.stroke();
+
+                this.ctx.strokeStyle = '#93c5fd';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, 100 + Math.sin(now() * 0.02) * 20, 0, Math.PI * 2);
+                this.ctx.stroke();
+            } else if (type === 'ncha') {
+                // Draw beam
+                this.ctx.globalAlpha = 0.6;
+                const gradient = this.ctx.createLinearGradient(px, 0, this.canvas.width, 0);
+                gradient.addColorStop(0, '#f59e0b');
+                gradient.addColorStop(1, '#dc2626');
+                this.ctx.fillStyle = gradient;
+                const beamHeight = 72;
+                this.ctx.fillRect(px, py - beamHeight / 2, this.canvas.width - px, beamHeight);
+            } else {
+                // Rainbow (default)
+                this.ctx.globalAlpha = 0.5;
+                const lanes = [py, py - 36, py + 36];
+                const colors = ['#ef4444', '#f59e0b', '#10b981'];
+                lanes.forEach((y, i) => {
+                    this.ctx.fillStyle = colors[i];
+                    this.ctx.fillRect(px, y - 3, this.canvas.width - px, 6);
+                });
+            }
+            this.ctx.restore();
+        }
+    }
+
+    updateCharacter(key) {
+        if (this.gacha.setCurrentChar(key)) {
+            this.player.setCharacter(key, this.getEffectiveStats(key));
+            this.notifyState();
         }
     }
 

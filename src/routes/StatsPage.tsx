@@ -41,22 +41,36 @@ export const StatsPage: React.FC = () => {
 
                 {stats && (
                     <div className="stats-grid">
+                        {stats.total_users !== undefined && (
+                            <div className="stat-card">
+                                <h3>総ユーザー数</h3>
+                                <div className="stat-value">{stats.total_users.toLocaleString()}</div>
+                            </div>
+                        )}
+                        {stats.played_users !== undefined && (
+                            <div className="stat-card">
+                                <h3>プレイ済みユーザー</h3>
+                                <div className="stat-value">{stats.played_users.toLocaleString()}</div>
+                            </div>
+                        )}
                         <div className="stat-card">
                             <h3>総プレイ回数</h3>
-                            <div className="stat-value">{stats.total_runs}</div>
+                            <div className="stat-value">{(stats.total_runs || 0).toLocaleString()}</div>
                         </div>
                         <div className="stat-card">
                             <h3>最高スコア</h3>
-                            <div className="stat-value">{stats.max_score.toLocaleString()}</div>
+                            <div className="stat-value">{(stats.max_score || 0).toLocaleString()}</div>
                         </div>
                         <div className="stat-card">
-                            <h3>総獲得コイン</h3>
-                            <div className="stat-value">{stats.total_coins.toLocaleString()}</div>
+                            <h3>平均スコア</h3>
+                            <div className="stat-value">{(stats.avg_score || 0).toLocaleString()}</div>
                         </div>
-                        <div className="stat-card">
-                            <h3>総スコア</h3>
-                            <div className="stat-value">{stats.total_score.toLocaleString()}</div>
-                        </div>
+                        {stats.today_users !== undefined && (
+                            <div className="stat-card">
+                                <h3>今日のユーザー</h3>
+                                <div className="stat-value">{stats.today_users.toLocaleString()}</div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

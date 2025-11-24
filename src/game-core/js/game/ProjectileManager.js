@@ -38,40 +38,18 @@ export class ProjectileManager {
             }
 
             // Hit Enemies
+            // Mark enemy as dead by setting a flag, which will be filtered by the caller
             for (let i = 0; i < enemies.length; i++) {
                 const en = enemies[i];
                 if (this.AABB(en, b)) {
                     awardEnemyDefeat(en);
+                    en._dead = true; // Mark for removal
                     b.hitsLeft--;
                     if (hasSlow) {
                         en.vx = Math.max(en.vx * 0.6, 1.6);
                     }
                     if (b.hitsLeft <= 0) return false;
-                    // Continue to check other enemies if piercing? 
-                    // Original logic: "return false" immediately after hitting ONE enemy.
-                    // But wait, if hitsLeft > 0, it should continue?
-                    // Original code:
-                    /*
-                      if (AABB(en,bullets[i])){
-                          awardEnemyDefeat(en);
-                          bullets[i].hitsLeft--;
-                          if (hasSlow){ en.vx = Math.max(en.vx*0.6, 1.6); }
-                          if (bullets[i].hitsLeft<=0) bullets.splice(i,1);
-                          return false; // This returns from the enemy filter loop? No, this is inside enemies.filter?
-                          // Wait, original code was:
-                          // enemies = enemies.filter(en => { ... 
-                          //    for (let i=0;i<bullets.length;i++){ ... if hit ... bullets.splice(i,1); return false; }
-                          // })
-                          // This means if an enemy is hit, it dies (return false for enemy filter).
-                    */
-                    // My logic here is updating bullets. So I need to check if bullet hits any enemy.
-                    // If I do it here, I need to remove the enemy too.
-                    // This suggests ProjectileManager might need to modify the enemies array or return hit enemies.
-                    // A better approach might be to handle collision in Game.js or pass a callback.
-                    // For now, let's assume we can modify enemies or return a list of dead enemies?
-                    // Actually, the original code did collision checks inside the enemy update loop.
-                    // To keep it modular, maybe ProjectileManager just updates positions, and Game.js handles collisions?
-                    // OR, ProjectileManager has a `checkCollisions(enemies)` method.
+                    // If piercing, continue to check other enemies
                 }
             }
 

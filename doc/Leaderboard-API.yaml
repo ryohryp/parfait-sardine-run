@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: PSRun Leaderboard REST API
+  description: PSRunゲームのハイスコアを記録・取得するためのAPI。WordPress REST API上に構築されています。
+  version: v2
+servers:
+  - url: /{base_url}/wp-json/psrun/v2
+    variables:
+      base_url:
+        default: https://example.com # 実際のWordPressサイトのドメインに置き換えてください
+        description: WordPressサイトのベースURL
+tags:
+  - name: Leaderboard
+    description: ランキングデータの操作
+
+paths:
+  /leaderboard:
+    get:
+      tags:
+        - Leaderboard
+      summary: ランキングの取得
+      operationId: getLeaderboard
+      description: |
+        リーダーボードの上位エントリ（最大100件）を取得します。
+        結果はスコア降順、登録日時昇順でソートされます。
+      responses:
+        '200':
+          description: 成功。リーダーボードのリストを返します。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaderboard:
+                    type: array
+                    description: リーダーボードのエントリのリスト
+                    items:
+                      $ref: '#/components/schemas/ScoreEntry'
+              example:
+                leaderboard:
+                  - name: "PlayerA"
+                    score: 12500
+                    level: 10
+                    coins: 500
+                    char: "Runner"
+                    time: "2025-11-23 10:00:00"
+                  - name: "PlayerB"
+                    score: 10000
+                    level: 8
+                    coins: 300
+                    char: "Jumper"
+                    time: "2025-11-23 11:30:00"
+
+    post:
+      tags:
+        - Leaderboard
+      summary: スコアの保存
+      operationId: addScore
+      description: |
+        新しいゲームのスコアをリーダーボードに登録します。
+        全ての必須パラメータはサーバー側でサニタイズされます。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewScoreRequest'
+            examples:
+              exampleScore:
+                value:
+                  name: "NewPlayer"
+                  score: 8500
+                  level: 7
+                  coins: 250
+                  char: "Dash"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NewScoreRequest'
+      responses:
+        '200':
+          description: スコアの登録に成功しました。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: 成功した場合はtrue
+              example:
+                success: true
+        '400':
+          description: リクエストの検証エラー（例：必須パラメータ不足）
+          # WordPress REST APIは、通常、検証エラー時に特定のJSONレスポンスを返します
+
+components:
+  schemas:
+    ScoreEntry:
+      type: object
+      description: リーダーボードの単一のエントリ
+      properties:
+        name:
+          type: string
+          description: プレイヤー名
+          maxLength: 255 # WordPressのsanitize_text_fieldによる推定
+        score:
+          type: integer
+          description: スコア
+          format: int32
+        level:
+          type: integer
+          description: 達成レベル
+          format: int32
+        coins:
+          type: integer
+          description: 獲得コイン数
+          format: int32
+        char:
+          type: string
+          description: 使用キャラクター名 (コード内のエイリアス)
+          maxLength: 255
+        time:
+          type: string
+          format: date-time
+          description: スコアの登録日時 (MySQL形式)
+
+    NewScoreRequest:
+      type: object
+      required:
+        - name
+        - score
+        - level
+        - coins
+        - char
+      description: 新しいスコアを登録するためのリクエストボディ
+      properties:
+        name:
+          type: string
+          description: プレイヤー名 (サニタイズされる)
+          maxLength: 255
+        score:
+          type: integer
+          description: スコア (整数に変換される)
+          format: int32
+          minimum: 0
+        level:
+          type: integer
+          description: 達成レベル (整数に変換される)
+          format: int32
+          minimum: 0
+        coins:
+          type: integer
+          description: 獲得コイン数 (整数に変換される)
+          format: int32
+          minimum: 0
+        char:
+          type: string
+          description: 使用キャラクター名 (サニタイズされる)
+          maxLength: 255

@@ -11,18 +11,40 @@ export const HistoryPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (fingerprint) {
-            loadRuns();
-        }
+        let isMounted = true;
+        let timeoutId: ReturnType<typeof setTimeout>;
+
+        const loadData = async () => {
+            if (fingerprint && isMounted) {
+                await loadRuns();
+            }
+        };
+
+        // Debounce the call to prevent double execution in Strict Mode
+        timeoutId = setTimeout(() => {
+            loadData();
+        }, 100);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
     }, [fingerprint]);
 
     const loadRuns = async () => {
         setLoading(true);
+        setError(null);
         try {
             const data = await runsApi.getRuns(fingerprint);
             setRuns(data);
-        } catch (err) {
-            setError('履歴の読み込みに失敗しました。');
+        } catch (err: any) {
+            // Handle rate limit errors specifically
+            if (err?.message?.includes('429')) {
+                setError('リクエストが多すぎます。しばらく時間をおいてから再度お試しください。');
+            } else {
+                setError('履歴の読み込みに失敗しました。');
+            }
+            setRuns([]);
         } finally {
             setLoading(false);
         }

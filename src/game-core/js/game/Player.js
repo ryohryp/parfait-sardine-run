@@ -53,6 +53,23 @@ export class Player {
     setCharacter(key, stats) {
         this.charKey = key;
         this.stats = stats;
+
+        // Try to load character-specific sprite
+        const charSpritePath = `assets/char-${key}.png`;
+        const newImage = new Image();
+        newImage.onerror = () => {
+            // If character sprite doesn't exist, use emoji rendering
+            this.sprite.loaded = false;
+            this.sprite.useEmoji = true;
+        };
+        newImage.onload = () => {
+            this.sprite.image = newImage;
+            this.sprite.loaded = true;
+            this.sprite.useEmoji = false;
+            this.sprite.frameWidth = Math.floor(newImage.naturalWidth / this.sprite.cols);
+            this.sprite.frameHeight = Math.floor(newImage.naturalHeight / this.sprite.rows);
+        };
+        newImage.src = charSpritePath;
     }
 
     reset() {
@@ -142,7 +159,7 @@ export class Player {
         // Blink on hurt
         const blink = now < hurtUntil && Math.floor(now / 60) % 2 === 0;
         if (!blink) {
-            if (this.sprite.loaded && this.sprite.frameWidth) {
+            if (this.sprite.loaded && this.sprite.frameWidth && !this.sprite.useEmoji) {
                 const smoothingBackup = ctx.imageSmoothingEnabled;
                 ctx.imageSmoothingEnabled = true;
 
@@ -164,8 +181,17 @@ export class Player {
 
                 ctx.imageSmoothingEnabled = smoothingBackup;
             } else {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.w, this.h);
+                // Fallback: render character emoji or colored box
+                const char = characters[this.charKey];
+                if (char && char.emoji) {
+                    ctx.font = '42px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(char.emoji, this.x + this.w / 2, this.y + this.h / 2 + 4);
+                } else {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                }
             }
         }
     }

@@ -19,7 +19,24 @@ export interface PostCommentParams {
 export const commentsApi = {
     getComments: async (fingerprint?: string) => {
         const headers: HeadersInit = fingerprint ? { 'X-PSR-Client': fingerprint } : {};
-        return apiClient<Comment[]>('/comments?post_id=103', { headers });
+        const response = await apiClient<any>('/comments?post_id=103', { headers });
+
+        // API returns { items: [...], total, page, per_page }
+        const data = response?.items || response;
+
+        // Transform API response to match Comment interface
+        if (Array.isArray(data)) {
+            return data.map((item: any) => ({
+                id: item.comment_id,
+                name: item.author,
+                message: item.content,
+                date: item.date_gmt,
+                like_count: item.like_count || 0,
+                liked: item.liked || false
+            } as Comment));
+        }
+
+        return [];
     },
 
     postComment: async (params: PostCommentParams) => {

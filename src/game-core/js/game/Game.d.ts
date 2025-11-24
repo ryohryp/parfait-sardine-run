@@ -1,15 +1,12 @@
-export interface GameCallbacks {
-    onStateUpdate: (state: GameState) => void;
-    onGameOver: (result: any) => void;
-    onPlaySfx?: (name: string) => void;
-    onRunStart?: () => void;
-    onRunFinish?: (data: any) => void;
-}
+import type { GameState } from '../../../types/game';
+import type { GachaSystem } from './GachaSystem.js';
 
-export class Game {
-    constructor(canvas: HTMLCanvasElement, callbacks: GameCallbacks);
-    init(): void;
+export declare class Game {
+    constructor(canvas: HTMLCanvasElement, callbacks?: any);
     start(): void;
-    endGame(): void;
-    input: any;
+    getState(): GameState;
+    updateCharacter(key: string): void;
+    tryUlt(): void;
+    // expose gacha system for UI components
+    gacha: GachaSystem;
 }

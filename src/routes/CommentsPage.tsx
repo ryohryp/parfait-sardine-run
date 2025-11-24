@@ -29,6 +29,7 @@ export const CommentsPage: React.FC = () => {
             setComments(data);
         } catch (err) {
             setError('コメントの読み込みに失敗しました。');
+            setComments([]);
         } finally {
             setLoading(false);
         }

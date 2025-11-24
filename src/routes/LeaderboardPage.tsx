@@ -15,10 +15,14 @@ export const LeaderboardPage: React.FC = () => {
     const loadRanking = async () => {
         setLoading(true);
         try {
-            const data = await leaderboardApi.getLeaderboard();
-            setRanking(data);
+            const response = await leaderboardApi.getLeaderboard();
+            // API returns { leaderboard: [...] } according to API spec
+            const data = (response as any)?.leaderboard || response;
+            // Ensure data is an array
+            setRanking(Array.isArray(data) ? data : []);
         } catch (err) {
             setError('ランキングの読み込みに失敗しました。');
+            setRanking([]); // Ensure ranking is empty array on error
         } finally {
             setLoading(false);
         }
