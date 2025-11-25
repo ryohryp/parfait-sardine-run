@@ -37,7 +37,7 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
             }}>
                 <span>{stageName}</span>
                 <span>Lv.{level}</span>
-                <span>🪙 {coins.toLocaleString()}</span>
+                <span>🪙 {(coins || 0).toLocaleString()}</span>
             </div>
 
             <div className="hud-group">
@@ -67,10 +67,10 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
             </div>
 
             <div className="hud-group" style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
-                <div className="hud-score">{score.toLocaleString()}</div>
+                <div className="hud-score">{(score || 0).toLocaleString()}</div>
                 <div className="hud-pill" style={{ fontSize: '12px', padding: '4px 8px' }}>
                     <span>🏆</span>
-                    <span>{bestScore.toLocaleString()}</span>
+                    <span>{(bestScore || 0).toLocaleString()}</span>
                 </div>
             </div>
 

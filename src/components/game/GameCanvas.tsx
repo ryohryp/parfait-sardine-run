@@ -12,6 +12,15 @@ import { useFingerprint } from '../../hooks/useFingerprint';
 
 import { MissionNotification } from './MissionNotification';
 import type { Mission } from '../../types/game';
+import { AchievementSystem } from '../../game-core/js/game/AchievementSystem';
+import type { Achievement } from '../../game-core/js/game/AchievementSystem';
+import { AchievementNotification } from './AchievementNotification';
+import { DailyBonusSystem } from '../../game-core/js/game/DailyBonusSystem';
+
+import { useSound } from '../../hooks/useSound';
+
+import { TutorialOverlay } from './TutorialOverlay';
+import type { TutorialStep } from './TutorialOverlay';
 
 export const GameCanvas: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -20,13 +29,19 @@ export const GameCanvas: React.FC = () => {
     const [showStartScreen, setShowStartScreen] = useState(true);
     const [result, setResult] = useState<GameResult | null>(null);
     const [missionNotification, setMissionNotification] = useState<Mission | null>(null);
+    const [achievementNotification, setAchievementNotification] = useState<Achievement | null>(null);
+    const [showTutorial, setShowTutorial] = useState(false);
+    const [tutorialStep, setTutorialStep] = useState<TutorialStep>('jump');
     const fingerprint = useFingerprint();
     const currentRunId = useRef<string | null>(null);
     const currentNonce = useRef<string | null>(null);
     const playerNameRef = useRef<string>('');
+    const { playBgm, stopBgm } = useSound();
 
-    // Initialize GachaSystem once to share between Game and UI
+    // Initialize Systems
     const [gachaSystem] = useState(() => new GachaSystem());
+    const [achievementSystem] = useState(() => new AchievementSystem());
+    const [dailyBonusSystem] = useState(() => new DailyBonusSystem());
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -37,8 +52,43 @@ export const GameCanvas: React.FC = () => {
             },
             onGameOver: (res: GameResult) => {
                 setResult(res);
+                stopBgm();
+
+                // Update stats and check achievements
+                achievementSystem.updateStats({
+                    totalRuns: 1,
+                    totalCoins: res.coins,
+                    maxScore: res.score,
+                    enemiesDefeated: res.enemiesDefeated || 0,
+                    bossesDefeated: res.bossesDefeated || 0
+                });
+
+                const newUnlocks = achievementSystem.checkUnlocks(gachaSystem);
+                if (newUnlocks.length > 0) {
+                    // Show first unlock (queueing could be added for multiple)
+                    setAchievementNotification(newUnlocks[0]);
+                }
             },
             onRunStart: async () => {
+                // Construct path with base URL to handle deployment correctly
+                const baseUrl = import.meta.env.BASE_URL;
+                // Remove trailing slash if present to avoid double slashes, though browsers usually handle it
+                const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+                playBgm(`${cleanBase}/assets/bgm/stage.ogg`);
+
+                // Check tutorial
+                const tutorialCompleted = localStorage.getItem('psrun_tutorial_completed');
+                if (!tutorialCompleted) {
+                    setShowTutorial(true);
+                    setTutorialStep('jump');
+                    // Pause game for tutorial
+                    setTimeout(() => {
+                        if (gameRef.current) {
+                            gameRef.current.pause();
+                        }
+                    }, 100);
+                }
+
                 if (fingerprint) {
                     try {
                         const res = await runsApi.startRun(fingerprint);
@@ -81,6 +131,19 @@ export const GameCanvas: React.FC = () => {
             onStageClear: (data: GameResult) => {
                 // Stage cleared, show result or continue
                 setResult({ ...data, stageClear: true });
+
+                // Also check achievements on stage clear
+                achievementSystem.updateStats({
+                    totalCoins: data.coins,
+                    maxScore: data.score,
+                    enemiesDefeated: data.enemiesDefeated || 0,
+                    bossesDefeated: data.bossesDefeated || 0
+                });
+
+                const newUnlocks = achievementSystem.checkUnlocks(gachaSystem);
+                if (newUnlocks.length > 0) {
+                    setAchievementNotification(newUnlocks[0]);
+                }
             },
             onMissionComplete: (mission: Mission) => {
                 setMissionNotification(mission);
@@ -94,7 +157,7 @@ export const GameCanvas: React.FC = () => {
         return () => {
             // game.destroy(); // Implement destroy if needed
         };
-    }, [fingerprint, gachaSystem]);
+    }, [fingerprint, gachaSystem, achievementSystem]);
 
     const handleStart = (characterKey: string, playerName: string) => {
         console.log('[GameCanvas] handleStart called');
@@ -118,6 +181,7 @@ export const GameCanvas: React.FC = () => {
     };
 
     const handleMenu = () => {
+        stopBgm();
         setResult(null);
         setShowStartScreen(true);
     };
@@ -125,6 +189,31 @@ export const GameCanvas: React.FC = () => {
     const handleUlt = () => {
         if (gameRef.current) {
             gameRef.current.tryUlt();
+        }
+    };
+
+    const handleTutorialNext = () => {
+        if (tutorialStep === 'jump') {
+            setTutorialStep('doubleJump');
+        } else if (tutorialStep === 'doubleJump') {
+            setTutorialStep('attack');
+        } else if (tutorialStep === 'attack') {
+            setTutorialStep('complete');
+        } else {
+            // Complete
+            localStorage.setItem('psrun_tutorial_completed', 'true');
+            setShowTutorial(false);
+            if (gameRef.current) {
+                gameRef.current.resume();
+            }
+        }
+    };
+
+    const handleTutorialSkip = () => {
+        localStorage.setItem('psrun_tutorial_completed', 'true');
+        setShowTutorial(false);
+        if (gameRef.current) {
+            gameRef.current.resume();
         }
     };
 
@@ -142,11 +231,31 @@ export const GameCanvas: React.FC = () => {
                     height={640}
                 />
                 {gameState && <HUD state={gameState} onUlt={handleUlt} />}
-                <StartScreen onStart={handleStart} visible={showStartScreen} gachaSystem={gachaSystem} />
+                <StartScreen
+                    onStart={handleStart}
+                    visible={showStartScreen}
+                    gachaSystem={gachaSystem}
+                    achievementSystem={achievementSystem}
+                    dailyBonusSystem={dailyBonusSystem}
+                />
                 {result && <ResultScreen result={result} onRetry={handleRetry} onMenu={handleMenu} />}
                 <MissionNotification mission={missionNotification} onClose={() => setMissionNotification(null)} />
+                {achievementNotification && (
+                    <AchievementNotification
+                        title={achievementNotification.titleKey} // Note: This needs translation in component
+                        description={achievementNotification.descKey} // Note: This needs translation in component
+                        icon={achievementNotification.icon}
+                        reward={achievementNotification.reward}
+                        onClose={() => setAchievementNotification(null)}
+                    />
+                )}
+                <TutorialOverlay
+                    visible={showTutorial}
+                    step={tutorialStep}
+                    onNext={handleTutorialNext}
+                    onSkip={handleTutorialSkip}
+                />
             </div>
         </div>
     );
 };
-

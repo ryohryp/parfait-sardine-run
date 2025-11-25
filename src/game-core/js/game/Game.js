@@ -40,35 +40,12 @@ export class Game {
         this.missions = dependencies.missions || new MissionManager();
 
         // System classes
+        // System classes
         this.scoreSystem = dependencies.scoreSystem || new ScoreSystem();
         const CollisionSystemClass = dependencies.collisionSystemClass || CollisionSystem;
         this.collisionSystem = dependencies.collisionSystem || new CollisionSystemClass(this);
         const GameRendererClass = dependencies.rendererClass || GameRenderer;
         this.renderer = dependencies.renderer || new GameRendererClass(this.canvas, this);
-
-        // Game state variables
-        this.gameOn = false;
-        this.t0 = 0;
-        this.runStartTimestamp = 0;
-        this.score = 0;
-        this.level = 1;
-        this.hp = 100;
-        this.maxHp = 100;
-        this.hasUsedAutoRevive = false;
-        this.invUntil = 0;
-        this.hurtUntil = 0;
-        this.ult = 0;
-        this.ultReady = false;
-        this.ultActiveUntil = 0;
-        this.sessionCoins = 0;
-        this.stageClearUntil = 0;
-        this.levelOffset = 0;
-        this.autoShootUntil = 0;
-        this.bulletBoostUntil = 0;
-        this.scoreMulUntil = 0;
-        this.lastShot = 0;
-        this.currentStageKey = null;
-        this.bestScore = this.loadBestScore();
 
         this.init();
     }
@@ -81,6 +58,30 @@ export class Game {
         initAudio();
         this.notifyState();
         requestAnimationFrame(t => this.loop(t));
+    }
+
+    pause() {
+        this.paused = true;
+        this.pauseTime = now();
+    }
+
+    resume() {
+        if (this.paused) {
+            this.paused = false;
+            const duration = now() - this.pauseTime;
+            this.t0 += duration;
+            this.runStartTimestamp += duration;
+            // Adjust timers
+            if (this.invUntil > 0) this.invUntil += duration;
+            if (this.hurtUntil > 0) this.hurtUntil += duration;
+            if (this.autoShootUntil > 0) this.autoShootUntil += duration;
+            if (this.bulletBoostUntil > 0) this.bulletBoostUntil += duration;
+            if (this.scoreMulUntil > 0) this.scoreMulUntil += duration;
+            if (this.ultActiveUntil > 0) this.ultActiveUntil += duration;
+            if (this.stageClearUntil > 0) this.stageClearUntil += duration;
+            if (this.scoreSystem.feverModeUntil > 0) this.scoreSystem.feverModeUntil += duration;
+            if (this.scoreSystem.lastComboTime > 0) this.scoreSystem.lastComboTime += duration;
+        }
     }
 
     notifyState() {
@@ -191,7 +192,7 @@ export class Game {
     }
 
     update(t) {
-        if (!this.gameOn) return;
+        if (!this.gameOn || this.paused) return;
         const elapsed = t - this.t0;
         const remain = GAME_TIME - elapsed;
         if (remain <= 0) return this.endGame();
@@ -217,7 +218,9 @@ export class Game {
         );
         this.companion.update(t, this.items.items);
         this.enemies.enemies = this.enemies.enemies.filter(en => !en._dead);
-        this.collisionSystem.checkAll();
+        if (this.collisionSystem) {
+            this.collisionSystem.checkAll();
+        }
         if (this.ult >= 100) this.ultReady = true;
         // Render
         this.renderer.render({
@@ -242,7 +245,9 @@ export class Game {
     }
 
     loop(t) {
-        this.update(t);
+        if (!this.paused) {
+            this.update(t);
+        }
         requestAnimationFrame(t2 => this.loop(t2));
     }
 

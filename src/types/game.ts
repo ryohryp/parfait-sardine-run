@@ -76,6 +76,8 @@ export interface GameResult {
     level: number;
     newBest: boolean;
     stageClear?: boolean;
+    enemiesDefeated?: number;
+    bossesDefeated?: number;
 }
 
 export interface GameRunData {
@@ -84,6 +86,8 @@ export interface GameRunData {
     duration: number;
     coins: number;
     result: string;
+    enemiesDefeated?: number;
+    bossesDefeated?: number;
 }
 
 export interface GameCallbacks {

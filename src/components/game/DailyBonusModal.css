@@ -1,0 +1,232 @@
+/* Daily Bonus Modal Styles */
+.daily-bonus-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.4s ease-out;
+}
+
+.daily-bonus-content {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    width: 90%;
+    max-width: 640px;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: center;
+    position: relative;
+}
+
+.close-button {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.close-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.daily-bonus-header {
+    margin-bottom: 32px;
+}
+
+.daily-bonus-header h2 {
+    color: #fbbf24;
+    font-size: 36px;
+    margin: 0 0 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    font-weight: 800;
+}
+
+.daily-bonus-header p {
+    color: #94a3b8;
+    font-size: 16px;
+    margin: 0;
+}
+
+.daily-bonus-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.daily-bonus-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    border: 2px solid transparent;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    width: calc(25% - 12px);
+    box-sizing: border-box;
+}
+
+.daily-bonus-item.big {
+    width: calc(50% - 12px);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.daily-bonus-item.today {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: #fbbf24;
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+    transform: translateY(-4px);
+    z-index: 10;
+}
+
+.daily-bonus-item.claimed {
+    opacity: 0.5;
+    background: rgba(0, 0, 0, 0.2);
+    transform: scale(0.95);
+}
+
+.day-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.reward-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.daily-bonus-item.big .reward-icon {
+    font-size: 36px;
+}
+
+.reward-amount {
+    font-size: 18px;
+    font-weight: 800;
+    color: #f1f5f9;
+}
+
+.check-mark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    color: #4ade80;
+    font-weight: bold;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    animation: stamp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.today-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ef4444;
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    animation: bounce 1s infinite;
+}
+
+.daily-bonus-actions {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.claim-button {
+    background: linear-gradient(to bottom, #fbbf24, #d97706);
+    color: #fff;
+    border: none;
+    padding: 14px 48px;
+    font-size: 20px;
+    font-weight: 800;
+    border-radius: 100px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #b45309, 0 8px 20px rgba(251, 191, 36, 0.3);
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.claim-button:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #b45309, 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.claimed-message {
+    font-size: 18px;
+    color: #94a3b8;
+    font-weight: 600;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes stamp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    50% {
+        transform: translateX(-50%) translateY(-3px);
+    }
+}

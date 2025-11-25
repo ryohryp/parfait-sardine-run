@@ -5,22 +5,32 @@ import { GachaModal } from './GachaModal';
 import { CharacterSelectModal } from './CharacterSelectModal';
 import { SkillTreeModal } from './SkillTreeModal';
 import { EquipmentModal } from './EquipmentModal';
+import { AchievementModal } from './AchievementModal';
+import { DailyBonusModal } from './DailyBonusModal';
 import { useTranslation } from '../../hooks/useTranslation';
 import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
+import { AchievementSystem } from '../../game-core/js/game/AchievementSystem';
+import { DailyBonusSystem } from '../../game-core/js/game/DailyBonusSystem';
+import { useSound } from '../../hooks/useSound';
 
 interface StartScreenProps {
     onStart: (characterKey: string, playerName: string) => void;
     visible: boolean;
     gachaSystem: GachaSystem;
+    achievementSystem: AchievementSystem;
+    dailyBonusSystem: DailyBonusSystem;
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem, achievementSystem, dailyBonusSystem }) => {
     const { t, language, setLanguage } = useTranslation();
+    const { playClick } = useSound();
     const [showHowTo, setShowHowTo] = useState(false);
     const [showGacha, setShowGacha] = useState(false);
     const [showCharSelect, setShowCharSelect] = useState(false);
     const [showSkillTree, setShowSkillTree] = useState(false);
     const [showEquipment, setShowEquipment] = useState(false);
+    const [showAchievements, setShowAchievements] = useState(false);
+    const [showDailyBonus, setShowDailyBonus] = useState(false);
     const [selectedCharForProgression, setSelectedCharForProgression] = useState('parfen');
     const [playerName, setPlayerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || '');
     const [coins, setCoins] = useState(0);
@@ -34,8 +44,18 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     useEffect(() => {
         if (visible) {
             updateGachaState();
+
+            // Check daily bonus
+            const availability = dailyBonusSystem.checkAvailability();
+            if (availability.available) {
+                // Delay slightly for better UX
+                const timer = setTimeout(() => {
+                    setShowDailyBonus(true);
+                }, 800);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [visible, updateGachaState]);
+    }, [visible, updateGachaState, dailyBonusSystem]);
 
     const handleStartClick = () => {
         if (!playerName.trim()) {
@@ -111,7 +131,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', width: '100%' }}>
                         <button
-                            onClick={handleStartClick}
+                            onClick={() => { playClick(); handleStartClick(); }}
                             className="primary"
                             style={{ flex: 2, fontSize: '18px', padding: '16px' }}
                         >
@@ -119,27 +139,32 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                         </button>
                         <button
                             className="secondary"
-                            onClick={() => setShowGacha(true)}
+                            onClick={() => { playClick(); setShowGacha(true); }}
                             style={{ flex: 1, fontSize: '14px', padding: '16px', background: '#f59e0b', color: 'white', border: 'none' }}
                         >
                             {t('gacha')}
                         </button>
                     </div>
 
-                    <button className="secondary" onClick={() => setShowHowTo(true)} style={{ width: '100%' }}>
-                        {t('howToPlay')}
-                    </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }}>
+                        <button className="secondary" onClick={() => { playClick(); setShowHowTo(true); }} style={{ width: '100%', fontSize: '14px' }}>
+                            {t('howToPlay')}
+                        </button>
+                        <button className="secondary" onClick={() => { playClick(); setShowAchievements(true); }} style={{ width: '100%', fontSize: '14px' }}>
+                            {t('achievements')}
+                        </button>
+                    </div>
 
                     {/* Navigation Links */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', marginTop: '8px' }}>
-                        <Link to="/leaderboard"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>{t('ranking')}</button></Link>
-                        <Link to="/comments"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>{t('comments')}</button></Link>
-                        <Link to="/history"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>{t('history')}</button></Link>
-                        <Link to="/stats"><button className="secondary" style={{ width: '100%', fontSize: '14px' }}>{t('stats')}</button></Link>
+                        <Link to="/leaderboard"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('ranking')}</button></Link>
+                        <Link to="/comments"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('comments')}</button></Link>
+                        <Link to="/history"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('history')}</button></Link>
+                        <Link to="/stats"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('stats')}</button></Link>
                     </div>
 
                     <Link to="/settings" style={{ width: '100%' }}>
-                        <button className="secondary" style={{ width: '100%', fontSize: '14px' }}>{t('settings')}</button>
+                        <button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('settings')}</button>
                     </Link>
                 </div>
             </div>
@@ -182,6 +207,22 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                 onClose={() => setShowEquipment(false)}
                 progression={gachaSystem.progression}
             />
+            {showAchievements && (
+                <AchievementModal
+                    achievementSystem={achievementSystem}
+                    onClose={() => setShowAchievements(false)}
+                />
+            )}
+            {showDailyBonus && (
+                <DailyBonusModal
+                    dailyBonusSystem={dailyBonusSystem}
+                    gachaSystem={gachaSystem}
+                    onClose={() => setShowDailyBonus(false)}
+                    onClaim={() => {
+                        updateGachaState();
+                    }}
+                />
+            )}
         </>
     );
 };

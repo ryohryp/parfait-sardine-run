@@ -35,13 +35,50 @@ function tryUnlockAudio(audio) {
   } catch { }
 }
 
+let bgmVolume = 0.5;
+let sfxVolume = 0.6;
+
+function loadVolumeSettings() {
+  try {
+    const savedBgm = localStorage.getItem('psrun_bgm_volume');
+    const savedSfx = localStorage.getItem('psrun_sfx_volume');
+    if (savedBgm !== null) bgmVolume = parseFloat(savedBgm);
+    if (savedSfx !== null) sfxVolume = parseFloat(savedSfx);
+  } catch (e) {
+    console.warn('Failed to load volume settings:', e);
+  }
+}
+
+function setBgmVolume(vol) {
+  bgmVolume = clamp(vol, 0, 1);
+  if (stageBgm) {
+    stageBgm.volume = bgmVolume;
+  }
+  localStorage.setItem('psrun_bgm_volume', bgmVolume);
+}
+
+function setSfxVolume(vol) {
+  sfxVolume = clamp(vol, 0, 1);
+  sfxPools.forEach(pool => {
+    pool.forEach(audio => {
+      audio.volume = sfxVolume;
+    });
+  });
+  localStorage.setItem('psrun_sfx_volume', sfxVolume);
+}
+
+function getBgmVolume() { return bgmVolume; }
+function getSfxVolume() { return sfxVolume; }
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
 function ensureStageBgm() {
   if (typeof Audio === 'undefined' || !BGM_SRC) return null;
   if (!stageBgm) {
     stageBgm = new Audio(BGM_SRC);
     stageBgm.loop = true;
     stageBgm.preload = 'auto';
-    stageBgm.volume = 0.5;
+    stageBgm.volume = bgmVolume;
     registerUnlockableAudio(stageBgm);
   }
   return stageBgm;
@@ -83,7 +120,7 @@ function getSfxPool(name) {
     const pool = Array.from({ length: SFX_POOL_SIZE }, () => {
       const audio = new Audio(src);
       audio.preload = 'auto';
-      audio.volume = 0.6;
+      audio.volume = sfxVolume;
       registerUnlockableAudio(audio);
       return audio;
     });
@@ -135,9 +172,10 @@ function stopBgm() {
 }
 
 function initAudio() {
+  loadVolumeSettings();
   bindUnlockListeners();
 }
 
 initAudio();
 
-export { initAudio, playBgm, stopBgm, playSfx, registerUnlockableAudio };
+export { initAudio, playBgm, stopBgm, playSfx, registerUnlockableAudio, setBgmVolume, setSfxVolume, getBgmVolume, getSfxVolume };

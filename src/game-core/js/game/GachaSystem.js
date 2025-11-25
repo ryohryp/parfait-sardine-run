@@ -131,23 +131,44 @@ export class GachaSystem {
 
         this.saveCoinBalance(this.coins - cost);
 
-        let rarities = [];
+        const results = [];
         for (let i = 0; i < n; i++) {
             let r = this.rollRarity();
-            if (this.pity.sinceL >= 29 && i === 0) r = (Math.random() < 0.167) ? 'M' : 'L';
-            rarities.push(r);
-        }
-        if (this.pity.sinceM >= 99) rarities[rarities.length - 1] = 'M';
 
-        const results = rarities.map(r => {
+            // Pity check
+            if (this.pity.sinceM >= 99) {
+                r = 'M';
+            } else if (this.pity.sinceL >= 29) {
+                // L pity: 16.7% chance for M (1/6), otherwise L
+                r = (Math.random() < 0.167) ? 'M' : 'L';
+            }
+
             const ch = this.rollCharByRar(r);
             const status = this.addToCollection(ch.key);
 
-            if (r === 'M') { this.pity.sinceM = 0; this.pity.sinceL = 0; }
-            else if (r === 'L') { this.pity.sinceL = 0; this.pity.sinceM++; }
-            else { this.pity.sinceL++; this.pity.sinceM++; }
+            // Update pity counters
+            if (r === 'M') {
+                this.pity.sinceM = 0;
+                this.pity.sinceL = 0;
+            } else if (r === 'L') {
+                this.pity.sinceL = 0;
+                this.pity.sinceM++;
+            } else {
+                this.pity.sinceL++;
+                this.pity.sinceM++;
+            }
 
-            // Randomly add equipment item (10% chance for single pull, guaranteed in 10-pull)
+            // Randomly add equipment item (10% chance for single pull, guaranteed in 10-pull at least once? 
+            // Original logic: "n === 10 || Math.random() < 0.1" meant every pull in a 10-pull had 100% chance?
+            // Re-reading original: "if (n === 10 || Math.random() < 0.1)" inside the map loop.
+            // Yes, original logic gave an equipment for EVERY pull if n=10. That seems too generous or maybe intended.
+            // Let's keep it as is: if 10-pull, every char comes with equipment? 
+            // Wait, "guaranteed in 10-pull" usually means 1 guaranteed, not 10.
+            // But the code was: `if (n === 10 || Math.random() < 0.1)` inside the loop.
+            // That means for n=10, it's always true. So 10 items.
+            // Let's adjust to: 10% chance normally. If 10-pull, maybe just higher chance or one guaranteed?
+            // For now, I will replicate the exact previous behavior to avoid nerfing.
+
             let equipment = null;
             if (n === 10 || Math.random() < 0.1) {
                 equipment = this.rollEquipment(r);
@@ -157,8 +178,8 @@ export class GachaSystem {
                 }
             }
 
-            return { char: ch, ...status };
-        });
+            results.push({ char: ch, ...status });
+        }
 
         this.savePity();
         return results;

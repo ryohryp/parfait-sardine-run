@@ -92,6 +92,11 @@ export const locales = {
         cancel: "Cancel",
         version: "Version Info",
 
+        // Audio
+        volume: "Volume",
+        bgm: "BGM",
+        sfx: "SFX",
+
         // Characters
         char_parfen_name: "🍓 Parfen",
         char_parfen_desc: "The standard Parfait. Balanced stats for beginners.",
@@ -132,6 +137,57 @@ export const locales = {
         tipGacha: "Higher rarity characters have better stats and abilities.",
         tipCombo: "Defeat enemies quickly to build up your combo multiplier!",
         tipBoss: "Boss enemies are tough but give lots of points!",
+
+        // Achievements
+        achievements: "Achievements",
+        ach_unlocked: "Achievement Unlocked!",
+        ach_first_run_title: "First Run",
+        ach_first_run_desc: "Complete your first run.",
+        ach_score_1000_title: "Rookie Runner",
+        ach_score_1000_desc: "Reach a score of 1,000.",
+        ach_score_5000_title: "Pro Runner",
+        ach_score_5000_desc: "Reach a score of 5,000.",
+        claim: "CLAIM",
+        comeBackTomorrow: "Come back tomorrow!",
+
+        // Daily Bonus
+        dailyBonus: "Daily Bonus",
+        dailyBonusDesc: "Log in every day for rewards!",
+        day: "Day",
+        claim: "CLAIM",
+        comeBackTomorrow: "Come back tomorrow!",
+
+        // Tutorial
+        tutorial_jump_title: "Jump!",
+        tutorial_jump_desc: "Tap the screen to jump over obstacles.",
+        tutorial_tap_screen: "Tap to Continue",
+        tutorial_double_jump_title: "Double Jump!",
+        tutorial_double_jump_desc: "Tap again while in the air to jump higher.",
+        tutorial_tap_midair: "Tap to Continue",
+        tutorial_attack_title: "Attack!",
+        tutorial_attack_desc: "Use the Attack button to defeat enemies.",
+        tutorial_tap_attack: "Tap to Continue",
+        tutorial_complete_title: "Ready!",
+        tutorial_complete_desc: "You are ready to run! Collect coins and aim for a high score!",
+        tutorial_lets_go: "Let's Go!",
+        skip: "Skip",
+
+        // Pity
+        pityL: "{{count}} pulls until L+ guaranteed!",
+        pityM: "{{count}} pulls until M guaranteed!",
+
+        // Gacha Details
+        ratesTitle: "Drop Rates",
+        ratesDesc: "Probability per rarity:",
+        rateM: "M (Mythical): 1%",
+        rateL: "L (Legendary): 5%",
+        rateE: "E (Epic): 10%",
+        rateR: "R (Rare): 24%",
+        rateC: "C (Common): 60%",
+        pityTitle: "Pity System",
+        pityDescL: "If L+ is not obtained in 30 pulls, next pull guarantees L+.",
+        pityDescM: "If M is not obtained in 100 pulls, next pull guarantees M.",
+        viewRates: "Rates & Details",
     },
     ja: {
         gameTitle: "パフェとイワシ RUN!",
@@ -226,6 +282,11 @@ export const locales = {
         cancel: "キャンセル",
         version: "バージョン情報",
 
+        // Audio
+        volume: "音量",
+        bgm: "BGM",
+        sfx: "効果音",
+
         // Characters
         char_parfen_name: "🍓パフェン",
         char_parfen_desc: "基本のパフェ。バランスが良く扱いやすい。",
@@ -266,6 +327,71 @@ export const locales = {
         tipGacha: "レアリティが高いキャラほど強力なステータスとスキルを持っています。",
         tipCombo: "敵を素早く倒してコンボを繋げるとスコア倍率アップ！",
         tipBoss: "ボス敵は強いけど、倒すと大量のポイントがもらえます！",
+
+        // Achievements
+        achievements: "実績",
+        ach_unlocked: "実績解除！",
+        ach_first_run_title: "初めの一歩",
+        ach_first_run_desc: "初めてゲームをプレイする。",
+        ach_score_1000_title: "ルーキーランナー",
+        ach_score_1000_desc: "スコア1,000を達成する。",
+        ach_score_5000_title: "プロランナー",
+        ach_score_5000_desc: "スコア5,000を達成する。",
+        ach_score_10000_title: "伝説のランナー",
+        ach_score_10000_desc: "スコア10,000を達成する。",
+        ach_gacha_10_title: "ガチャ中毒",
+        ach_gacha_10_desc: "ガチャを合計10回回す。",
+        ach_collector_5_title: "コレクター",
+        ach_collector_5_desc: "キャラクターを5種類集める。",
+        ach_boss_killer_title: "ボススレイヤー",
+        ach_boss_killer_desc: "ボスを1体倒す。",
+        ach_enemy_hunter_title: "エネミーハンター",
+        ach_enemy_hunter_desc: "敵を合計100体倒す。",
+        ach_rich_title: "大富豪",
+        ach_rich_desc: "コインを合計10,000枚集める。",
+        ach_veteran_title: "ベテランランナー",
+        ach_veteran_desc: "合計50回プレイする。",
+        ach_collector_10_title: "マスターコレクター",
+        ach_collector_10_desc: "キャラクターを10種類集める。",
+
+        // Daily Bonus
+        dailyBonus: "デイリーボーナス",
+        dailyBonusDesc: "毎日ログインして報酬をゲット！",
+        day: "日目",
+        claim: "受け取る",
+        comeBackTomorrow: "また明日来てね！",
+
+        // Tutorial
+        tutorial_jump_title: "ジャンプ！",
+        tutorial_jump_desc: "画面をタップして障害物を飛び越えよう。",
+        tutorial_tap_screen: "タップして次へ",
+        tutorial_double_jump_title: "2段ジャンプ！",
+        tutorial_double_jump_desc: "空中でタップすると、さらに高く飛べるよ。",
+        tutorial_tap_midair: "タップして次へ",
+        tutorial_attack_title: "攻撃！",
+        tutorial_attack_desc: "攻撃ボタンで敵を倒そう。",
+        tutorial_tap_attack: "タップして次へ",
+        tutorial_complete_title: "準備完了！",
+        tutorial_complete_desc: "さあ、冒険に出発だ！コインを集めてハイスコアを目指そう！",
+        tutorial_lets_go: "出発！",
+        skip: "スキップ",
+
+        // Pity
+        pityL: "あと {{count}} 回でL以上確定！",
+        pityM: "あと {{count}} 回でM確定！",
+
+        // Gacha Details
+        ratesTitle: "提供割合",
+        ratesDesc: "レアリティごとの排出率は以下の通りです。",
+        rateM: "M (ミシカル): 1%",
+        rateL: "L (レジェンド): 5%",
+        rateE: "E (エピック): 10%",
+        rateR: "R (レア): 24%",
+        rateC: "C (コモン): 60%",
+        pityTitle: "天井システム",
+        pityDescL: "30回連続でL以上が出なかった場合、次回のガチャでL以上が確定します。",
+        pityDescM: "100回連続でMが出なかった場合、次回のガチャでMが確定します。",
+        viewRates: "提供割合・詳細",
     }
 };
 

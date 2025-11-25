@@ -199,26 +199,81 @@ export class GameRenderer {
      */
     drawComboText(comboCount, comboMultiplier, lastComboTime) {
         // Show combo if count > 0 and recently active (within 2 seconds)
-        const comboActive = comboCount > 0 && (now() - lastComboTime < 2000);
+        const timeSinceHit = now() - lastComboTime;
+        const comboDuration = 2000;
+        const comboActive = comboCount > 0 && (timeSinceHit < comboDuration);
+
         if (!comboActive) return;
 
         this.ctx.save();
-        this.ctx.fillStyle = '#ffeb3b';
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 3;
-        this.ctx.font = 'bold 32px sans-serif';
-        this.ctx.textAlign = 'right';
-        const comboText = `${comboCount} COMBO!`;
-        this.ctx.strokeText(comboText, this.canvas.width - 20, 80);
-        this.ctx.fillText(comboText, this.canvas.width - 20, 80);
 
+        // Dynamic styling based on multiplier
+        let color = '#ffffff';
+        let scale = 1.0;
+
+        if (comboMultiplier >= 5.0) color = '#d946ef'; // Fuchsia
+        else if (comboMultiplier >= 3.0) color = '#ef4444'; // Red
+        else if (comboMultiplier >= 2.0) color = '#f97316'; // Orange
+        else if (comboMultiplier >= 1.5) color = '#eab308'; // Yellow
+
+        // Pop animation on hit
+        if (timeSinceHit < 200) {
+            scale = 1.0 + 0.5 * (1 - timeSinceHit / 200);
+        }
+
+        // Shake effect on hit
+        let shakeX = 0;
+        let shakeY = 0;
+        if (timeSinceHit < 100) {
+            shakeX = (Math.random() - 0.5) * 10;
+            shakeY = (Math.random() - 0.5) * 10;
+        }
+
+        const x = this.canvas.width - 20 + shakeX;
+        const y = 80 + shakeY;
+
+        this.ctx.textAlign = 'right';
+
+        // Draw Combo Count
+        this.ctx.translate(x, y);
+        this.ctx.scale(scale, scale);
+
+        this.ctx.fillStyle = color;
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 4;
+        this.ctx.lineJoin = 'round';
+        this.ctx.font = 'bold italic 40px "Arial Black", sans-serif';
+
+        const comboText = `${comboCount} COMBO!`;
+        this.ctx.strokeText(comboText, 0, 0);
+        this.ctx.fillText(comboText, 0, 0);
+
+        // Draw Multiplier
         if (comboMultiplier > 1) {
-            this.ctx.fillStyle = '#00e676';
+            this.ctx.fillStyle = '#fff';
             this.ctx.font = 'bold 24px sans-serif';
             const mulText = `x${comboMultiplier.toFixed(1)}`;
-            this.ctx.strokeText(mulText, this.canvas.width - 20, 110);
-            this.ctx.fillText(mulText, this.canvas.width - 20, 110);
+            this.ctx.strokeText(mulText, 0, 35);
+            this.ctx.fillText(mulText, 0, 35);
         }
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+
+        // Draw Combo Timer Bar
+        const barWidth = 200;
+        const barHeight = 6;
+        const progress = 1 - (timeSinceHit / comboDuration);
+        const barX = this.canvas.width - 20 - barWidth;
+        const barY = 130;
+
+        // Bar background
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Bar fill
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(barX + barWidth * (1 - progress), barY, barWidth * progress, barHeight);
+
         this.ctx.restore();
     }
 

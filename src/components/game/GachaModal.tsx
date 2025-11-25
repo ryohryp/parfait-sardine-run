@@ -18,6 +18,8 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
     const [results, setResults] = useState<GachaResultItem[] | null>(null);
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
 
+    const [showRates, setShowRates] = useState(false);
+
     if (!visible) return null;
 
     const handleRoll = (n: number) => {
@@ -80,7 +82,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
 
     return (
         <div className="overlay visible" style={{ zIndex: 100 }}>
-            <div className="modal-content" style={{ maxWidth: '500px', textAlign: 'center' }}>
+            <div className="modal-content" style={{ maxWidth: '500px', textAlign: 'center', position: 'relative' }}>
                 <div className="cardHeader">
                     <h2>{t('gacha')}</h2>
                     <button className="ghost" onClick={onClose}>✕</button>
@@ -88,13 +90,31 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
 
                 <div className="cardBody" style={{ minHeight: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
 
-                    {animationState === 'idle' && (
+                    {animationState === 'idle' && !showRates && (
                         <>
                             <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎁</div>
                             <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px' }}>
                                 {t('coins')}: {gachaSystem.coins}
                             </div>
-                            <p style={{ opacity: 0.7, marginBottom: '32px' }}>
+
+                            {/* Pity Counters */}
+                            <div style={{
+                                background: 'rgba(0,0,0,0.05)',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                fontSize: '12px',
+                                width: '100%'
+                            }}>
+                                <div style={{ color: '#d97706', fontWeight: 'bold' }}>
+                                    {t('pityL', { count: 30 - gachaSystem.pity.sinceL })}
+                                </div>
+                                <div style={{ color: '#db2777', fontWeight: 'bold' }}>
+                                    {t('pityM', { count: 100 - gachaSystem.pity.sinceM })}
+                                </div>
+                            </div>
+
+                            <p style={{ opacity: 0.7, marginBottom: '24px' }}>
                                 Collect characters to power up!
                             </p>
 
@@ -112,7 +132,39 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                     {t('roll10')}
                                 </button>
                             </div>
+
+                            <button
+                                className="text-button"
+                                onClick={() => setShowRates(true)}
+                                style={{ marginTop: '16px', fontSize: '12px', textDecoration: 'underline', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}
+                            >
+                                {t('viewRates')}
+                            </button>
                         </>
+                    )}
+
+                    {showRates && (
+                        <div style={{ textAlign: 'left', width: '100%', fontSize: '14px' }}>
+                            <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>{t('ratesTitle')}</h3>
+                            <p style={{ marginBottom: '8px' }}>{t('ratesDesc')}</p>
+                            <ul style={{ listStyle: 'none', padding: 0, marginBottom: '20px' }}>
+                                <li style={{ color: '#ff0080', fontWeight: 'bold' }}>{t('rateM')}</li>
+                                <li style={{ color: '#ff8c00', fontWeight: 'bold' }}>{t('rateL')}</li>
+                                <li style={{ color: '#a855f7' }}>{t('rateE')}</li>
+                                <li style={{ color: '#3b82f6' }}>{t('rateR')}</li>
+                                <li style={{ color: '#666' }}>{t('rateC')}</li>
+                            </ul>
+
+                            <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '12px' }}>{t('pityTitle')}</h3>
+                            <ul style={{ listStyle: 'none', padding: 0, marginBottom: '20px' }}>
+                                <li style={{ marginBottom: '4px' }}>• {t('pityDescL')}</li>
+                                <li>• {t('pityDescM')}</li>
+                            </ul>
+
+                            <button className="secondary" onClick={() => setShowRates(false)} style={{ width: '100%' }}>
+                                {t('close')}
+                            </button>
+                        </div>
                     )}
 
                     {animationState === 'rolling' && (

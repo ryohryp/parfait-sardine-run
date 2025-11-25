@@ -1,0 +1,100 @@
+.tutorial-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.tutorial-content {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 80%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tutorial-step-indicator {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.tutorial-content h2 {
+    color: #0f172a;
+    margin: 0 0 12px 0;
+    font-size: 24px;
+}
+
+.tutorial-content p {
+    color: #334155;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.tutorial-action {
+    font-weight: bold;
+    color: #2563eb;
+    font-size: 18px;
+}
+
+.blink {
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.tutorial-arrow {
+    position: absolute;
+    font-size: 48px;
+    animation: bounce 1s infinite;
+}
+
+.attack-arrow {
+    bottom: 100px;
+    right: 40px;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}

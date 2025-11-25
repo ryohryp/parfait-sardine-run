@@ -6,7 +6,7 @@ import type { Language } from '../i18n/locales';
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: keyof typeof locales.en) => string;
+    t: (key: keyof typeof locales.en, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -25,8 +25,14 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         localStorage.setItem('psrun_language', lang);
     };
 
-    const t = (key: keyof typeof locales.en) => {
-        return locales[language][key] || key;
+    const t = (key: keyof typeof locales.en, params?: Record<string, string | number>) => {
+        let text = locales[language][key] || key;
+        if (params) {
+            Object.entries(params).forEach(([k, v]) => {
+                text = text.replace(new RegExp(`{{${k}}}`, 'g'), String(v));
+            });
+        }
+        return text;
     };
 
     return (
