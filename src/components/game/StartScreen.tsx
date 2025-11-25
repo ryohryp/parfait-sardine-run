@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { HowToModal } from './HowToModal';
+import { Link, useNavigate } from 'react-router-dom';
 import { GachaModal } from './GachaModal';
 import { CharacterSelectModal } from './CharacterSelectModal';
 import { SkillTreeModal } from './SkillTreeModal';
@@ -24,7 +23,7 @@ interface StartScreenProps {
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem, achievementSystem, dailyBonusSystem }) => {
     const { t, language, setLanguage } = useTranslation();
     const { playClick } = useSound();
-    const [showHowTo, setShowHowTo] = useState(false);
+    const navigate = useNavigate();
     const [showGacha, setShowGacha] = useState(false);
     const [showCharSelect, setShowCharSelect] = useState(false);
     const [showSkillTree, setShowSkillTree] = useState(false);
@@ -147,7 +146,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }}>
-                        <button className="secondary" onClick={() => { playClick(); setShowHowTo(true); }} style={{ width: '100%', fontSize: '14px' }}>
+                        <button className="secondary" onClick={() => { playClick(); navigate('/manual'); }} style={{ width: '100%', fontSize: '14px' }}>
                             {t('howToPlay')}
                         </button>
                         <button className="secondary" onClick={() => { playClick(); setShowAchievements(true); }} style={{ width: '100%', fontSize: '14px' }}>
@@ -170,7 +169,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
             </div>
 
             {/* Modals */}
-            <HowToModal visible={showHowTo} onClose={() => setShowHowTo(false)} />
             <GachaModal
                 visible={showGacha}
                 onClose={() => {

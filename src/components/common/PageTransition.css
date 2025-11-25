@@ -115,11 +115,13 @@ a:hover {
 
 /* Card hover effects */
 .stat-card,
+.page-stat-card,
 .data-table tr {
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
-.stat-card:hover {
+.stat-card:hover,
+.page-stat-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }

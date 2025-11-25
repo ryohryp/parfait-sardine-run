@@ -6,6 +6,7 @@ import { HistoryPage } from './routes/HistoryPage';
 import { StatsPage } from './routes/StatsPage';
 import { LeaderboardPage } from './routes/LeaderboardPage';
 import { SettingsPage } from './routes/SettingsPage';
+import { ManualPage } from './routes/ManualPage';
 import { LoadingScreen } from './components/game/LoadingScreen';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/manual" element={<ManualPage />} />
       </Routes>
     </>
   );

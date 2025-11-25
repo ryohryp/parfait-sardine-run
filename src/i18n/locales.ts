@@ -218,11 +218,25 @@ export const locales = {
         pityDescL: "If L+ is not obtained in 30 pulls, next pull guarantees L+.",
         pityDescM: "If M is not obtained in 100 pulls, next pull guarantees M.",
         viewRates: "Rates & Details",
+
+        // Manual
+        manual_title: "User Manual",
+        manual_progression_title: "Progression",
+        manual_level_title: "Level Up",
+        manual_level_desc: "Duplicate characters grant XP. Level up to increase stats!",
+        manual_skill_title: "Skill Tree",
+        manual_skill_desc: "Use Skill Points (SP) from leveling to unlock special abilities.",
+        manual_equip_title: "Equipment",
+        manual_equip_desc: "Equip items found in Gacha to boost your stats further.",
+        manual_combo_title: "Combo System",
+        manual_combo_desc: "Defeat enemies quickly to increase your score multiplier.",
+        manual_boss_title: "Boss Battles",
+        manual_boss_desc: "Defeat bosses to earn massive points and coins.",
     },
     ja: {
         gameTitle: "パフェとイワシ RUN!",
         start: "スタート",
-        howToPlay: "📖 遊び方",
+        howToPlay: "📖 マニュアル",
         ranking: "🏆 ランキング",
         comments: "💬 コメント",
         history: "📜 履歴",
@@ -436,6 +450,20 @@ export const locales = {
         pityDescL: "30回連続でL以上が出なかった場合、次回のガチャでL以上が確定します。",
         pityDescM: "100回連続でMが出なかった場合、次回のガチャでMが確定します。",
         viewRates: "提供割合・詳細",
+
+        // Manual
+        manual_title: "ユーザーマニュアル",
+        manual_progression_title: "育成・強化",
+        manual_level_title: "レベルアップ",
+        manual_level_desc: "ガチャで同じキャラを入手すると経験値を獲得。レベルアップでステータスが上昇！",
+        manual_skill_title: "スキルツリー",
+        manual_skill_desc: "レベルアップで得たSPを使って、キャラごとの特殊能力を解放しよう。",
+        manual_equip_title: "装備",
+        manual_equip_desc: "ガチャで手に入る装備アイテムで、さらにステータスを強化できるぞ。",
+        manual_combo_title: "コンボシステム",
+        manual_combo_desc: "敵を素早く連続で倒すとコンボ発生！スコア倍率がアップする。",
+        manual_boss_title: "ボスバトル",
+        manual_boss_desc: "特定の距離でボスが出現。倒すと大量のスコアとコインをゲット！",
     }
 };
 

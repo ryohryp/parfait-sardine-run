@@ -107,19 +107,19 @@
     padding-bottom: 8px;
 }
 
-.stats-grid {
+.detail-stats-grid {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.stat-row {
+.detail-stat-row {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.stat-label {
+.detail-stat-label {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -129,7 +129,7 @@
     font-weight: 600;
 }
 
-.stat-bar-container {
+.detail-stat-bar-container {
     flex: 1;
     height: 12px;
     background: #f1f5f9;
@@ -138,13 +138,13 @@
     overflow: hidden;
 }
 
-.stat-bar-fill {
+.detail-stat-bar-fill {
     height: 100%;
     background: linear-gradient(90deg, #3b82f6, #60a5fa);
     border-radius: 6px;
 }
 
-.stat-value {
+.detail-stat-value {
     position: absolute;
     right: 4px;
     top: 50%;

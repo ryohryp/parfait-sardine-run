@@ -34,17 +34,17 @@ export const CharacterDetailModal: React.FC<CharacterDetailModalProps> = ({
     const renderStatBar = (label: string, value: number, max: number, icon: string) => {
         const percentage = Math.min((value / max) * 100, 100);
         return (
-            <div className="stat-row">
-                <div className="stat-label">
-                    <span className="stat-icon">{icon}</span>
-                    <span className="stat-name">{label}</span>
+            <div className="detail-stat-row">
+                <div className="detail-stat-label">
+                    <span className="detail-stat-icon">{icon}</span>
+                    <span className="detail-stat-name">{label}</span>
                 </div>
-                <div className="stat-bar-container">
+                <div className="detail-stat-bar-container">
                     <div
-                        className="stat-bar-fill"
+                        className="detail-stat-bar-fill"
                         style={{ width: `${percentage}%` }}
                     ></div>
-                    <span className="stat-value">{value.toFixed(2)}</span>
+                    <span className="detail-stat-value">{value.toFixed(2)}</span>
                 </div>
             </div>
         );
@@ -73,7 +73,7 @@ export const CharacterDetailModal: React.FC<CharacterDetailModalProps> = ({
                 <div className="detail-body">
                     <div className="detail-section">
                         <h3>{t('stats')}</h3>
-                        <div className="stats-grid">
+                        <div className="detail-stats-grid">
                             {renderStatBar('Speed', characterData.move, MAX_STATS.move, '🏃')}
                             {renderStatBar('Jump', characterData.jump, MAX_STATS.jump, '🦘')}
                             {renderStatBar('Bullet', characterData.bullet, MAX_STATS.bullet, '🔫')}

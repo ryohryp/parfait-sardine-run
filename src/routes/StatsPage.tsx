@@ -44,35 +44,35 @@ export const StatsPage: React.FC = () => {
                     {error && <p style={{ color: '#f44336' }}>{error}</p>}
 
                     {stats && (
-                        <div className="stats-grid">
+                        <div className="page-stats-grid">
                             {stats.total_users !== undefined && (
-                                <div className="stat-card">
+                                <div className="page-stat-card">
                                     <h3>{t('totalUsers')}</h3>
-                                    <div className="stat-value">{stats.total_users.toLocaleString()}</div>
+                                    <div className="page-stat-value">{stats.total_users.toLocaleString()}</div>
                                 </div>
                             )}
                             {stats.played_users !== undefined && (
-                                <div className="stat-card">
+                                <div className="page-stat-card">
                                     <h3>{t('playedUsers')}</h3>
-                                    <div className="stat-value">{stats.played_users.toLocaleString()}</div>
+                                    <div className="page-stat-value">{stats.played_users.toLocaleString()}</div>
                                 </div>
                             )}
-                            <div className="stat-card">
+                            <div className="page-stat-card">
                                 <h3>{t('totalRuns')}</h3>
-                                <div className="stat-value">{(stats.total_runs || 0).toLocaleString()}</div>
+                                <div className="page-stat-value">{(stats.total_runs || 0).toLocaleString()}</div>
                             </div>
-                            <div className="stat-card">
+                            <div className="page-stat-card">
                                 <h3>{t('maxScore')}</h3>
-                                <div className="stat-value">{(stats.max_score || 0).toLocaleString()}</div>
+                                <div className="page-stat-value">{(stats.max_score || 0).toLocaleString()}</div>
                             </div>
-                            <div className="stat-card">
+                            <div className="page-stat-card">
                                 <h3>{t('avgScore')}</h3>
-                                <div className="stat-value">{(stats.avg_score || 0).toLocaleString()}</div>
+                                <div className="page-stat-value">{(stats.avg_score || 0).toLocaleString()}</div>
                             </div>
                             {stats.today_users !== undefined && (
-                                <div className="stat-card">
+                                <div className="page-stat-card">
                                     <h3>{t('todayUsers')}</h3>
-                                    <div className="stat-value">{stats.today_users.toLocaleString()}</div>
+                                    <div className="page-stat-value">{stats.today_users.toLocaleString()}</div>
                                 </div>
                             )}
                         </div>
