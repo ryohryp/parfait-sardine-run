@@ -133,52 +133,69 @@ export class GachaSystem {
 
         const results = [];
         for (let i = 0; i < n; i++) {
-            let r = this.rollRarity();
+            // Determine if this roll is Character or Equipment
+            // 50% chance for each, unless pity forces a character
+            let isCharacter = Math.random() < 0.5;
 
-            // Pity check
-            if (this.pity.sinceM >= 99) {
-                r = 'M';
-            } else if (this.pity.sinceL >= 29) {
-                // L pity: 16.7% chance for M (1/6), otherwise L
-                r = (Math.random() < 0.167) ? 'M' : 'L';
+            // Check pity - if pity is hit, FORCE character
+            if (this.pity.sinceM >= 99 || this.pity.sinceL >= 29) {
+                isCharacter = true;
             }
 
-            const ch = this.rollCharByRar(r);
-            const status = this.addToCollection(ch.key);
+            if (isCharacter) {
+                let r = this.rollRarity();
 
-            // Update pity counters
-            if (r === 'M') {
-                this.pity.sinceM = 0;
-                this.pity.sinceL = 0;
-            } else if (r === 'L') {
-                this.pity.sinceL = 0;
-                this.pity.sinceM++;
+                // Pity check
+                if (this.pity.sinceM >= 99) {
+                    r = 'M';
+                } else if (this.pity.sinceL >= 29) {
+                    // L pity: 16.7% chance for M (1/6), otherwise L
+                    r = (Math.random() < 0.167) ? 'M' : 'L';
+                }
+
+                const ch = this.rollCharByRar(r);
+                const status = this.addToCollection(ch.key);
+
+                // Update pity counters
+                if (r === 'M') {
+                    this.pity.sinceM = 0;
+                    this.pity.sinceL = 0;
+                } else if (r === 'L') {
+                    this.pity.sinceL = 0;
+                    this.pity.sinceM++;
+                } else {
+                    this.pity.sinceL++;
+                    this.pity.sinceM++;
+                }
+
+                results.push({ type: 'char', char: ch, ...status });
             } else {
+                // Equipment Roll
+                // Equipment rarity is independent of character pity
+                const r = this.rollRarity(); // Use same rarity distribution for equipment
+                const equipment = this.rollEquipment(r);
+
+                if (equipment) {
+                    const isNewEquip = this.progression.addEquipmentToInventory(equipment.id);
+                    results.push({ type: 'equip', item: equipment, isNew: isNewEquip, rar: r });
+                } else {
+                    // Fallback to low rarity equipment if something goes wrong, or just give coins?
+                    // For now, let's just force a Common equipment if null (shouldn't happen with correct data)
+                    const fallback = this.rollEquipment('C');
+                    if (fallback) {
+                        const isNewEquip = this.progression.addEquipmentToInventory(fallback.id);
+                        results.push({ type: 'equip', item: fallback, isNew: isNewEquip, rar: 'C' });
+                    }
+                }
+
+                // Equipment rolls do NOT reset character pity, but they DO increment it?
+                // Usually gacha pity is only for characters. Let's say equipment pulls don't affect character pity.
+                // OR, maybe they count towards "pulls since last M"?
+                // User didn't specify. Let's be generous and say they DON'T reset, but they DON'T increment either?
+                // Or maybe they increment? Let's increment to be nice.
                 this.pity.sinceL++;
                 this.pity.sinceM++;
             }
-
-            // Randomly add equipment item (10% chance for single pull, guaranteed in 10-pull at least once? 
-            // Original logic: "n === 10 || Math.random() < 0.1" meant every pull in a 10-pull had 100% chance?
-            // Re-reading original: "if (n === 10 || Math.random() < 0.1)" inside the map loop.
-            // Yes, original logic gave an equipment for EVERY pull if n=10. That seems too generous or maybe intended.
-            // Let's keep it as is: if 10-pull, every char comes with equipment? 
-            // Wait, "guaranteed in 10-pull" usually means 1 guaranteed, not 10.
-            // But the code was: `if (n === 10 || Math.random() < 0.1)` inside the loop.
-            // That means for n=10, it's always true. So 10 items.
-            // Let's adjust to: 10% chance normally. If 10-pull, maybe just higher chance or one guaranteed?
-            // For now, I will replicate the exact previous behavior to avoid nerfing.
-
-            let equipment = null;
-            if (n === 10 || Math.random() < 0.1) {
-                equipment = this.rollEquipment(r);
-                if (equipment) {
-                    const isNewEquip = this.progression.addEquipmentToInventory(equipment.id);
-                    status.equipment = { item: equipment, isNew: isNewEquip };
-                }
-            }
-
-            results.push({ char: ch, ...status });
         }
 
         this.savePity();
@@ -197,19 +214,16 @@ export class GachaSystem {
             this.progression.initializeCharacter(key);
         } else {
             this.collection.owned[key].dup++;
-            const rar = characters[key].rar;
-            const inc = rar === 'M' ? 0.04 : rar === 'L' ? 0.03 : rar === 'E' ? 0.025 : rar === 'R' ? 0.015 : 0.005;
-            this.collection.owned[key].limit = +(this.collection.owned[key].limit + inc).toFixed(3);
 
-            // NEW: Perform limit break on duplicate
+            // Perform Limit Break (Level Cap Increase)
             limitBreakPerformed = this.progression.limitBreak(key);
             isLimitBreak = limitBreakPerformed;
 
-            // If max limit breaks reached, exp is already added by CharacterProgression
-            logger.info('Duplicate character obtained', {
+            // NO XP on duplicate (as requested), but Limit Break is allowed
+            logger.info('Duplicate character obtained - Limit Break attempted', {
                 key,
-                limitBreakPerformed,
-                dup: this.collection.owned[key].dup
+                dup: this.collection.owned[key].dup,
+                limitBreakPerformed
             });
         }
         this.saveCollection();
@@ -232,26 +246,20 @@ export class GachaSystem {
      * @param {string} charRarity 
      * @returns {Object|null}
      */
-    rollEquipment(charRarity) {
-        // Match equipment rarity to character rarity with some variation
-        let targetRarity;
-        const roll = Math.random();
+    rollEquipment(rarity) {
+        // Match equipment rarity to requested rarity
+        // If exact rarity not found, try one lower
+        let pool = Object.values(equipmentItems).filter(e => e.rarity === rarity);
 
-        if (charRarity === 'M') {
-            targetRarity = roll < 0.5 ? 'L' : 'E';
-        } else if (charRarity === 'L') {
-            targetRarity = roll < 0.3 ? 'L' : roll < 0.8 ? 'E' : 'R';
-        } else if (charRarity === 'E') {
-            targetRarity = roll < 0.4 ? 'E' : 'R';
-        } else if (charRarity === 'R') {
-            targetRarity = roll < 0.3 ? 'R' : 'C';
-        } else {
-            targetRarity = 'C';
+        if (pool.length === 0) {
+            // Fallback logic
+            if (rarity === 'M') pool = Object.values(equipmentItems).filter(e => e.rarity === 'L');
+            else if (rarity === 'L') pool = Object.values(equipmentItems).filter(e => e.rarity === 'E');
+            else if (rarity === 'E') pool = Object.values(equipmentItems).filter(e => e.rarity === 'R');
+            else pool = Object.values(equipmentItems).filter(e => e.rarity === 'C');
         }
 
-        const pool = Object.values(equipmentItems).filter(e => e.rarity === targetRarity);
         if (pool.length === 0) return null;
-
         return pool[Math.floor(Math.random() * pool.length)];
     }
 }

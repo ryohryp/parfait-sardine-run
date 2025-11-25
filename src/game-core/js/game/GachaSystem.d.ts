@@ -71,8 +71,8 @@ export class GachaSystem {
     addCoins(amount: number): void;
     rollRarity(): string;
     rollCharByRar(r: string): Character;
-    doGacha(n: number): (CharacterOwned & { char: Character; isLimitBreak: boolean; limitBreakPerformed: boolean; isNew: boolean })[] | null;
-    addToCollection(key: string): CharacterOwned & { isNew: boolean; isLimitBreak: boolean; limitBreakPerformed: boolean };
+    doGacha(n: number): ({ type: 'char'; char: Character; isNew: boolean; isLimitBreak: boolean; limitBreakPerformed: boolean } | { type: 'equip'; item: EquipmentItem; isNew: boolean; rar: string })[] | null;
+    addToCollection(key: string): { isNew: boolean; isLimitBreak: boolean; limitBreakPerformed: boolean };
     setCurrentChar(key: string): boolean;
-    rollEquipment(charRarity: string): EquipmentItem | null;
+    rollEquipment(rarity: string): EquipmentItem | null;
 }

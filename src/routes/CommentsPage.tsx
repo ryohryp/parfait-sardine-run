@@ -137,15 +137,15 @@ export const CommentsPage: React.FC = () => {
                         {error && <p style={{ color: '#f44336' }}>{error}</p>}
 
                         {comments.map((comment) => (
-                            <div key={comment.id} className="comment-card">
-                                <div className="comment-header">
-                                    <span className="comment-author">{comment.name}</span>
+                            <div key={comment.id} className="commentItem">
+                                <div className="commentItemHeader">
+                                    <span className="commentItemName">{comment.name}</span>
                                     <span className="comment-date">{comment.date}</span>
                                 </div>
-                                <div className="comment-body">{comment.message}</div>
+                                <div className="commentItemMessage">{comment.message}</div>
                                 <div className="comment-footer">
                                     <button
-                                        className={`like-btn ${comment.liked ? 'liked' : ''}`}
+                                        className={`commentLikeBtn ${comment.liked ? 'isLiked' : ''}`}
                                         onClick={() => handleLike(comment.id)}
                                     >
                                         ❤️ {comment.like_count}

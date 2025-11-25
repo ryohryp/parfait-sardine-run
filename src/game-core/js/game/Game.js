@@ -268,6 +268,7 @@ export class Game {
     }
 
     loop(t) {
+        if (this.destroyed) return;
         if (!this.paused) {
             this.update(t);
         }
@@ -437,5 +438,15 @@ export class Game {
 
     updateCharInfo() {
         // UI updates handled elsewhere
+    }
+
+    destroy() {
+        this.gameOn = false;
+        this.paused = true;
+        this.destroyed = true;
+        stopBgm();
+
+        // Clear callbacks to prevent further execution
+        this.callbacks = {};
     }
 }

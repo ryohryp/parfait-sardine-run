@@ -69,9 +69,9 @@ export const HistoryPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {runs.map((run) => (
+                            {runs.slice(0, 10).map((run) => (
                                 <tr key={run.id}>
-                                    <td>{run.date}</td>
+                                    <td>{new Date(run.date).toLocaleString()}</td>
                                     <td>{run.stage}</td>
                                     <td className="text-right">{run.score.toLocaleString()}</td>
                                     <td className="text-right">{run.coins}</td>

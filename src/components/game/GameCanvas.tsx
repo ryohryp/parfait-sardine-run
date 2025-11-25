@@ -95,7 +95,9 @@ export const GameCanvas: React.FC = () => {
 
                 if (fingerprint) {
                     try {
+                        console.log('[GameCanvas] Starting run with fingerprint:', fingerprint);
                         const res = await runsApi.startRun(fingerprint);
+                        console.log('[GameCanvas] Run started:', res);
                         if (res.run_id && res.nonce) {
                             currentRunId.current = res.run_id;
                             currentNonce.current = res.nonce;
@@ -106,16 +108,26 @@ export const GameCanvas: React.FC = () => {
                 }
             },
             onRunFinish: async (data: GameRunData) => {
+                console.log('[GameCanvas] onRunFinish called with:', {
+                    data,
+                    fingerprint,
+                    currentRunId: currentRunId.current,
+                    currentNonce: currentNonce.current
+                });
+
                 if (fingerprint && currentRunId.current && currentNonce.current) {
                     try {
+                        console.log('[GameCanvas] Attempting to finish run:', currentRunId.current);
                         await runsApi.finishRun(currentRunId.current, {
                             ...data,
                             fingerprint,
                             nonce: currentNonce.current
                         });
+                        console.log('[GameCanvas] Run finished successfully');
 
                         // Submit to Leaderboard
                         if (playerNameRef.current) {
+                            console.log('[GameCanvas] Submitting to leaderboard');
                             await leaderboardApi.submitScore({
                                 name: playerNameRef.current,
                                 score: data.score,
@@ -124,12 +136,19 @@ export const GameCanvas: React.FC = () => {
                                 char: gameRef.current?.gacha.collection.current || 'parfen',
                                 fingerprint
                             });
+                            console.log('[GameCanvas] Leaderboard submission successful');
                         }
                     } catch (e) {
                         console.error('Failed to finish run log or submit score', e);
                     }
                     currentRunId.current = null;
                     currentNonce.current = null;
+                } else {
+                    console.warn('[GameCanvas] Skipping run finish - missing data:', {
+                        hasFingerprint: !!fingerprint,
+                        hasRunId: !!currentRunId.current,
+                        hasNonce: !!currentNonce.current
+                    });
                 }
             },
             onStageClear: (data: GameResult) => {
@@ -159,7 +178,9 @@ export const GameCanvas: React.FC = () => {
         gameRef.current = game;
 
         return () => {
-            // game.destroy(); // Implement destroy if needed
+            if (gameRef.current) {
+                gameRef.current.destroy();
+            }
         };
     }, [fingerprint, gachaSystem, achievementSystem]);
 

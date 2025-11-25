@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { GachaSystem, type CharacterOwned, type Character } from '../../game-core/js/game/GachaSystem.js';
+import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
+import type { Character } from '../../game-core/js/game/GachaSystem.js';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useSound } from '../../hooks/useSound';
 import { rarClass } from '../../game-core/js/game-data/characters.js';
@@ -12,7 +13,11 @@ interface GachaModalProps {
 }
 
 type AnimationState = 'idle' | 'rolling' | 'cutscene' | 'ultra-cutscene' | 'result';
-type GachaResultItem = CharacterOwned & { char: Character; isLimitBreak: boolean; limitBreakPerformed: boolean; isNew: boolean };
+
+// Updated Result Type
+type GachaResultItem =
+    | { type: 'char'; char: Character; isNew: boolean; isLimitBreak: boolean; limitBreakPerformed: boolean }
+    | { type: 'equip'; item: { id: string; name: string; rarity: string; icon: string }; isNew: boolean; rar: string };
 
 export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaSystem, onUpdate }) => {
     const { t } = useTranslation();
@@ -21,6 +26,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
     const [rollRarity, setRollRarity] = useState<'C' | 'L' | 'M'>('C'); // Highest rarity in current roll
     const [ultraChar, setUltraChar] = useState<Character | null>(null); // For M rarity reveal
+    const [ultraEquip, setUltraEquip] = useState<{ name: string; icon: string } | null>(null); // For M rarity equipment reveal
 
     const [showRates, setShowRates] = useState(false);
 
@@ -33,24 +39,29 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
         }
 
         // 1. Pre-calculate results
-        const res = gachaSystem.doGacha(n);
+        const res = gachaSystem.doGacha(n) as GachaResultItem[];
         if (!res) return;
 
         // 2. Determine highest rarity
         let highestRarity: 'C' | 'L' | 'M' = 'C';
-        let foundUltra: Character | null = null;
+        let foundUltraChar: Character | null = null;
+        let foundUltraEquip: { name: string; icon: string } | null = null;
 
         res.forEach(item => {
-            if (item.char.rar === 'M' || item.char.rar === 'XL') {
+            const rarity = item.type === 'char' ? item.char.rar : item.rar;
+
+            if (rarity === 'M' || rarity === 'XL') {
                 highestRarity = 'M';
-                foundUltra = item.char; // Grab the first M char for reveal
-            } else if (item.char.rar === 'L' && highestRarity !== 'M') {
+                if (item.type === 'char') foundUltraChar = item.char;
+                else foundUltraEquip = item.item;
+            } else if (rarity === 'L' && highestRarity !== 'M') {
                 highestRarity = 'L';
             }
         });
 
         setRollRarity(highestRarity);
-        setUltraChar(foundUltra);
+        setUltraChar(foundUltraChar);
+        setUltraEquip(foundUltraEquip);
         setResults(res);
         setAnimationState('rolling');
 
@@ -82,6 +93,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
         setAnimationState('idle');
         setRollRarity('C');
         setUltraChar(null);
+        setUltraEquip(null);
     };
 
     return (
@@ -119,7 +131,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             </div>
 
                             <p style={{ opacity: 0.7, marginBottom: '24px' }}>
-                                Collect characters to power up!
+                                Collect characters and equipment!
                             </p>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
@@ -248,14 +260,14 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             <div style={{ position: 'absolute', top: '50%', left: '5%', fontSize: '45px', animation: 'float 2.3s ease-in-out infinite 0.2s' }}>🎆</div>
                             <div style={{ position: 'absolute', top: '40%', right: '8%', fontSize: '50px', animation: 'float 2.6s ease-in-out infinite 0.9s' }}>💫</div>
 
-                            {/* Center content - Reveal Character */}
+                            {/* Center content - Reveal Character or Equipment */}
                             <div style={{
                                 fontSize: '120px',
                                 animation: 'megaBounce 1s infinite, rotate 3s linear infinite',
                                 marginBottom: '40px',
                                 filter: 'drop-shadow(0 0 30px rgba(255,255,255,1))'
                             }}>
-                                {ultraChar ? ultraChar.emoji : '👑'}
+                                {ultraChar ? ultraChar.emoji : (ultraEquip ? ultraEquip.icon : '👑')}
                             </div>
                             <div style={{
                                 fontSize: '48px',
@@ -266,7 +278,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 letterSpacing: '4px',
                                 textAlign: 'center'
                             }}>
-                                {ultraChar ? ultraChar.name : 'ULTRA RARE!!!'}
+                                {ultraChar ? ultraChar.name : (ultraEquip ? ultraEquip.name : 'ULTRA RARE!!!')}
                             </div>
                             <div style={{
                                 fontSize: '32px',
@@ -293,26 +305,33 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 overflowY: 'auto',
                                 padding: '8px'
                             }}>
-                                {results.map((item, idx) => (
-                                    <div key={idx} className={`gacha-result-item ${rarClass(item.char.rar)}`} style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        padding: '8px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #ccc',
-                                        background: '#fff',
-                                        position: 'relative',
-                                        animation: `slideIn 0.3s ease-out ${idx * 0.1}s backwards`
-                                    }}>
-                                        {item.isNew && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#facc15', color: '#000', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>NEW!</div>}
-                                        {item.isLimitBreak && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#60a5fa', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>UP!</div>}
+                                {results.map((item, idx) => {
+                                    const isChar = item.type === 'char';
+                                    const rarity = isChar ? item.char.rar : item.rar;
+                                    const icon = isChar ? item.char.emoji : item.item.icon;
+                                    const name = isChar ? item.char.name : item.item.name;
 
-                                        <div style={{ fontSize: '32px' }}>{item.char.emoji}</div>
-                                        <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{item.char.name}</div>
-                                        <div style={{ fontSize: '10px', color: '#666' }}>{item.char.rar}</div>
-                                    </div>
-                                ))}
+                                    return (
+                                        <div key={idx} className={`gacha-result-item ${rarClass(rarity)}`} style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #ccc',
+                                            background: '#fff',
+                                            position: 'relative',
+                                            animation: `slideIn 0.3s ease-out ${idx * 0.1}s backwards`
+                                        }}>
+                                            {item.isNew && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#facc15', color: '#000', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>NEW!</div>}
+                                            {!isChar && <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: '#a855f7', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>EQP</div>}
+
+                                            <div style={{ fontSize: '32px' }}>{icon}</div>
+                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{name}</div>
+                                            <div style={{ fontSize: '10px', color: '#666' }}>{rarity}</div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                             <button className="primary" onClick={closeResults} style={{ marginTop: '20px', width: '100%' }}>
                                 {t('close')}

@@ -157,7 +157,7 @@ export class CharacterProgression {
 
     /**
      * Perform a limit break (called when duplicate character is obtained)
-     * Directly increases character level by 1
+     * Increases the level cap by 1
      * @param {string} charKey 
      * @returns {boolean} Whether limit break was successful
      */
@@ -166,28 +166,17 @@ export class CharacterProgression {
         this.initializeCharacter(charKey);
         const data = this.progression[charKey];
 
-        // Directly increase level by 1
-        data.level++;
-
-        // Safely increment limitBreak
+        // Safely increment limitBreak (this increases the level cap)
         const currentLimitBreak = Math.floor(Number(data.limitBreak) || 0);
         data.limitBreak = currentLimitBreak + 1;
 
-        data.exp = 0; // Reset EXP
-        data.expToNext = this.calculateExpToNext(data.level);
-
-        // Grant skill point every 10 levels
-        if (data.level % 10 === 0) {
-            data.skillPoints++;
-        }
-
         this.save();
 
-        logger.info('Limit break performed - Level +1', {
+        logger.info('Limit break performed - Level cap increased', {
             charKey,
-            newLevel: data.level,
+            currentLevel: data.level,
             totalLimitBreaks: data.limitBreak,
-            levelCap: this.getLevelCap(data.limitBreak)
+            newLevelCap: this.getLevelCap(data.limitBreak)
         });
 
         return true;

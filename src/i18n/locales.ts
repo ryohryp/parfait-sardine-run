@@ -171,6 +171,10 @@ export const locales = {
         ach_bunny_hop_desc: "Jump 1,000 times total.",
         ach_fighter_title: "Fighter",
         ach_fighter_desc: "Attack 500 times total.",
+        // Daily Bonus
+        dailyBonus: "Daily Bonus",
+        dailyBonusDesc: "Log in every day to get rewards!",
+        day: "Day {{count}}",
         claim: "CLAIM",
         comeBackTomorrow: "Come back tomorrow!",
 
@@ -405,6 +409,12 @@ export const locales = {
         ach_bunny_hop_desc: "累計1,000回ジャンプする。",
         ach_fighter_title: "ファイター",
         ach_fighter_desc: "累計500回攻撃する。",
+        // Daily Bonus
+        dailyBonus: "デイリーボーナス",
+        dailyBonusDesc: "毎日ログインして報酬をゲットしよう！",
+        day: "{{count}}日目",
+        claim: "受け取る",
+        comeBackTomorrow: "また明日来てね！",
 
 
 

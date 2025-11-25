@@ -33,6 +33,20 @@ export class EnemyManager {
         // Load Assets
         this.droneImage = new Image();
         this.droneImage.src = 'assets/sprite/enemy_cupcake.png';
+
+        this.shieldImage = new Image();
+        this.shieldImage.src = 'assets/sprite/enemy_shield.png';
+
+        this.bossImages = {
+            meadow: new Image(),
+            dunes: new Image(),
+            sky: new Image(),
+            abyss: new Image()
+        };
+        this.bossImages.meadow.src = 'assets/sprite/boss_meadow.png';
+        this.bossImages.dunes.src = 'assets/sprite/boss_dunes.png';
+        this.bossImages.sky.src = 'assets/sprite/boss_sky.png';
+        this.bossImages.abyss.src = 'assets/sprite/boss_abyss.png';
     }
 
     reset() {
@@ -82,6 +96,14 @@ export class EnemyManager {
             enemy.hoverRange = rand(28, 92);
             enemy.hoverSpeed = rand(0.02, 0.035);
             enemy.baseY = baseY - rand(40, 120);
+        } else if (type === 'shield') {
+            enemy.vx = baseSpeed * 0.6; // Slower
+            enemy.hp = 3; // Takes 3 hits (implemented in collision system usually, but here just marking it)
+            // Note: CollisionSystem needs to handle HP if it doesn't already. 
+            // If CollisionSystem just kills on contact, we might need to update it.
+            // For now, let's just make it slow and tanky-looking.
+            enemy.w = 40;
+            enemy.h = 40;
         }
 
         this.enemies.push(enemy);
@@ -93,14 +115,15 @@ export class EnemyManager {
             return r < 0.75 ? 'straight' : 'zigzag';
         }
         if (lv < 6) {
-            if (r < 0.55) return 'straight';
-            if (r < 0.8) return 'zigzag';
+            if (r < 0.50) return 'straight';
+            if (r < 0.75) return 'zigzag';
             return 'hover';
         }
-        if (r < 0.4) return 'straight';
-        if (r < 0.65) return 'zigzag';
-        if (r < 0.85) return 'hover';
-        return 'dash';
+        // Higher levels
+        if (r < 0.35) return 'straight';
+        if (r < 0.60) return 'zigzag';
+        if (r < 0.80) return 'hover';
+        return 'shield';
     }
 
     spawnBossForStage(stageKey, t) {
@@ -301,8 +324,10 @@ export class EnemyManager {
     draw(ctx) {
         // Draw Enemies
         this.enemies.forEach(en => {
-            if (this.droneImage.complete && this.droneImage.naturalWidth > 0) {
-                // Draw drone sprite
+            if (en.type === 'shield' && this.shieldImage.complete && this.shieldImage.naturalWidth > 0) {
+                ctx.drawImage(this.shieldImage, en.x, en.y, en.w, en.h);
+            } else if (this.droneImage.complete && this.droneImage.naturalWidth > 0) {
+                // Draw drone sprite for others (or add more specific ones later)
                 ctx.drawImage(this.droneImage, en.x, en.y, en.w, en.h);
             } else {
                 // Fallback
@@ -316,16 +341,27 @@ export class EnemyManager {
             const bodyColor = this.bossState.config.bodyColor || '#1e3a8a';
             const displayIcon = this.bossState.config.icon || '??';
 
-            ctx.save();
-            ctx.globalAlpha = (typeof this.bossState.opacity === 'number') ? this.bossState.opacity : 1;
-            ctx.fillStyle = bodyColor;
-            ctx.fillRect(this.bossState.x, this.bossState.y, this.bossState.w, this.bossState.h);
+            // Draw Boss Image if available
+            const bossImg = this.bossImages[this.bossState.stageKey];
+            if (bossImg && bossImg.complete && bossImg.naturalWidth > 0) {
+                ctx.save();
+                ctx.globalAlpha = (typeof this.bossState.opacity === 'number') ? this.bossState.opacity : 1;
+                // Draw image centered
+                ctx.drawImage(bossImg, this.bossState.x, this.bossState.y, this.bossState.w, this.bossState.h);
+                ctx.restore();
+            } else {
+                // Fallback
+                ctx.save();
+                ctx.globalAlpha = (typeof this.bossState.opacity === 'number') ? this.bossState.opacity : 1;
+                ctx.fillStyle = bodyColor;
+                ctx.fillRect(this.bossState.x, this.bossState.y, this.bossState.w, this.bossState.h);
 
-            ctx.fillStyle = '#fff';
-            ctx.font = '48px serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(displayIcon, this.bossState.x + this.bossState.w / 2, this.bossState.y + this.bossState.h / 2 + 18);
-            ctx.restore();
+                ctx.fillStyle = '#fff';
+                ctx.font = '48px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(displayIcon, this.bossState.x + this.bossState.w / 2, this.bossState.y + this.bossState.h / 2 + 18);
+                ctx.restore();
+            }
 
             // Boss HP Bar
             const barWidth = 260;
