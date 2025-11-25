@@ -7,7 +7,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename="/parfait-sardine-run/">
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <LanguageProvider>
         <App />
       </LanguageProvider>
