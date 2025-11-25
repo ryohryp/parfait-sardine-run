@@ -23,9 +23,14 @@ export class EnemyManager {
             zigzag: { icon: '🐍', label: '蛇行型' },
             dash: { icon: '💥', label: '突進型' },
             hover: { icon: '🛸', label: '浮遊型' },
+            chaser: { icon: '🎯', label: '追跡型' },
+            bomber: { icon: '💣', label: '爆弾型' },
+            splitter: { icon: '🔷', label: '分裂型' },
             'boss-meadow': { icon: stageBosses.meadow.icon || '👑', label: 'Boss - Meadow Monarch', base: stageBosses.meadow.rewardScore || ENEMY_BONUS },
             'boss-dunes': { icon: stageBosses.dunes.icon || '👑', label: 'Boss - Dune Typhoon', base: stageBosses.dunes.rewardScore || ENEMY_BONUS },
             'boss-sky': { icon: stageBosses.sky.icon || '👑', label: 'Boss - Stratos Ranger', base: stageBosses.sky.rewardScore || ENEMY_BONUS },
+            'boss-volcano': { icon: stageBosses.volcano.icon || '👑', label: 'Boss - Inferno Dragon', base: stageBosses.volcano.rewardScore || ENEMY_BONUS },
+            'boss-ocean': { icon: stageBosses.ocean.icon || '👑', label: 'Boss - Leviathan', base: stageBosses.ocean.rewardScore || ENEMY_BONUS },
             'boss-abyss': { icon: stageBosses.abyss.icon || '👑', label: 'Boss - Abyss Sovereign', base: stageBosses.abyss.rewardScore || ENEMY_BONUS }
         };
         this.enemyTypeIcons = Object.fromEntries(Object.entries(this.enemyTypeMeta).map(([type, meta]) => [type, meta.icon]));
@@ -41,12 +46,27 @@ export class EnemyManager {
             meadow: new Image(),
             dunes: new Image(),
             sky: new Image(),
+            volcano: new Image(),
+            ocean: new Image(),
             abyss: new Image()
         };
         this.bossImages.meadow.src = 'assets/sprite/boss_meadow.png';
-        this.bossImages.dunes.src = 'assets/sprite/boss_dunes.png';
-        this.bossImages.sky.src = 'assets/sprite/boss_sky.png';
-        this.bossImages.abyss.src = 'assets/sprite/boss_abyss.png';
+        this.bossImages.dunes.src = 'assets/sprite/boss_dunes_v2.png';
+        this.bossImages.sky.src = 'assets/sprite/boss_sky_v2.png';
+        this.bossImages.volcano.src = 'assets/sprite/boss_volcano.png';
+        this.bossImages.ocean.src = 'assets/sprite/boss_ocean.png';
+        this.bossImages.abyss.src = 'assets/sprite/boss_abyss_v2.png';
+
+        // Enemy images for new types
+        this.chaserImage = new Image();
+        this.chaserImage.src = 'assets/sprite/enemy_chaser.png';
+        this.bomberImage = new Image();
+        this.bomberImage.src = 'assets/sprite/enemy_bomber.png';
+        this.splitterImage = new Image();
+        this.splitterImage.src = 'assets/sprite/enemy_splitter.png';
+
+        // Boss particles
+        this.bossParticles = [];
     }
 
     reset() {
@@ -104,6 +124,22 @@ export class EnemyManager {
             // For now, let's just make it slow and tanky-looking.
             enemy.w = 40;
             enemy.h = 40;
+        } else if (type === 'chaser') {
+            enemy.vx = baseSpeed * 0.8;
+            enemy.vy = 0;
+            enemy.chaseSpeed = baseSpeed * 0.3;
+            enemy.baseY = baseY - rand(20, 80);
+        } else if (type === 'bomber') {
+            enemy.vx = baseSpeed * 0.7;
+            enemy.explosionRadius = 80;
+            enemy.triggerDistance = 120;
+            enemy.exploding = false;
+            enemy.explosionTimer = 0;
+        } else if (type === 'splitter') {
+            enemy.vx = baseSpeed * 0.85;
+            enemy.canSplit = true;
+            enemy.w = 42;
+            enemy.h = 42;
         }
 
         this.enemies.push(enemy);
@@ -119,11 +155,21 @@ export class EnemyManager {
             if (r < 0.75) return 'zigzag';
             return 'hover';
         }
-        // Higher levels
-        if (r < 0.35) return 'straight';
-        if (r < 0.60) return 'zigzag';
-        if (r < 0.80) return 'hover';
-        return 'shield';
+        if (lv < 10) {
+            if (r < 0.30) return 'straight';
+            if (r < 0.50) return 'zigzag';
+            if (r < 0.70) return 'hover';
+            if (r < 0.85) return 'shield';
+            return 'chaser';
+        }
+        // Higher levels - all types
+        if (r < 0.20) return 'straight';
+        if (r < 0.35) return 'zigzag';
+        if (r < 0.50) return 'hover';
+        if (r < 0.65) return 'shield';
+        if (r < 0.80) return 'chaser';
+        if (r < 0.90) return 'bomber';
+        return 'splitter';
     }
 
     spawnBossForStage(stageKey, t) {
@@ -218,6 +264,31 @@ export class EnemyManager {
                     const maxV = en.maxV ?? (en.vx * 2.1);
                     en.vx = Math.min(maxV, en.vx + accel);
                 }
+            } else if (en.type === 'chaser') {
+                // Chase player vertically
+                if (!en.vy) en.vy = 0;
+                const targetY = player.y + player.h / 2;
+                const deltaY = targetY - (en.y + en.h / 2);
+                if (Math.abs(deltaY) > 5) {
+                    en.vy = Math.sign(deltaY) * Math.min(Math.abs(deltaY) * 0.05, en.chaseSpeed || 2);
+                } else {
+                    en.vy *= 0.9; // Damping
+                }
+                en.y += en.vy;
+            } else if (en.type === 'bomber') {
+                // Check distance to player
+                const dx = player.x - en.x;
+                const dy = player.y - en.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (!en.exploding && dist < en.triggerDistance) {
+                    en.exploding = true;
+                    en.explosionTimer = now() + 600; // 600ms before explosion
+                    en.vx *= 0.3; // Slow down
+                }
+                if (en.exploding && now() >= en.explosionTimer) {
+                    // Mark for explosion (CollisionSystem should handle actual explosion)
+                    en.explode = true;
+                }
             }
 
             en.y = clamp(en.y, 18, this.canvas.height - GROUND - en.h + 6);
@@ -256,6 +327,28 @@ export class EnemyManager {
                 this.bossProjectiles.length = 0;
             }
         }
+
+        // Update Boss Particles
+        if (this.bossState && this.bossState.state === 'battle') {
+            // Generate particles
+            if (Math.random() < 0.3) {
+                this.bossParticles.push({
+                    x: this.bossState.x + rand(10, this.bossState.w - 10),
+                    y: this.bossState.y + rand(10, this.bossState.h - 10),
+                    vx: rand(-1, 1),
+                    vy: rand(-1, 1),
+                    life: 1.0,
+                    color: this.bossState.config.bodyColor || '#fff'
+                });
+            }
+        }
+
+        this.bossParticles = this.bossParticles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            return p.life > 0;
+        });
     }
 
     bossFireVolley(boss, time, player) {
@@ -326,6 +419,18 @@ export class EnemyManager {
         this.enemies.forEach(en => {
             if (en.type === 'shield' && this.shieldImage.complete && this.shieldImage.naturalWidth > 0) {
                 ctx.drawImage(this.shieldImage, en.x, en.y, en.w, en.h);
+            } else if (en.type === 'chaser' && this.chaserImage.complete && this.chaserImage.naturalWidth > 0) {
+                ctx.drawImage(this.chaserImage, en.x, en.y, en.w, en.h);
+            } else if (en.type === 'bomber' && this.bomberImage.complete && this.bomberImage.naturalWidth > 0) {
+                if (en.exploding && Math.floor(now() / 50) % 2 === 0) {
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.drawImage(this.bomberImage, en.x, en.y, en.w, en.h);
+                    ctx.globalCompositeOperation = 'source-over';
+                } else {
+                    ctx.drawImage(this.bomberImage, en.x, en.y, en.w, en.h);
+                }
+            } else if (en.type === 'splitter' && this.splitterImage.complete && this.splitterImage.naturalWidth > 0) {
+                ctx.drawImage(this.splitterImage, en.x, en.y, en.w, en.h);
             } else if (this.droneImage.complete && this.droneImage.naturalWidth > 0) {
                 // Draw drone sprite for others (or add more specific ones later)
                 ctx.drawImage(this.droneImage, en.x, en.y, en.w, en.h);
@@ -340,6 +445,23 @@ export class EnemyManager {
         if (this.bossState) {
             const bodyColor = this.bossState.config.bodyColor || '#1e3a8a';
             const displayIcon = this.bossState.config.icon || '??';
+
+            // Draw Boss Particles
+            ctx.save();
+            this.bossParticles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
+
+            // Draw Boss Glow
+            ctx.save();
+            ctx.globalAlpha = (typeof this.bossState.opacity === 'number') ? this.bossState.opacity * 0.5 : 0.5;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = bodyColor;
 
             // Draw Boss Image if available
             const bossImg = this.bossImages[this.bossState.stageKey];
@@ -360,6 +482,18 @@ export class EnemyManager {
                 ctx.font = '48px serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(displayIcon, this.bossState.x + this.bossState.w / 2, this.bossState.y + this.bossState.h / 2 + 18);
+                ctx.restore();
+            }
+
+            // Restore glow context
+            ctx.restore();
+
+            // Hit Flash
+            if (now() < this.bossState.hitFlashUntil) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'source-atop';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.fillRect(this.bossState.x, this.bossState.y, this.bossState.w, this.bossState.h);
                 ctx.restore();
             }
 

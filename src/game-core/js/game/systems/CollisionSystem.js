@@ -92,9 +92,56 @@ export class CollisionSystem {
         const game = this.game;
 
         game.enemies.enemies = game.enemies.enemies.filter(en => {
+            // Bomber Explosion Logic
+            if (en.type === 'bomber' && en.explode) {
+                game.particles.createExplosion(en.x + en.w / 2, en.y + en.h / 2, '#ff4500', 60); // Big explosion
+                playSfx('hit'); // Use hit sound for explosion for now
+
+                // Check distance to player for explosion damage
+                const dx = (game.player.x + game.player.w / 2) - (en.x + en.w / 2);
+                const dy = (game.player.y + game.player.h / 2) - (en.y + en.h / 2);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < (en.explosionRadius || 80)) {
+                    if (now() > game.invUntil && now() > game.feverModeUntil && now() > game.hurtUntil) {
+                        const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
+                        const baseDamage = 30; // Explosion deals more damage
+                        const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
+                        game.hp = Math.max(0, game.hp - finalDamage);
+                        game.hurtUntil = now() + 900;
+                        logger.debug('Player hit by bomber explosion', { hp: game.hp });
+
+                        if (game.hp <= 0) {
+                            if (skillBonuses.hasAutoRevive && !game.hasUsedAutoRevive) {
+                                game.hp = Math.floor(game.maxHp * 0.5);
+                                game.hasUsedAutoRevive = true;
+                                game.invUntil = now() + 3000;
+                                game.particles.createExplosion(game.player.x, game.player.y, '#00ff00');
+                            } else {
+                                game.endGame();
+                            }
+                        }
+                    }
+                }
+                return false; // Remove bomber after explosion
+            }
+
             if (this.AABB(game.player, en)) {
                 if (now() < game.invUntil || now() < game.feverModeUntil) {
                     game.awardEnemyDefeat(en);
+                    // Splitter logic
+                    if (en.type === 'splitter' && en.canSplit) {
+                        for (let i = 0; i < 2; i++) {
+                            game.enemies.spawnEnemy(game.level, 0);
+                            const newEn = game.enemies.enemies[game.enemies.enemies.length - 1];
+                            newEn.x = en.x;
+                            newEn.y = en.y + (i === 0 ? -30 : 30);
+                            newEn.type = 'straight'; // Split into straight enemies
+                            newEn.vx = en.vx * 1.2;
+                            newEn.w = 24;
+                            newEn.h = 24;
+                        }
+                    }
                     return false;
                 }
                 if (now() > game.hurtUntil) {

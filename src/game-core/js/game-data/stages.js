@@ -2,8 +2,11 @@ export const stages = [
   { key: 'meadow', name: '草原', bg1: '#9ed6ee', bg2: '#fff7e6', ground: '#7fb10a', enemyMul: 1.00, bgImage: 'meadow.png' },
   { key: 'dunes', name: '砂漠', bg1: '#ffd28a', bg2: '#ffe9c7', ground: '#d2a659', enemyMul: 1.10, bgImage: 'desert.png' },
   { key: 'sky', name: '雪原', bg1: '#c8e7ff', bg2: '#f6fbff', ground: '#b9d3e5', enemyMul: 1.22, bgImage: 'snow.png' },
+  { key: 'volcano', name: '火山', bg1: '#ff4500', bg2: '#ff6b35', ground: '#8b0000', enemyMul: 1.50, bgImage: 'volcano.png' },
+  { key: 'ocean', name: '海底', bg1: '#001f3f', bg2: '#003366', ground: '#1a3a52', enemyMul: 1.68, bgImage: 'ocean.png' },
   { key: 'abyss', name: '宇宙', bg1: '#0b1833', bg2: '#1b2850', ground: '#0b1833', enemyMul: 1.38, bgImage: 'space.png' },
 ];
+
 
 export function stageForKey(key) {
   return stages.find(s => s.key === key) || stages[0];
@@ -11,11 +14,14 @@ export function stageForKey(key) {
 
 // Legacy support - maps old level-based system to new stage keys
 export function stageForLevel(lv) {
-  if (lv >= 10) return stages[3];
-  if (lv >= 7) return stages[2];
-  if (lv >= 4) return stages[1];
-  return stages[0];
+  if (lv >= 16) return stages[5]; // abyss
+  if (lv >= 13) return stages[4]; // ocean
+  if (lv >= 10) return stages[3]; // volcano
+  if (lv >= 7) return stages[2];  // sky
+  if (lv >= 4) return stages[1];  // dunes
+  return stages[0];               // meadow
 }
+
 
 export const stageBosses = {
   meadow: {
@@ -83,6 +89,50 @@ export const stageBosses = {
     rewardCoins: 14,
     spawnDelay: 7600,
     groundOffset: 36
+  },
+  volcano: {
+    key: 'boss-volcano',
+    displayName: 'Inferno Dragon',
+    icon: '🐉',
+    bodyColor: '#ff4500',
+    width: 180,
+    height: 135,
+    hp: 28,
+    speed: 2.9,
+    targetOffset: 190,
+    floatRange: 38,
+    floatSpeed: 0.033,
+    attackInterval: 1700,
+    projectileSpeed: 4.0,
+    projectileGravity: 0.12,
+    projectileSpread: 0.28,
+    volley: 5,
+    rewardScore: 250,
+    rewardCoins: 16,
+    spawnDelay: 7800,
+    groundOffset: 38
+  },
+  ocean: {
+    key: 'boss-ocean',
+    displayName: 'Leviathan',
+    icon: '🐋',
+    bodyColor: '#003366',
+    width: 190,
+    height: 140,
+    hp: 36,
+    speed: 3.1,
+    targetOffset: 170,
+    floatRange: 45,
+    floatSpeed: 0.036,
+    attackInterval: 1500,
+    projectileSpeed: 4.4,
+    projectileGravity: 0.14,
+    projectileSpread: 0.32,
+    volley: 6,
+    rewardScore: 320,
+    rewardCoins: 20,
+    spawnDelay: 8500,
+    groundOffset: 42
   },
   abyss: {
     key: 'boss-abyss',
