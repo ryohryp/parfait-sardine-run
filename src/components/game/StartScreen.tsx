@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GachaModal } from './GachaModal';
 import { CharacterSelectModal } from './CharacterSelectModal';
 import { SkillTreeModal } from './SkillTreeModal';
@@ -11,6 +11,7 @@ import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
 import { AchievementSystem } from '../../game-core/js/game/AchievementSystem';
 import { DailyBonusSystem } from '../../game-core/js/game/DailyBonusSystem';
 import { useSound } from '../../hooks/useSound';
+import './TitleScreen.css';
 
 interface StartScreenProps {
     onStart: (characterKey: string, playerName: string) => void;
@@ -21,9 +22,11 @@ interface StartScreenProps {
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem, achievementSystem, dailyBonusSystem }) => {
-    const { t, language, setLanguage } = useTranslation();
+    const { t } = useTranslation();
     const { playClick } = useSound();
     const navigate = useNavigate();
+
+    const [viewState, setViewState] = useState<'title' | 'menu'>('title');
     const [showGacha, setShowGacha] = useState(false);
     const [showCharSelect, setShowCharSelect] = useState(false);
     const [showSkillTree, setShowSkillTree] = useState(false);
@@ -31,37 +34,32 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const [showAchievements, setShowAchievements] = useState(false);
     const [showDailyBonus, setShowDailyBonus] = useState(false);
     const [selectedCharForProgression, setSelectedCharForProgression] = useState('parfen');
-    const [playerName, setPlayerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || '');
+    const [playerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || 'プレイヤー');
     const [coins, setCoins] = useState(0);
 
-    const updateGachaState = useCallback(() => {
-        const currentCoins = gachaSystem.loadCoinBalance();
-        gachaSystem.saveCoinBalance(currentCoins);
-        setCoins(currentCoins);
-    }, [gachaSystem]);
-
-    useEffect(() => {
+    React.useEffect(() => {
         if (visible) {
-            updateGachaState();
+            setCoins(gachaSystem.loadCoinBalance());
+            setViewState('title'); // Reset to title screen when visible
 
             // Check daily bonus
             const availability = dailyBonusSystem.checkAvailability();
             if (availability.available) {
-                // Delay slightly for better UX
-                const timer = setTimeout(() => {
-                    setShowDailyBonus(true);
-                }, 800);
-                return () => clearTimeout(timer);
+                setTimeout(() => setShowDailyBonus(true), 800);
             }
         }
-    }, [visible, updateGachaState, dailyBonusSystem]);
+    }, [visible, gachaSystem, dailyBonusSystem]);
 
-    const handleStartClick = () => {
-        if (!playerName.trim()) {
-            alert(t('enterName'));
-            return;
+    const handleScreenClick = () => {
+        if (viewState === 'title') {
+            playClick();
+            setViewState('menu');
         }
-        localStorage.setItem('psrun_player_name_v1', playerName);
+    };
+
+    const handlePlayClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        playClick();
         setShowCharSelect(true);
     };
 
@@ -71,110 +69,82 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
         onStart(characterKey, playerName);
     };
 
-    const toggleLanguage = () => {
-        setLanguage(language === 'en' ? 'ja' : 'en');
+    const updateGachaState = () => {
+        const currentCoins = gachaSystem.loadCoinBalance();
+        gachaSystem.saveCoinBalance(currentCoins);
+        setCoins(currentCoins);
     };
 
     if (!visible) return null;
 
     return (
         <>
-            <div className="start-screen-container">
-                <div className="start-screen-content">
-                    {/* Language Toggle */}
-                    <button
-                        onClick={toggleLanguage}
-                        style={{
-                            position: 'absolute',
-                            top: '16px',
-                            right: '16px',
-                            background: 'transparent',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '20px',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        {language === 'en' ? '🇯🇵 日本語' : '🇺🇸 English'}
-                    </button>
+            <div className={`title-screen-container ${viewState === 'menu' ? 'menu-mode' : ''}`} onClick={handleScreenClick}>
+                <div className="title-screen-content">
+                    {/* Background */}
+                    <div className="title-background"></div>
 
-                    <h1 style={{ marginTop: '24px' }}>{t('gameTitle')}</h1>
-                    <p style={{ opacity: 0.8 }}>{t('ready')}</p>
+                    {/* Character */}
+                    <div className={`title-character ${viewState === 'menu' ? 'minimized' : ''}`}></div>
 
-                    {/* Player Name Input */}
-                    <div style={{ width: '100%', textAlign: 'left' }}>
-                        <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#64748b', marginBottom: '8px', display: 'block' }}>
-                            {t('playerName')}
-                        </label>
-                        <input
-                            type="text"
-                            value={playerName}
-                            onChange={(e) => setPlayerName(e.target.value)}
-                            placeholder={t('enterName')}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                borderRadius: '8px',
-                                border: '1px solid #cbd5e1',
-                                fontSize: '16px'
-                            }}
-                        />
-                    </div>
+                    {/* Logo */}
+                    <h1 className={`title-logo ${viewState === 'menu' ? 'minimized' : ''}`}>{t('gameTitle')}</h1>
 
-                    {/* Coin Display */}
-                    <div style={{ width: '100%', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#f59e0b' }}>
-                        💰 {coins}
-                    </div>
+                    {/* Title Screen View */}
+                    {viewState === 'title' && (
+                        <div className="tap-to-start">
+                            TAP TO START
+                        </div>
+                    )}
 
-                    {/* Action Buttons */}
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', width: '100%' }}>
-                        <button
-                            onClick={() => { playClick(); handleStartClick(); }}
-                            className="primary"
-                            style={{ flex: 2, fontSize: '18px', padding: '16px' }}
-                        >
-                            {t('start')}
-                        </button>
-                        <button
-                            className="secondary"
-                            onClick={() => { playClick(); setShowGacha(true); }}
-                            style={{ flex: 1, fontSize: '14px', padding: '16px', background: '#f59e0b', color: 'white', border: 'none' }}
-                        >
-                            {t('gacha')}
-                        </button>
-                    </div>
+                    {/* Main Menu View */}
+                    {viewState === 'menu' && (
+                        <div className="main-menu-container" onClick={(e) => e.stopPropagation()}>
+                            <div className="main-actions">
+                                <button className="title-btn title-btn-play" onClick={handlePlayClick}>
+                                    <span className="btn-icon">🎮</span>
+                                    <span className="btn-text">プレイ</span>
+                                </button>
+                                <button className="title-btn title-btn-gacha" onClick={(e) => { e.stopPropagation(); playClick(); setShowGacha(true); }}>
+                                    <span className="btn-icon">💰</span>
+                                    <span className="btn-text">ガチャ</span>
+                                    <span className="coin-badge">{coins} G</span>
+                                </button>
+                            </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }}>
-                        <button className="secondary" onClick={() => { playClick(); navigate('/manual'); }} style={{ width: '100%', fontSize: '14px' }}>
-                            {t('howToPlay')}
-                        </button>
-                        <button className="secondary" onClick={() => { playClick(); setShowAchievements(true); }} style={{ width: '100%', fontSize: '14px' }}>
-                            {t('achievements')}
-                        </button>
-                    </div>
+                            <div className="sub-actions">
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/manual'); }}>
+                                    <span className="btn-icon">📖</span>
+                                    <span className="btn-label">{t('howToPlay')}</span>
+                                </button>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/leaderboard'); }}>
+                                    <span className="btn-icon">🏆</span>
+                                    <span className="btn-label">{t('ranking')}</span>
+                                </button>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowAchievements(true); }}>
+                                    <span className="btn-icon">🏅</span>
+                                    <span className="btn-label">{t('achievements')}</span>
+                                </button>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/settings'); }}>
+                                    <span className="btn-icon">⚙️</span>
+                                    <span className="btn-label">{t('settings')}</span>
+                                </button>
+                            </div>
 
-                    {/* Navigation Links */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', marginTop: '8px' }}>
-                        <Link to="/leaderboard"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('ranking')}</button></Link>
-                        <Link to="/comments"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('comments')}</button></Link>
-                        <Link to="/history"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('history')}</button></Link>
-                        <Link to="/stats"><button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('stats')}</button></Link>
-                    </div>
-
-                    <Link to="/settings" style={{ width: '100%' }}>
-                        <button className="secondary" onClick={playClick} style={{ width: '100%', fontSize: '14px' }}>{t('settings')}</button>
-                    </Link>
+                            <div className="extra-actions">
+                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/history'); }}>{t('history')}</button>
+                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/stats'); }}>{t('stats')}</button>
+                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/comments'); }}>{t('comments')}</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Modals */}
             <GachaModal
                 visible={showGacha}
-                onClose={() => {
-                    setShowGacha(false);
-                    updateGachaState();
-                }}
+                onClose={() => { setShowGacha(false); updateGachaState(); }}
                 gachaSystem={gachaSystem}
                 onUpdate={updateGachaState}
             />
@@ -184,14 +154,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                 onBack={() => setShowCharSelect(false)}
                 gachaSystem={gachaSystem}
                 initialChar={localStorage.getItem('psrun_selected_char') || 'parfen'}
-                onOpenSkillTree={(charKey) => {
-                    setSelectedCharForProgression(charKey);
-                    setShowSkillTree(true);
-                }}
-                onOpenEquipment={(charKey) => {
-                    setSelectedCharForProgression(charKey);
-                    setShowEquipment(true);
-                }}
+                onOpenSkillTree={(charKey) => { setSelectedCharForProgression(charKey); setShowSkillTree(true); }}
+                onOpenEquipment={(charKey) => { setSelectedCharForProgression(charKey); setShowEquipment(true); }}
             />
             <SkillTreeModal
                 visible={showSkillTree}
@@ -216,9 +180,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                     dailyBonusSystem={dailyBonusSystem}
                     gachaSystem={gachaSystem}
                     onClose={() => setShowDailyBonus(false)}
-                    onClaim={() => {
-                        updateGachaState();
-                    }}
+                    onClaim={() => updateGachaState()}
                 />
             )}
         </>
