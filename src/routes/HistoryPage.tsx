@@ -17,34 +17,31 @@ export const HistoryPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await runsApi.getRuns(fingerprint);
-            setRuns(data);
-        } catch (err) {
-            // Handle rate limit errors specifically
-            if (err instanceof Error && err.message?.includes('429')) {
-                setError(t('errorRateLimit'));
-            } else {
-                setError(t('errorHistory'));
+            // Load from localStorage first
+            const localRuns = localStorage.getItem('psrun_history_v1');
+            if (localRuns) {
+                const parsed = JSON.parse(localRuns);
+                setRuns(parsed);
             }
+
+            // Also try to fetch from API (but don't rely on it)
+            try {
+                const data = await runsApi.getRuns(fingerprint);
+                console.log('[HistoryPage] Fetched runs from API:', data.length, 'items');
+            } catch (apiErr) {
+                console.log('[HistoryPage] API fetch failed (expected):', apiErr);
+            }
+        } catch (err) {
+            console.error('[HistoryPage] Failed to load local history:', err);
             setRuns([]);
         } finally {
             setLoading(false);
         }
-    }, [fingerprint, t]);
+    }, [fingerprint]);
 
     useEffect(() => {
-        let isMounted = true;
-        const timeoutId = setTimeout(() => {
-            if (fingerprint && isMounted) {
-                loadRuns();
-            }
-        }, 100);
-
-        return () => {
-            isMounted = false;
-            clearTimeout(timeoutId);
-        };
-    }, [fingerprint, loadRuns]);
+        loadRuns();
+    }, [loadRuns]);
 
     return (
         <PageTransition transitionKey="history">
@@ -71,7 +68,15 @@ export const HistoryPage: React.FC = () => {
                         <tbody>
                             {runs.slice(0, 10).map((run) => (
                                 <tr key={run.id}>
-                                    <td>{new Date(run.date).toLocaleString()}</td>
+                                    <td>{new Date(run.date).toLocaleString('ja-JP', {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit',
+                                        hour12: false
+                                    })}</td>
                                     <td>{run.stage}</td>
                                     <td className="text-right">{run.score.toLocaleString()}</td>
                                     <td className="text-right">{run.coins}</td>

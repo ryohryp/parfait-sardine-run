@@ -115,6 +115,30 @@ export const GameCanvas: React.FC = () => {
                     currentNonce: currentNonce.current
                 });
 
+                // Save to localStorage
+                try {
+                    const historyKey = 'psrun_history_v1';
+                    const existingHistory = localStorage.getItem(historyKey);
+                    const history = existingHistory ? JSON.parse(existingHistory) : [];
+
+                    const newEntry = {
+                        id: currentRunId.current || `local_${Date.now()}`,
+                        stage: data.stage,
+                        score: data.score,
+                        duration: data.duration,
+                        coins: data.coins,
+                        result: data.result,
+                        date: new Date().toISOString()
+                    };
+
+                    history.unshift(newEntry);
+                    const trimmedHistory = history.slice(0, 50);
+                    localStorage.setItem(historyKey, JSON.stringify(trimmedHistory));
+                    console.log('[GameCanvas] Saved to local history');
+                } catch (e) {
+                    console.error('[GameCanvas] Failed to save local history:', e);
+                }
+
                 if (fingerprint && currentRunId.current && currentNonce.current) {
                     try {
                         console.log('[GameCanvas] Attempting to finish run:', currentRunId.current);

@@ -15,7 +15,26 @@ export const SettingsPage: React.FC = () => {
     const [sfxVol, setSfxVol] = useState(getSfxVolume() * 100);
 
     const handleReset = () => {
-        localStorage.removeItem('psrun_fingerprint_v1');
+        // Clear all game data
+        const keysToRemove = [
+            'psrun_fingerprint_v1',
+            'psrun_coin_balance_v1',
+            'psrun_char_collection_v1',
+            'psrun_pity_v1',
+            'psrun_character_progression_v1',
+            'psrun_equipment_inventory_v1',
+            'psrun_best_score_v1',
+            'psrun_missions_v1',
+            'psrun_achievements_v1',
+            'psrun_daily_bonus_v1',
+            'psrun_tutorial_completed',
+            'psrun_history_v1',
+            'psrun_language'
+        ];
+
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // Reload page
         window.location.reload();
     };
 
