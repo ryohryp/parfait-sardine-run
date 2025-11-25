@@ -6,7 +6,11 @@ import type { StatsSummary } from '../api/runs';
 import { useFingerprint } from '../hooks/useFingerprint';
 import { PageTransition } from '../components/common/PageTransition';
 
-export const StatsPage: React.FC = () => {
+interface StatsPageProps {
+    onClose?: () => void;
+}
+
+export const StatsPage: React.FC<StatsPageProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const fingerprint = useFingerprint();
     const [stats, setStats] = useState<StatsSummary | null>(null);
@@ -36,7 +40,11 @@ export const StatsPage: React.FC = () => {
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('stats')}</h1>
-                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    {!onClose ? (
+                        <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    ) : (
+                        <button className="ghost" onClick={onClose}>{t('close')}</button>
+                    )}
                 </div>
 
                 <div className="settings-section">

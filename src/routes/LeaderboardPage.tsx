@@ -5,7 +5,11 @@ import { leaderboardApi } from '../api/leaderboard';
 import type { LeaderboardEntry } from '../api/leaderboard';
 import { PageTransition } from '../components/common/PageTransition';
 
-export const LeaderboardPage: React.FC = () => {
+interface LeaderboardPageProps {
+    onClose?: () => void;
+}
+
+export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const [ranking, setRanking] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,7 +40,11 @@ export const LeaderboardPage: React.FC = () => {
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('ranking')}</h1>
-                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    {!onClose ? (
+                        <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    ) : (
+                        <button className="ghost" onClick={onClose}>{t('close')}</button>
+                    )}
                 </div>
 
                 <div className="data-table-section">

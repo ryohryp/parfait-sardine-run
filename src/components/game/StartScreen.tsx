@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { GachaModal } from './GachaModal';
 import { CharacterSelectModal } from './CharacterSelectModal';
 import { SkillTreeModal } from './SkillTreeModal';
 import { EquipmentModal } from './EquipmentModal';
 import { AchievementModal } from './AchievementModal';
 import { DailyBonusModal } from './DailyBonusModal';
+import { ModalWrapper } from '../common/ModalWrapper';
+import { ManualPage } from '../../routes/ManualPage';
+import { LeaderboardPage } from '../../routes/LeaderboardPage';
+import { SettingsPage } from '../../routes/SettingsPage';
+import { HistoryPage } from '../../routes/HistoryPage';
+import { StatsPage } from '../../routes/StatsPage';
+import { CommentsPage } from '../../routes/CommentsPage';
 import { useTranslation } from '../../hooks/useTranslation';
 import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
 import { AchievementSystem } from '../../game-core/js/game/AchievementSystem';
@@ -24,7 +30,6 @@ interface StartScreenProps {
 export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem, achievementSystem, dailyBonusSystem }) => {
     const { t } = useTranslation();
     const { playClick } = useSound();
-    const navigate = useNavigate();
 
     const [viewState, setViewState] = useState<'title' | 'menu'>('title');
     const [showGacha, setShowGacha] = useState(false);
@@ -33,6 +38,15 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const [showEquipment, setShowEquipment] = useState(false);
     const [showAchievements, setShowAchievements] = useState(false);
     const [showDailyBonus, setShowDailyBonus] = useState(false);
+
+    // New modal states
+    const [showManual, setShowManual] = useState(false);
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showStats, setShowStats] = useState(false);
+    const [showComments, setShowComments] = useState(false);
+
     const [selectedCharForProgression, setSelectedCharForProgression] = useState('parfen');
     const [playerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || 'プレイヤー');
     const [coins, setCoins] = useState(0);
@@ -113,11 +127,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                             </div>
 
                             <div className="sub-actions">
-                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/manual'); }}>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowManual(true); }}>
                                     <span className="btn-icon">📖</span>
                                     <span className="btn-label">{t('howToPlay')}</span>
                                 </button>
-                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/leaderboard'); }}>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowLeaderboard(true); }}>
                                     <span className="btn-icon">🏆</span>
                                     <span className="btn-label">{t('ranking')}</span>
                                 </button>
@@ -125,16 +139,16 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                                     <span className="btn-icon">🏅</span>
                                     <span className="btn-label">{t('achievements')}</span>
                                 </button>
-                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/settings'); }}>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowSettings(true); }}>
                                     <span className="btn-icon">⚙️</span>
                                     <span className="btn-label">{t('settings')}</span>
                                 </button>
                             </div>
 
                             <div className="extra-actions">
-                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/history'); }}>{t('history')}</button>
-                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/stats'); }}>{t('stats')}</button>
-                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); navigate('/comments'); }}>{t('comments')}</button>
+                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowHistory(true); }}>{t('history')}</button>
+                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowStats(true); }}>{t('stats')}</button>
+                                <button className="text-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowComments(true); }}>{t('comments')}</button>
                             </div>
                         </div>
                     )}
@@ -183,6 +197,31 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                     onClaim={() => updateGachaState()}
                 />
             )}
+
+            {/* Page Modals */}
+            <ModalWrapper visible={showManual} onClose={() => setShowManual(false)} title={t('howToPlay')}>
+                <ManualPage onClose={() => setShowManual(false)} />
+            </ModalWrapper>
+
+            <ModalWrapper visible={showLeaderboard} onClose={() => setShowLeaderboard(false)} title={t('ranking')}>
+                <LeaderboardPage onClose={() => setShowLeaderboard(false)} />
+            </ModalWrapper>
+
+            <ModalWrapper visible={showSettings} onClose={() => setShowSettings(false)} title={t('settings')}>
+                <SettingsPage onClose={() => setShowSettings(false)} />
+            </ModalWrapper>
+
+            <ModalWrapper visible={showHistory} onClose={() => setShowHistory(false)} title={t('history')}>
+                <HistoryPage onClose={() => setShowHistory(false)} />
+            </ModalWrapper>
+
+            <ModalWrapper visible={showStats} onClose={() => setShowStats(false)} title={t('stats')}>
+                <StatsPage onClose={() => setShowStats(false)} />
+            </ModalWrapper>
+
+            <ModalWrapper visible={showComments} onClose={() => setShowComments(false)} title={t('comments')}>
+                <CommentsPage onClose={() => setShowComments(false)} />
+            </ModalWrapper>
         </>
     );
 };

@@ -6,7 +6,11 @@ import { PageTransition } from '../components/common/PageTransition';
 
 import { getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from '../game-core/js/audio.js';
 
-export const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+    onClose?: () => void;
+}
+
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const fingerprint = useFingerprint();
     const [showConfirm, setShowConfirm] = useState(false);
@@ -55,7 +59,11 @@ export const SettingsPage: React.FC = () => {
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('settings')}</h1>
-                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    {!onClose ? (
+                        <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    ) : (
+                        <button className="ghost" onClick={onClose}>{t('close')}</button>
+                    )}
                 </div>
 
                 <div className="settings-section">

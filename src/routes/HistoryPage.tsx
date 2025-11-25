@@ -1,35 +1,30 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '../hooks/useTranslation';
-import { runsApi } from '../api/runs';
 import type { RunLogEntry } from '../api/runs';
-import { useFingerprint } from '../hooks/useFingerprint';
 import { PageTransition } from '../components/common/PageTransition';
 
-export const HistoryPage: React.FC = () => {
+interface HistoryPageProps {
+    onClose?: () => void;
+}
+
+export const HistoryPage: React.FC<HistoryPageProps> = ({ onClose }) => {
     const { t } = useTranslation();
-    const fingerprint = useFingerprint();
     const [runs, setRuns] = useState<RunLogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const loadRuns = useCallback(async () => {
+    const loadRuns = useCallback(() => {
         setLoading(true);
         setError(null);
         try {
-            // Load from localStorage first
+            // Load from localStorage
             const localRuns = localStorage.getItem('psrun_history_v1');
             if (localRuns) {
                 const parsed = JSON.parse(localRuns);
                 setRuns(parsed);
-            }
-
-            // Also try to fetch from API (but don't rely on it)
-            try {
-                const data = await runsApi.getRuns(fingerprint);
-                console.log('[HistoryPage] Fetched runs from API:', data.length, 'items');
-            } catch (apiErr) {
-                console.log('[HistoryPage] API fetch failed (expected):', apiErr);
+            } else {
+                setRuns([]);
             }
         } catch (err) {
             console.error('[HistoryPage] Failed to load local history:', err);
@@ -37,7 +32,7 @@ export const HistoryPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [fingerprint]);
+    }, []);
 
     useEffect(() => {
         loadRuns();
@@ -48,7 +43,11 @@ export const HistoryPage: React.FC = () => {
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('history')}</h1>
-                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    {!onClose ? (
+                        <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    ) : (
+                        <button className="ghost" onClick={onClose}>{t('close')}</button>
+                    )}
                 </div>
 
                 <div className="data-table-section">

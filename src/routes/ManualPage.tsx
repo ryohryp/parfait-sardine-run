@@ -5,7 +5,11 @@ import { useSound } from '../hooks/useSound';
 import '../index.css';
 import './ManualPage.css';
 
-export const ManualPage: React.FC = () => {
+interface ManualPageProps {
+    onClose?: () => void;
+}
+
+export const ManualPage: React.FC<ManualPageProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const { playClick } = useSound();
 
@@ -21,11 +25,18 @@ export const ManualPage: React.FC = () => {
         <div className="page-container page-transition-enter">
             <div className="page-header">
                 <h1>{t('manual_title')}</h1>
-                <Link to="/">
-                    <button className="secondary" onClick={playClick}>
-                        {t('backToGame')}
+                {!onClose && (
+                    <Link to="/">
+                        <button className="secondary" onClick={playClick}>
+                            {t('backToGame')}
+                        </button>
+                    </Link>
+                )}
+                {onClose && (
+                    <button className="secondary" onClick={() => { playClick(); onClose(); }}>
+                        {t('close')}
                     </button>
-                </Link>
+                )}
             </div>
 
             <div className="manual-content">

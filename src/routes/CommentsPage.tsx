@@ -6,7 +6,11 @@ import type { Comment } from '../api/comments';
 import { useFingerprint } from '../hooks/useFingerprint';
 import { PageTransition } from '../components/common/PageTransition';
 
-export const CommentsPage: React.FC = () => {
+interface CommentsPageProps {
+    onClose?: () => void;
+}
+
+export const CommentsPage: React.FC<CommentsPageProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const fingerprint = useFingerprint();
     const [comments, setComments] = useState<Comment[]>([]);
@@ -86,7 +90,11 @@ export const CommentsPage: React.FC = () => {
             <div className="page-container">
                 <div className="page-header">
                     <h1>{t('comments')}</h1>
-                    <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    {!onClose ? (
+                        <Link to="/" className="ghost">{t('backToGame')}</Link>
+                    ) : (
+                        <button className="ghost" onClick={onClose}>{t('close')}</button>
+                    )}
                 </div>
 
                 <div className="comments-section">
