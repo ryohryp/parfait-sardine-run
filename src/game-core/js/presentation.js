@@ -3,13 +3,13 @@ import { registerUnlockableAudio } from './audio.js';
 /* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
 
 const PSR_ASSETS = [
-  './assets/sprite/player.png',
-  './assets/sprite/enemies.png',
-  './assets/bg/layer1.png',
-  './assets/bg/layer2.png',
-  './assets/sfx/jump.ogg',
-  './assets/sfx/hit.ogg',
-  './assets/bgm/stage.ogg'
+  '/assets/sprite/player.png',
+  '/assets/sprite/enemies.png',
+  '/assets/bg/layer1.png',
+  '/assets/bg/layer2.png',
+  '/assets/sfx/jump.ogg',
+  '/assets/sfx/hit.ogg',
+  '/assets/bgm/stage.ogg'
 ];
 
 const PSR_VER = 'psr-preload-v20240929-01';
@@ -42,20 +42,20 @@ addEventListener('orientationchange', scheduleResize, { passive: true });
 
 /* ====== Preloader utils ====== */
 
-function withBustParam(src){
+function withBustParam(src) {
   if (!src) return src;
   const hasQuery = src.includes('?');
   const param = `psr=${encodeURIComponent(PSR_VER)}`;
   return src + (hasQuery ? '&' : '?') + param;
 }
 
-function withTimeout(promise, ms = LOAD_TIMEOUT_MS){
+function withTimeout(promise, ms = LOAD_TIMEOUT_MS) {
   return new Promise(resolve => {
     let settled = false;
     const timer = setTimeout(() => {
-      if (!settled){
+      if (!settled) {
         settled = true;
-        resolve({ ok:false, reason:'timeout' });
+        resolve({ ok: false, reason: 'timeout' });
       }
     }, ms);
 
@@ -63,17 +63,17 @@ function withTimeout(promise, ms = LOAD_TIMEOUT_MS){
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      resolve({ ok:true, value });
+      resolve({ ok: true, value });
     }).catch(reason => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      resolve({ ok:false, reason });
+      resolve({ ok: false, reason });
     });
   });
 }
 
-function loadImage(src){
+function loadImage(src) {
   const url = withBustParam(src);
   return withTimeout(new Promise((resolve, reject) => {
     const img = new Image();
@@ -83,7 +83,7 @@ function loadImage(src){
   }));
 }
 
-function loadAudio(src){
+function loadAudio(src) {
   const url = withBustParam(src);
   return withTimeout(new Promise((resolve, reject) => {
     const audio = new Audio();
@@ -97,7 +97,7 @@ function loadAudio(src){
     try {
       audio.src = url;
       audio.load();
-    } catch (err){
+    } catch (err) {
       cleanup();
       reject(err);
     }
@@ -111,7 +111,7 @@ const splashPercentEl = document.querySelector('.splash-percent');
 // Exposed so other modules can guard interactions until preload completes.
 window.PSRUN_BOOT_READY = false;
 
-function updateProgress(loaded, total){
+function updateProgress(loaded, total) {
   const safeTotal = Math.max(1, Number(total) || 0);
   const pct = Math.floor((Math.max(0, loaded) / safeTotal) * 100);
   if (splashFillEl) splashFillEl.style.width = `${pct}%`;
@@ -119,9 +119,9 @@ function updateProgress(loaded, total){
   if (labelEl) labelEl.textContent = `${pct}%`;
 }
 
-async function psrPreload(list){
+async function psrPreload(list) {
   const assets = Array.isArray(list) ? list.filter(Boolean) : [];
-  if (!assets.length){
+  if (!assets.length) {
     updateProgress(1, 1);
     return;
   }
@@ -134,7 +134,7 @@ async function psrPreload(list){
     const src = String(asset);
     const loader = IMG_PATTERN.test(src) ? loadImage : (AUDIO_PATTERN.test(src) ? loadAudio : loadImage);
     const result = await loader(src);
-    if (!result.ok){
+    if (!result.ok) {
       console.warn('[PSR] preload miss:', src, result.reason);
     }
     loaded++;
@@ -143,7 +143,7 @@ async function psrPreload(list){
   }));
 }
 
-async function psrBoot(){
+async function psrBoot() {
   try {
     // 初期スケールを先に合わせてからプリロード（見た目のブレ最小化）
     setSceneScale();
@@ -157,7 +157,7 @@ async function psrBoot(){
   }
 }
 
-function showStageTitle(text){
+function showStageTitle(text) {
   const el = document.getElementById('stageTitle');
   if (!el) return;
   el.textContent = text;
@@ -165,10 +165,10 @@ function showStageTitle(text){
   setTimeout(() => el.classList.remove('show'), 1600);
 }
 
-function cameraShake(mag = 8, dur = 140){
+function cameraShake(mag = 8, dur = 140) {
   const root = document.documentElement;
   const start = performance.now();
-  function tick(t){
+  function tick(t) {
     const progress = Math.min(1, (t - start) / dur);
     const amplitude = (1 - progress) * mag;
     const x = (Math.random() * 2 - 1) * amplitude;
@@ -180,7 +180,7 @@ function cameraShake(mag = 8, dur = 140){
   requestAnimationFrame(tick);
 }
 
-function floatText(text, x, y, color = '#ffec8b'){
+function floatText(text, x, y, color = '#ffec8b') {
   const el = document.createElement('div');
   el.className = 'float-txt';
   el.textContent = text;
@@ -191,19 +191,19 @@ function floatText(text, x, y, color = '#ffec8b'){
   el.addEventListener('animationend', () => el.remove());
 }
 
-const speedSe = typeof Audio !== 'undefined' ? new Audio('./assets/sfx/whoosh.ogg') : null;
-if (speedSe){
+const speedSe = typeof Audio !== 'undefined' ? new Audio('/assets/sfx/whoosh.ogg') : null;
+if (speedSe) {
   speedSe.volume = 0.35;
   registerUnlockableAudio(speedSe);
 }
 
-function speedSE(){
+function speedSE() {
   try {
-    if (speedSe){
+    if (speedSe) {
       speedSe.currentTime = 0;
       speedSe.play();
     }
-  } catch {}
+  } catch { }
 }
 
 document.addEventListener('DOMContentLoaded', psrBoot);

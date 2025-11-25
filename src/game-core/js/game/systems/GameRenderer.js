@@ -15,12 +15,55 @@ export class GameRenderer {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
 
-        // 背景レイヤー
-        this.bgLayers = [
-            { src: './assets/bg/bg_layer_1_sky.png', speed: 0.2, img: new Image(), alpha: 1.0 },
-            { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, img: new Image(), alpha: 1.0 }
-        ];
-        this.bgLayers.forEach(l => l.img.src = l.src);
+        // 背景レイヤー - 初期化時は空
+        this.bgLayers = [];
+
+        // 最前景レイヤー
+        this.foregroundLayer = null;
+
+        // 現在のステージキーを追跡
+        this.currentStageKey = null;
+    }
+
+    /**
+     * 背景レイヤーを更新（ステージ変更時）
+     */
+    updateBackgroundLayers(stage) {
+        // 同じステージの場合は更新不要
+        if (this.currentStageKey === stage.key) return;
+
+        this.currentStageKey = stage.key;
+
+        // 新しいレイヤーを設定
+        this.bgLayers = stage.layers.map(layer => ({
+            src: layer.src,
+            speed: layer.speed,
+            alpha: layer.alpha,
+            bottomAligned: layer.bottomAligned, // 下揃え設定
+            img: new Image()
+        }));
+
+        // 画像を読み込み
+        this.bgLayers.forEach(l => {
+            // ./assets/... -> /assets/... に変換して読み込み
+            const src = l.src.startsWith('./') ? l.src.substring(1) : l.src;
+            l.img.src = src;
+        });
+
+        // 最前景レイヤーを設定（存在する場合）
+        if (stage.foregroundLayer) {
+            this.foregroundLayer = {
+                src: stage.foregroundLayer.src,
+                speed: stage.foregroundLayer.speed,
+                alpha: stage.foregroundLayer.alpha,
+                img: new Image()
+            };
+            this.foregroundLayer.img.src = this.foregroundLayer.src.startsWith('./')
+                ? this.foregroundLayer.src.substring(1)
+                : this.foregroundLayer.src;
+        } else {
+            this.foregroundLayer = null;
+        }
     }
 
     /**
@@ -29,37 +72,64 @@ export class GameRenderer {
     drawBackground(level) {
         const st = stageForLevel(level);
 
+        // ステージに応じて背景レイヤーを更新
+        this.updateBackgroundLayers(st);
+
         // Parallax BG
         this.bgLayers.forEach(layer => {
-            if (layer.img.complete) {
-                const scale = this.canvas.height / layer.img.height;
+            if (layer.img.complete && layer.img.naturalWidth > 0) {
+                let scale = this.canvas.height / layer.img.height;
+                let y = 0;
+
+                // 下揃えモード（画像を縦に引き伸ばさず、下端に配置）
+                // 下揃えモード（画像を縦に引き伸ばさず、下端に配置）
+                if (layer.bottomAligned) {
+                    // 基本スケール: 画面高さ / 1080 (基準解像度)
+                    scale = this.canvas.height / 1080;
+
+                    // 最低でも画面下半分をカバーするように強制
+                    const minHeight = this.canvas.height * 0.6;
+                    if (layer.img.height * scale < minHeight) {
+                        scale = minHeight / layer.img.height;
+                    }
+
+                    // 画面下端に配置 (y座標を計算)
+                    // 確実に下端に合わせるため、Math.floor等は使わず、浮動小数点のまま計算
+                    // さらに、隙間防止のために 1px 下にずらす（オーバーラップさせる）
+                    y = this.canvas.height - (layer.img.height * scale) + 1;
+                }
+
                 const w = layer.img.width * scale;
-                const h = this.canvas.height;
+                const h = layer.img.height * scale;
                 const x = -(now() * 0.1 * layer.speed) % w;
 
                 this.ctx.save();
                 this.ctx.globalAlpha = layer.alpha || 1.0;
-                this.ctx.drawImage(layer.img, x, 0, w, h);
-                this.ctx.drawImage(layer.img, x + w, 0, w, h);
+                this.ctx.drawImage(layer.img, x, y, w, h);
+                this.ctx.drawImage(layer.img, x + w, y, w, h);
                 if (x + w < this.canvas.width) {
-                    this.ctx.drawImage(layer.img, x + w * 2, 0, w, h);
+                    this.ctx.drawImage(layer.img, x + w * 2, y, w, h);
                 }
                 this.ctx.restore();
             }
         });
 
         // Fallback gradient if bg not loaded
-        if (!this.bgLayers[0].img.complete) {
+        if (this.bgLayers.length === 0 || !this.bgLayers[0].img.complete) {
             const g = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-            g.addColorStop(0, '#0f172a');
-            g.addColorStop(1, '#334155');
+            g.addColorStop(0, st.bg1 || '#0f172a');
+            g.addColorStop(1, st.bg2 || '#334155');
             this.ctx.fillStyle = g;
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
         // Ground
-        this.ctx.fillStyle = st.ground;
-        this.ctx.fillRect(0, this.canvas.height - 72, this.canvas.width, 72);
+        // bottomAlignedなレイヤーがある場合は、単色の地面を描画しない（画像の地面を使う）
+        const hasBottomLayer = this.bgLayers.some(l => l.bottomAligned);
+        if (!hasBottomLayer) {
+            this.ctx.fillStyle = st.ground;
+            this.ctx.fillRect(0, this.canvas.height - 72, this.canvas.width, 72);
+        }
     }
 
     /**
@@ -73,6 +143,42 @@ export class GameRenderer {
         projectiles.draw(this.ctx);
         companion.draw(this.ctx);
         particles.draw(this.ctx);
+    }
+
+    /**
+     * 最前景レイヤーの描画（キャラクターより手前）
+     */
+    drawForeground() {
+        if (!this.foregroundLayer || !this.foregroundLayer.img.complete || this.foregroundLayer.img.naturalWidth === 0) return;
+
+        const layer = this.foregroundLayer;
+
+        // レイヤー3と同じロジックでスケールとY座標を計算
+        // 基本スケール: 画面高さ / 1080 (基準解像度)
+        let scale = this.canvas.height / 1080;
+
+        // 最低でも画面下半分をカバーするように強制
+        const minHeight = this.canvas.height * 0.6;
+        if (layer.img.height * scale < minHeight) {
+            scale = minHeight / layer.img.height;
+        }
+
+        // 画面下端に配置 (y座標を計算)
+        // 隙間防止のために 1px 下にずらす
+        const y = this.canvas.height - (layer.img.height * scale) + 1;
+
+        const w = layer.img.width * scale;
+        const h = layer.img.height * scale;
+        const x = -(now() * 0.1 * layer.speed) % w;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = layer.alpha || 1.0;
+        this.ctx.drawImage(layer.img, x, y, w, h);
+        this.ctx.drawImage(layer.img, x + w, y, w, h);
+        if (x + w < this.canvas.width) {
+            this.ctx.drawImage(layer.img, x + w * 2, y, w, h);
+        }
+        this.ctx.restore();
     }
 
     /**
@@ -298,6 +404,9 @@ export class GameRenderer {
             gameState.invUntil,
             gameState.hurtUntil
         );
+
+        // Draw foreground layer (in front of characters)
+        this.drawForeground();
 
         // Draw fever effect
         this.drawFeverEffect(gameState.feverModeUntil);

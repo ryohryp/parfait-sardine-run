@@ -1,10 +1,88 @@
 export const stages = [
-  { key: 'meadow', name: '草原', bg1: '#9ed6ee', bg2: '#fff7e6', ground: '#7fb10a', enemyMul: 1.00, bgImage: 'meadow.png' },
-  { key: 'dunes', name: '砂漠', bg1: '#ffd28a', bg2: '#ffe9c7', ground: '#d2a659', enemyMul: 1.10, bgImage: 'desert.png' },
-  { key: 'sky', name: '雪原', bg1: '#c8e7ff', bg2: '#f6fbff', ground: '#b9d3e5', enemyMul: 1.22, bgImage: 'snow.png' },
-  { key: 'volcano', name: '火山', bg1: '#ff4500', bg2: '#ff6b35', ground: '#8b0000', enemyMul: 1.50, bgImage: 'volcano.png' },
-  { key: 'ocean', name: '海底', bg1: '#001f3f', bg2: '#003366', ground: '#1a3a52', enemyMul: 1.68, bgImage: 'ocean.png' },
-  { key: 'abyss', name: '宇宙', bg1: '#0b1833', bg2: '#1b2850', ground: '#0b1833', enemyMul: 1.38, bgImage: 'space.png' },
+  {
+    key: 'meadow',
+    name: '草原',
+    bg1: '#9ed6ee',
+    bg2: '#fff7e6',
+    ground: '#7fb10a',
+    enemyMul: 1.00,
+    layers: [
+      { src: './assets/bg/meadow_layer1.png', speed: 0.2, alpha: 1.0 },
+      { src: './assets/bg/meadow_layer2.png', speed: 0.5, alpha: 1.0 },
+      { src: './assets/bg/meadow_layer3.png', speed: 0.8, alpha: 1.0, bottomAligned: true }
+    ],
+    foregroundLayer: { src: './assets/bg/meadow_layer4.png', speed: 1.0, alpha: 1.0 }
+  },
+  {
+    key: 'dunes',
+    name: '砂漠',
+    bg1: '#ffd28a',
+    bg2: '#ffe9c7',
+    ground: '#d2a659',
+    enemyMul: 1.10,
+    layers: [
+      { src: './assets/bg/bg_layer_1_sky.png', speed: 0.2, alpha: 1.0 },
+      { src: './assets/bg/desert.png', speed: 0.5, alpha: 0.6 },
+      { src: './assets/bg/desert.png', speed: 0.8, alpha: 0.3, bottomAligned: true }
+    ],
+    foregroundLayer: { src: './assets/bg/dunes_layer4.png', speed: 1.0, alpha: 1.0 }
+  },
+  {
+    key: 'sky',
+    name: '雪原',
+    bg1: '#c8e7ff',
+    bg2: '#f6fbff',
+    ground: '#b9d3e5',
+    enemyMul: 1.22,
+    layers: [
+      { src: './assets/bg/bg_layer_1_sky.png', speed: 0.2, alpha: 1.0 },
+      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, alpha: 0.9 },
+      { src: './assets/bg/snow.png', speed: 0.8, alpha: 0.4, bottomAligned: true }
+    ],
+    foregroundLayer: { src: './assets/bg/sky_layer4.png', speed: 1.0, alpha: 1.0 }
+  },
+  {
+    key: 'volcano',
+    name: '火山',
+    bg1: '#ff4500',
+    bg2: '#ff6b35',
+    ground: '#8b0000',
+    enemyMul: 1.50,
+    layers: [
+      { src: './assets/bg/bg_layer_1_sky.png', speed: 0.2, alpha: 0.5 },
+      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, alpha: 0.7 },
+      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.8, alpha: 0.5, bottomAligned: true }
+    ],
+    foregroundLayer: { src: './assets/bg/volcano_layer4.png', speed: 1.0, alpha: 1.0 }
+  },
+  {
+    key: 'ocean',
+    name: '海底',
+    bg1: '#001f3f',
+    bg2: '#003366',
+    ground: '#1a3a52',
+    enemyMul: 1.68,
+    layers: [
+      { src: './assets/bg/bg_layer_1_sky.png', speed: 0.15, alpha: 0.6 },
+      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.4, alpha: 0.5 },
+      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.7, alpha: 0.3, bottomAligned: true }
+    ],
+    foregroundLayer: { src: './assets/bg/ocean_layer4.png', speed: 1.0, alpha: 1.0 }
+  },
+  {
+    key: 'abyss',
+    name: '宇宙',
+    bg1: '#0b1833',
+    bg2: '#1b2850',
+    ground: '#0b1833',
+    enemyMul: 1.38,
+    layers: [
+      { src: './assets/bg/space.png', speed: 0.1, alpha: 1.0 },
+      { src: './assets/bg/space.png', speed: 0.3, alpha: 0.5 },
+      { src: './assets/bg/space.png', speed: 0.6, alpha: 0.3, bottomAligned: true }
+    ],
+    foregroundLayer: { src: './assets/bg/abyss_layer4.png', speed: 1.0, alpha: 1.0 }
+  },
 ];
 
 
