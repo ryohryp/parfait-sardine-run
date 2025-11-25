@@ -20,6 +20,10 @@ export const useSound = () => {
         soundManager.playSuccess();
     }, [soundManager]);
 
+    const playUltraRare = useCallback(() => {
+        soundManager.playUltraRare();
+    }, [soundManager]);
+
     const playBgm = useCallback((url: string) => {
         soundManager.playBgm(url);
     }, [soundManager]);
@@ -33,6 +37,7 @@ export const useSound = () => {
         playCoin,
         playAchievement,
         playSuccess,
+        playUltraRare,
         playBgm,
         stopBgm
     };

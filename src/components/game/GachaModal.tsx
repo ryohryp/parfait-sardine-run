@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GachaSystem, type CharacterOwned, type Character } from '../../game-core/js/game/GachaSystem.js';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useSound } from '../../hooks/useSound';
 import { rarClass } from '../../game-core/js/game-data/characters.js';
 
 interface GachaModalProps {
@@ -15,8 +16,11 @@ type GachaResultItem = CharacterOwned & { char: Character; isLimitBreak: boolean
 
 export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaSystem, onUpdate }) => {
     const { t } = useTranslation();
+    const { playUltraRare, playSuccess } = useSound();
     const [results, setResults] = useState<GachaResultItem[] | null>(null);
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
+    const [rollRarity, setRollRarity] = useState<'C' | 'L' | 'M'>('C'); // Highest rarity in current roll
+    const [ultraChar, setUltraChar] = useState<Character | null>(null); // For M rarity reveal
 
     const [showRates, setShowRates] = useState(false);
 
@@ -28,56 +32,56 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
             return;
         }
 
+        // 1. Pre-calculate results
+        const res = gachaSystem.doGacha(n);
+        if (!res) return;
+
+        // 2. Determine highest rarity
+        let highestRarity: 'C' | 'L' | 'M' = 'C';
+        let foundUltra: Character | null = null;
+
+        res.forEach(item => {
+            if (item.char.rar === 'M' || item.char.rar === 'XL') {
+                highestRarity = 'M';
+                foundUltra = item.char; // Grab the first M char for reveal
+            } else if (item.char.rar === 'L' && highestRarity !== 'M') {
+                highestRarity = 'L';
+            }
+        });
+
+        setRollRarity(highestRarity);
+        setUltraChar(foundUltra);
+        setResults(res);
         setAnimationState('rolling');
 
-        // Rolling animation
+        // 3. Animation Sequence
         setTimeout(() => {
-            const res = gachaSystem.doGacha(n);
-
-            if (!res) {
-                setAnimationState('idle');
-                return;
-            }
-
-            // Check rarity levels
-            const hasUltraRarity = res.some((item) => {
-                const rar = item.char.rar;
-                return rar === 'M' || rar === 'XL';
-            });
-
-            const hasHighRarity = res.some((item) => {
-                const rar = item.char.rar;
-                return rar === 'L';
-            });
-
-            if (hasUltraRarity) {
-                // Show ultra cutscene for M/XL rarity
+            if (highestRarity === 'M') {
                 setAnimationState('ultra-cutscene');
+                playUltraRare();
                 setTimeout(() => {
-                    setResults(res);
                     setAnimationState('result');
                     onUpdate();
-                }, 3500);
-            } else if (hasHighRarity) {
-                // Show cutscene for L rarity
+                }, 4000); // Longer for ultra
+            } else if (highestRarity === 'L') {
                 setAnimationState('cutscene');
+                playSuccess();
                 setTimeout(() => {
-                    setResults(res);
                     setAnimationState('result');
                     onUpdate();
                 }, 2000);
             } else {
-                // Show results directly
-                setResults(res);
                 setAnimationState('result');
                 onUpdate();
             }
-        }, 1500);
+        }, 2000); // Rolling duration
     };
 
     const closeResults = () => {
         setResults(null);
         setAnimationState('idle');
+        setRollRarity('C');
+        setUltraChar(null);
     };
 
     return (
@@ -173,15 +177,16 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            animation: 'shake 0.5s infinite'
+                            animation: rollRarity === 'M' ? 'shakeHard 0.5s infinite' : 'shake 0.5s infinite'
                         }}>
                             <div style={{
                                 fontSize: '64px',
                                 animation: 'pulse 1s infinite',
-                                marginBottom: '20px'
+                                marginBottom: '20px',
+                                filter: rollRarity === 'M' ? 'drop-shadow(0 0 20px rgba(255,0,128,0.8))' : rollRarity === 'L' ? 'drop-shadow(0 0 15px rgba(255,215,0,0.8))' : 'none'
                             }}>🎁</div>
                             <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                                ガチャを引いています...
+                                {rollRarity === 'M' ? '!!!!' : 'ガチャを引いています...'}
                             </div>
                         </div>
                     )}
@@ -236,65 +241,32 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             overflow: 'hidden'
                         }}>
                             {/* Particle effects */}
-                            <div style={{
-                                position: 'absolute',
-                                top: '10%',
-                                left: '20%',
-                                fontSize: '60px',
-                                animation: 'float 2s ease-in-out infinite'
-                            }}>💎</div>
-                            <div style={{
-                                position: 'absolute',
-                                top: '20%',
-                                right: '15%',
-                                fontSize: '50px',
-                                animation: 'float 2.5s ease-in-out infinite 0.5s'
-                            }}>⭐</div>
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '15%',
-                                left: '10%',
-                                fontSize: '55px',
-                                animation: 'float 2.2s ease-in-out infinite 0.3s'
-                            }}>🌟</div>
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '25%',
-                                right: '20%',
-                                fontSize: '65px',
-                                animation: 'float 2.8s ease-in-out infinite 0.7s'
-                            }}>✨</div>
-                            <div style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '5%',
-                                fontSize: '45px',
-                                animation: 'float 2.3s ease-in-out infinite 0.2s'
-                            }}>🎆</div>
-                            <div style={{
-                                position: 'absolute',
-                                top: '40%',
-                                right: '8%',
-                                fontSize: '50px',
-                                animation: 'float 2.6s ease-in-out infinite 0.9s'
-                            }}>💫</div>
+                            <div style={{ position: 'absolute', top: '10%', left: '20%', fontSize: '60px', animation: 'float 2s ease-in-out infinite' }}>💎</div>
+                            <div style={{ position: 'absolute', top: '20%', right: '15%', fontSize: '50px', animation: 'float 2.5s ease-in-out infinite 0.5s' }}>⭐</div>
+                            <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: '55px', animation: 'float 2.2s ease-in-out infinite 0.3s' }}>🌟</div>
+                            <div style={{ position: 'absolute', bottom: '25%', right: '20%', fontSize: '65px', animation: 'float 2.8s ease-in-out infinite 0.7s' }}>✨</div>
+                            <div style={{ position: 'absolute', top: '50%', left: '5%', fontSize: '45px', animation: 'float 2.3s ease-in-out infinite 0.2s' }}>🎆</div>
+                            <div style={{ position: 'absolute', top: '40%', right: '8%', fontSize: '50px', animation: 'float 2.6s ease-in-out infinite 0.9s' }}>💫</div>
 
-                            {/* Center content */}
+                            {/* Center content - Reveal Character */}
                             <div style={{
                                 fontSize: '120px',
                                 animation: 'megaBounce 1s infinite, rotate 3s linear infinite',
                                 marginBottom: '40px',
                                 filter: 'drop-shadow(0 0 30px rgba(255,255,255,1))'
-                            }}>👑</div>
+                            }}>
+                                {ultraChar ? ultraChar.emoji : '👑'}
+                            </div>
                             <div style={{
-                                fontSize: '64px',
+                                fontSize: '48px',
                                 fontWeight: 'bold',
                                 color: '#fff',
                                 textShadow: '0 0 30px rgba(255,215,0,1), 0 0 60px rgba(255,215,0,0.8)',
                                 animation: 'megaGlow 1s infinite, pulse 2s infinite',
-                                letterSpacing: '8px'
+                                letterSpacing: '4px',
+                                textAlign: 'center'
                             }}>
-                                ULTRA RARE!!!
+                                {ultraChar ? ultraChar.name : 'ULTRA RARE!!!'}
                             </div>
                             <div style={{
                                 fontSize: '32px',
@@ -355,6 +327,11 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                     0%, 100% { transform: translateX(0); }
                     25% { transform: translateX(-5px) rotate(-5deg); }
                     75% { transform: translateX(5px) rotate(5deg); }
+                }
+                @keyframes shakeHard {
+                    0%, 100% { transform: translateX(0) scale(1); }
+                    25% { transform: translateX(-10px) rotate(-10deg) scale(1.1); }
+                    75% { transform: translateX(10px) rotate(10deg) scale(1.1); }
                 }
                 @keyframes pulse {
                     0%, 100% { transform: scale(1); }

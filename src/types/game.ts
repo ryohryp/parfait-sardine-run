@@ -78,6 +78,9 @@ export interface GameResult {
     stageClear?: boolean;
     enemiesDefeated?: number;
     bossesDefeated?: number;
+    distance?: number; // New
+    jumps?: number;    // New
+    attacks?: number;  // New
 }
 
 export interface GameRunData {
@@ -88,6 +91,9 @@ export interface GameRunData {
     result: string;
     enemiesDefeated?: number;
     bossesDefeated?: number;
+    distance?: number; // New
+    jumps?: number;    // New
+    attacks?: number;  // New
 }
 
 export interface GameCallbacks {

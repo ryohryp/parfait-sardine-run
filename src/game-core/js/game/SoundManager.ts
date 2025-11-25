@@ -200,4 +200,75 @@ export class SoundManager {
         osc2.start(now + 0.1);
         osc2.stop(now + 0.4);
     }
+
+    /**
+     * Play Ultra Rare Gacha Sound
+     * Dramatic fanfare with sparkles
+     */
+    public playUltraRare() {
+        if (!this.audioContext || !this.masterGain) return;
+        this.ensureContext();
+
+        const now = this.audioContext.currentTime;
+
+        // 1. Deep Bass Impact
+        const bassOsc = this.audioContext.createOscillator();
+        const bassGain = this.audioContext.createGain();
+        bassOsc.connect(bassGain);
+        bassGain.connect(this.masterGain);
+
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(100, now);
+        bassOsc.frequency.exponentialRampToValueAtTime(50, now + 1.0);
+
+        bassGain.gain.setValueAtTime(0.5, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+
+        bassOsc.start(now);
+        bassOsc.stop(now + 1.5);
+
+        // 2. Magical Arpeggio (Rapid high notes)
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98, 2093.00]; // C major extended
+
+        notes.forEach((freq, i) => {
+            // Play ascending
+            const osc = this.audioContext!.createOscillator();
+            const gain = this.audioContext!.createGain();
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            const startTime = now + 0.1 + (i * 0.08);
+
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(0.2, startTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.4);
+        });
+
+        // 3. Final Chord (Fanfare)
+        const chordNotes = [523.25, 659.25, 783.99, 1046.50]; // C Major
+        const chordTime = now + 0.8;
+
+        chordNotes.forEach(freq => {
+            const osc = this.audioContext!.createOscillator();
+            const gain = this.audioContext!.createGain();
+            osc.connect(gain);
+            gain.connect(this.masterGain!);
+
+            osc.type = 'triangle';
+            osc.frequency.value = freq;
+
+            gain.gain.setValueAtTime(0, chordTime);
+            gain.gain.linearRampToValueAtTime(0.3, chordTime + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.01, chordTime + 2.0);
+
+            osc.start(chordTime);
+            osc.stop(chordTime + 2.0);
+        });
+    }
 }

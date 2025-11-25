@@ -52,13 +52,20 @@ export class Game {
 
     init() {
         this.input.init(this.canvas);
-        this.input.on('jump', () => { if (this.gameOn) this.player.jump(); });
+        this.input.on('jump', () => {
+            if (this.gameOn) {
+                this.player.jump();
+                this.sessionJumps++; // Track jumps
+            }
+        });
         this.input.on('shoot', () => this.shoot());
         this.input.on('ult', () => this.tryUlt());
         initAudio();
         this.notifyState();
         requestAnimationFrame(t => this.loop(t));
     }
+
+    // ... (keep existing methods)
 
     pause() {
         this.paused = true;
@@ -141,6 +148,11 @@ export class Game {
         this.bulletBoostUntil = 0;
         this.scoreMulUntil = 0;
 
+        // New stats
+        this.sessionDistance = 0;
+        this.sessionJumps = 0;
+        this.sessionAttacks = 0;
+
         this.scoreSystem.reset();
         this.enemies.reset();
         this.items.reset();
@@ -171,20 +183,25 @@ export class Game {
         const finalScore = Number(this.score) || 0;
         const finalCoins = Number(this.sessionCoins) || 0;
         const finalLevel = Number(this.level) || 1;
+
+        const resultData = {
+            score: finalScore,
+            stage: `level-${finalLevel}`,
+            duration: durationMs,
+            coins: finalCoins,
+            result: 'gameover',
+            distance: Math.floor(this.sessionDistance),
+            jumps: this.sessionJumps,
+            attacks: this.sessionAttacks
+        };
+
         if (this.callbacks.onRunFinish) {
-            this.callbacks.onRunFinish({
-                score: finalScore,
-                stage: `level-${finalLevel}`,
-                duration: durationMs,
-                coins: finalCoins,
-                result: 'gameover'
-            });
+            this.callbacks.onRunFinish(resultData);
         }
         if (this.callbacks.onGameOver) {
             this.callbacks.onGameOver({
-                score: finalScore,
+                ...resultData,
                 level: finalLevel,
-                coins: finalCoins,
                 newBest: this.score === this.bestScore
             });
         }
@@ -196,6 +213,12 @@ export class Game {
         const elapsed = t - this.t0;
         const remain = GAME_TIME - elapsed;
         if (remain <= 0) return this.endGame();
+
+        // Update distance (approximate based on scroll speed)
+        // Base speed 6 + level * 0.5 (example assumption, adjusting to match feel)
+        const currentSpeed = 6 + (this.level * 0.5);
+        this.sessionDistance += currentSpeed * (16 / 1000) * 10; // Scale factor for "meters"
+
         // Level progression based on score
         this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1) + this.levelOffset;
         // Update entities
@@ -256,6 +279,7 @@ export class Game {
         const nowTime = now();
         if (nowTime - this.lastShot < SHOOT_COOLDOWN) return;
         this.lastShot = nowTime;
+        this.sessionAttacks++; // Track attacks
         const pierce = characters[this.gacha.collection.current]?.special?.includes('pierce');
         const v = 9 + this.level * 0.6 + (now() < this.bulletBoostUntil ? 4 : 0);
         const stats = this.getEffectiveStats(this.gacha.collection.current);

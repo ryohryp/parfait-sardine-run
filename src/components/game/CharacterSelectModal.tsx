@@ -3,6 +3,8 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { characters, rarClass } from '../../game-core/js/game-data/characters.js';
 import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
 
+import { CharacterDetailModal } from './CharacterDetailModal';
+
 interface CharacterSelectModalProps {
     visible: boolean;
     onStart: (characterKey: string) => void;
@@ -26,6 +28,7 @@ export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({
     const [selectedChar, setSelectedChar] = useState<string>(initialChar);
     const [collection, setCollection] = useState<any>(null);
     const [charProgression, setCharProgression] = useState<any>(null);
+    const [showDetail, setShowDetail] = useState(false);
 
     // Load collection and set initial selected character when modal becomes visible
     useEffect(() => {
@@ -125,7 +128,32 @@ export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({
                         })}
                     </div>
                     {/* Details View */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', padding: '16px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', padding: '16px', position: 'relative' }}>
+
+                        {/* Detail Button */}
+                        <button
+                            onClick={() => setShowDetail(true)}
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                background: 'white',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '50%',
+                                width: '40px',
+                                height: '40px',
+                                fontSize: '20px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                            title="View Details"
+                        >
+                            🔍
+                        </button>
+
                         <div style={{ fontSize: '64px', marginBottom: '16px' }}>{currentChar?.emoji}</div>
                         <h3 style={{ fontSize: '24px', marginBottom: '8px' }}>{t(`char_${selectedChar}_name` as any)}</h3>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
@@ -223,6 +251,15 @@ export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({
                     </button>
                 </div>
             </div>
+
+            {showDetail && currentChar && (
+                <CharacterDetailModal
+                    characterKey={selectedChar}
+                    characterData={currentChar}
+                    gachaSystem={gachaSystem}
+                    onClose={() => setShowDetail(false)}
+                />
+            )}
         </div>
     );
 };

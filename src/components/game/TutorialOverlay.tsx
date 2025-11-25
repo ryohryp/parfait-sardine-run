@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import './TutorialOverlay.css';
 
-export type TutorialStep = 'jump' | 'doubleJump' | 'attack' | 'complete';
+export type TutorialStep = 'jump' | 'attack' | 'complete';
 
 interface TutorialOverlayProps {
     step: TutorialStep;
@@ -23,12 +23,6 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
                     title: t('tutorial_jump_title'),
                     desc: t('tutorial_jump_desc'),
                     action: t('tutorial_tap_screen')
-                };
-            case 'doubleJump':
-                return {
-                    title: t('tutorial_double_jump_title'),
-                    desc: t('tutorial_double_jump_desc'),
-                    action: t('tutorial_tap_midair')
                 };
             case 'attack':
                 return {
@@ -53,9 +47,8 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
         <div className="tutorial-overlay" onClick={onNext}>
             <div className="tutorial-content">
                 <div className="tutorial-step-indicator">
-                    {step === 'jump' && '1/3'}
-                    {step === 'doubleJump' && '2/3'}
-                    {step === 'attack' && '3/3'}
+                    {step === 'jump' && '1/2'}
+                    {step === 'attack' && '2/2'}
                     {step === 'complete' && '🎉'}
                 </div>
                 <h2>{content.title}</h2>

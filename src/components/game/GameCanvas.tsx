@@ -55,12 +55,16 @@ export const GameCanvas: React.FC = () => {
                 stopBgm();
 
                 // Update stats and check achievements
+                // Update stats and check achievements
                 achievementSystem.updateStats({
                     totalRuns: 1,
                     totalCoins: res.coins,
                     maxScore: res.score,
                     enemiesDefeated: res.enemiesDefeated || 0,
-                    bossesDefeated: res.bossesDefeated || 0
+                    bossesDefeated: res.bossesDefeated || 0,
+                    totalDistance: res.distance || 0,
+                    totalJumps: res.jumps || 0,
+                    totalAttacks: res.attacks || 0
                 });
 
                 const newUnlocks = achievementSystem.checkUnlocks(gachaSystem);
@@ -194,8 +198,6 @@ export const GameCanvas: React.FC = () => {
 
     const handleTutorialNext = () => {
         if (tutorialStep === 'jump') {
-            setTutorialStep('doubleJump');
-        } else if (tutorialStep === 'doubleJump') {
             setTutorialStep('attack');
         } else if (tutorialStep === 'attack') {
             setTutorialStep('complete');

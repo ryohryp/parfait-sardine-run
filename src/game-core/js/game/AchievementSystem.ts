@@ -16,6 +16,9 @@ export interface UserStats {
     totalGachaPulls: number;
     enemiesDefeated: number;
     bossesDefeated: number;
+    totalDistance: number; // New
+    totalJumps: number;    // New
+    totalAttacks: number;  // New
 }
 
 export class AchievementSystem {
@@ -112,6 +115,39 @@ export class AchievementSystem {
             descKey: 'ach_collector_10_desc',
             reward: 2000,
             condition: (_, gacha) => Object.keys(gacha.collection.owned).length >= 10
+        },
+        // New Achievements
+        {
+            id: 'marathon',
+            icon: '👟',
+            titleKey: 'ach_marathon_title',
+            descKey: 'ach_marathon_desc',
+            reward: 500,
+            condition: (stats) => stats.totalDistance >= 10000
+        },
+        {
+            id: 'ultra_marathon',
+            icon: '🌏',
+            titleKey: 'ach_ultra_marathon_title',
+            descKey: 'ach_ultra_marathon_desc',
+            reward: 1000,
+            condition: (stats) => stats.totalDistance >= 50000
+        },
+        {
+            id: 'bunny_hop',
+            icon: '🐰',
+            titleKey: 'ach_bunny_hop_title',
+            descKey: 'ach_bunny_hop_desc',
+            reward: 300,
+            condition: (stats) => stats.totalJumps >= 1000
+        },
+        {
+            id: 'fighter',
+            icon: '🥊',
+            titleKey: 'ach_fighter_title',
+            descKey: 'ach_fighter_desc',
+            reward: 300,
+            condition: (stats) => stats.totalAttacks >= 500
         }
     ];
 
@@ -123,7 +159,10 @@ export class AchievementSystem {
             maxScore: 0,
             totalGachaPulls: 0,
             enemiesDefeated: 0,
-            bossesDefeated: 0
+            bossesDefeated: 0,
+            totalDistance: 0,
+            totalJumps: 0,
+            totalAttacks: 0
         };
         this.load();
     }
@@ -159,8 +198,6 @@ export class AchievementSystem {
             ...newStats,
             // Max score should only update if higher
             maxScore: Math.max(this.stats.maxScore, newStats.maxScore || 0),
-            // Others are cumulative (need to be handled by caller properly or logic here)
-            // For simplicity, let's assume the caller passes INCREMENTS for cumulative stats, except maxScore
         };
 
         // Actually, let's make updateStats handle increments for safety
@@ -169,6 +206,9 @@ export class AchievementSystem {
         if (newStats.totalGachaPulls) this.stats.totalGachaPulls += newStats.totalGachaPulls;
         if (newStats.enemiesDefeated) this.stats.enemiesDefeated += newStats.enemiesDefeated;
         if (newStats.bossesDefeated) this.stats.bossesDefeated += newStats.bossesDefeated;
+        if (newStats.totalDistance) this.stats.totalDistance += newStats.totalDistance;
+        if (newStats.totalJumps) this.stats.totalJumps += newStats.totalJumps;
+        if (newStats.totalAttacks) this.stats.totalAttacks += newStats.totalAttacks;
 
         this.save();
     }
