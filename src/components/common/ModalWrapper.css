@@ -14,9 +14,9 @@
 
 .modal-wrapper-content {
     background: #fff;
-    width: 100%;
-    max-width: 800px;
-    height: 90vh;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
     border-radius: 24px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     display: flex;
