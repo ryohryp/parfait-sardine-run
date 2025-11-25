@@ -7,7 +7,7 @@ import { StatsPage } from './routes/StatsPage';
 import { LeaderboardPage } from './routes/LeaderboardPage';
 import { SettingsPage } from './routes/SettingsPage';
 import { ManualPage } from './routes/ManualPage';
-import { LoadingScreen } from './components/game/LoadingScreen';
+import LoadingScreen from './components/game/LoadingScreen';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);

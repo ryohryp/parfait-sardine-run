@@ -6,7 +6,7 @@ interface LoadingScreenProps {
     onComplete: () => void;
 }
 
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
     const { t } = useTranslation();
     const [progress, setProgress] = useState(0);
     const [tipIndex, setTipIndex] = useState(0);
@@ -30,17 +30,17 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
                     setIsComplete(true);
                     setTimeout(() => {
                         onComplete();
-                    }, 500); // Wait for fade out animation
+                    }, 800); // Wait for fade out animation
                     return 100;
                 }
                 return prev + Math.random() * 15 + 5; // Random increment for realistic feel
             });
-        }, 100);
+        }, 150);
 
-        // Change tips every 2 seconds
+        // Change tips every 2.5 seconds
         const tipInterval = setInterval(() => {
             setTipIndex((prev) => (prev + 1) % tips.length);
-        }, 2000);
+        }, 2500);
 
         return () => {
             clearInterval(interval);
@@ -50,6 +50,10 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
 
     return (
         <div className={`loading-screen ${isComplete ? 'fade-out' : ''}`}>
+            {/* Background */}
+            <div className="loading-background"></div>
+            <div className="loading-overlay"></div>
+
             <div className="loading-content">
                 {/* Logo */}
                 <div className="loading-logo">
@@ -61,8 +65,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
                 </div>
 
                 {/* Character Animation */}
-                <div className="loading-character">
-                    <div className="character-sprite">🏃</div>
+                <div className="loading-character-container">
+                    <div className="loading-character-img"></div>
+                    <div className="loading-shadow"></div>
                 </div>
 
                 {/* Progress Bar */}
@@ -72,6 +77,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
                             className="loading-progress-fill"
                             style={{ width: `${Math.min(progress, 100)}%` }}
                         />
+                        <div className="loading-progress-glare"></div>
                     </div>
                     <div className="loading-percentage">
                         {Math.floor(Math.min(progress, 100))}%
@@ -80,18 +86,22 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
 
                 {/* Tips */}
                 <div className="loading-tips">
-                    <div className="tip-label">{t('tip')}</div>
-                    <div className="tip-text" key={tipIndex}>
-                        {tips[tipIndex]}
+                    <div className="tip-card">
+                        <div className="tip-label">💡 {t('tip')}</div>
+                        <div className="tip-text" key={tipIndex}>
+                            {tips[tipIndex]}
+                        </div>
                     </div>
                 </div>
 
                 {/* Footer */}
                 <div className="loading-footer">
                     <div className="loading-spinner"></div>
-                    <span>{t('loading')}</span>
+                    <span>NOW LOADING...</span>
                 </div>
             </div>
         </div>
     );
 };
+
+export default LoadingScreen;
