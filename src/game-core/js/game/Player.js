@@ -43,7 +43,13 @@ export class Player {
     }
 
     loadSprite() {
-        this.sprite.image.src = this.sprite.path;
+        const baseUrl = import.meta.env.BASE_URL;
+        // Ensure path is relative to base URL
+        const src = this.sprite.path.startsWith('assets/')
+            ? `${baseUrl}${this.sprite.path}`
+            : this.sprite.path;
+
+        this.sprite.image.src = src;
         this.sprite.image.onload = () => {
             this.sprite.loaded = true;
             this.sprite.frameWidth = Math.floor(this.sprite.image.naturalWidth / this.sprite.cols);
@@ -56,7 +62,8 @@ export class Player {
         this.stats = stats;
 
         // Try to load character-specific sprite
-        const charSpritePath = `assets/char-${key}.png`;
+        const baseUrl = import.meta.env.BASE_URL;
+        const charSpritePath = `${baseUrl}assets/char-${key}.png`;
         const newImage = new Image();
         newImage.onerror = () => {
             // If character sprite doesn't exist, use emoji rendering

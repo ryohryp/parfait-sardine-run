@@ -37,11 +37,13 @@ export class EnemyManager {
         this.enemyTypeIcons = Object.fromEntries(Object.entries(this.enemyTypeMeta).map(([type, meta]) => [type, meta.icon]));
 
         // Load Assets
+        const baseUrl = import.meta.env.BASE_URL;
+
         this.droneImage = new Image();
-        this.droneImage.src = '/assets/sprite/enemy_cupcake.png';
+        this.droneImage.src = `${baseUrl}assets/sprite/enemy_cupcake.png`;
 
         this.shieldImage = new Image();
-        this.shieldImage.src = '/assets/sprite/enemy_shield.png';
+        this.shieldImage.src = `${baseUrl}assets/sprite/enemy_shield.png`;
 
         this.bossImages = {
             meadow: new Image(),
@@ -51,20 +53,20 @@ export class EnemyManager {
             ocean: new Image(),
             abyss: new Image()
         };
-        this.bossImages.meadow.src = '/assets/sprite/boss_meadow.png';
-        this.bossImages.dunes.src = '/assets/sprite/boss_dunes_v2.png';
-        this.bossImages.sky.src = '/assets/sprite/boss_sky_v2.png';
-        this.bossImages.volcano.src = '/assets/sprite/boss_volcano.png';
-        this.bossImages.ocean.src = '/assets/sprite/boss_ocean.png';
-        this.bossImages.abyss.src = '/assets/sprite/boss_abyss_v2.png';
+        this.bossImages.meadow.src = `${baseUrl}assets/sprite/boss_meadow.png`;
+        this.bossImages.dunes.src = `${baseUrl}assets/sprite/boss_dunes_v2.png`;
+        this.bossImages.sky.src = `${baseUrl}assets/sprite/boss_sky_v2.png`;
+        this.bossImages.volcano.src = `${baseUrl}assets/sprite/boss_volcano.png`;
+        this.bossImages.ocean.src = `${baseUrl}assets/sprite/boss_ocean.png`;
+        this.bossImages.abyss.src = `${baseUrl}assets/sprite/boss_abyss_v2.png`;
 
         // Enemy images for new types
         this.chaserImage = new Image();
-        this.chaserImage.src = '/assets/sprite/enemy_chaser.png';
+        this.chaserImage.src = `${baseUrl}assets/sprite/enemy_chaser.png`;
         this.bomberImage = new Image();
-        this.bomberImage.src = '/assets/sprite/enemy_bomber.png';
+        this.bomberImage.src = `${baseUrl}assets/sprite/enemy_bomber.png`;
         this.splitterImage = new Image();
-        this.splitterImage.src = '/assets/sprite/enemy_splitter.png';
+        this.splitterImage.src = `${baseUrl}assets/sprite/enemy_splitter.png`;
 
         // Boss particles
         this.bossParticles = [];
