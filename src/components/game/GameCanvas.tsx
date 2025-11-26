@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Game } from '../../game-core/js/game/Game.js';
-import { GameFactory } from '../../game-core/js/game/GameFactory.js';
+import { Game } from '../../game-core/js/game/Game';
+import { GameFactory } from '../../game-core/js/game/GameFactory';
 import { GachaSystem } from '../../game-core/js/game/GachaSystem.js';
 import type { GameState, GameResult, GameRunData } from '../../types/game';
 import { HUD } from './HUD';

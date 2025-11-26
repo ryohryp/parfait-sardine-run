@@ -1,4 +1,3 @@
-// Game core implementation
 import { Player } from './Player.js';
 import { InputManager } from './InputManager.js';
 import { EnemyManager } from './EnemyManager.js';
@@ -12,20 +11,59 @@ import { CollisionSystem } from './systems/CollisionSystem.js';
 import { ScoreSystem } from './systems/ScoreSystem.js';
 import { GameRenderer } from './systems/GameRenderer.js';
 import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
-import { GAME_TIME, INVINCIBILITY_DURATION, BASE_JUMP, SHOOT_COOLDOWN, POWER_DURATION, ITEM_LEVEL } from '../game-constants.js';
+import { GAME_TIME, SHOOT_COOLDOWN, ITEM_LEVEL } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
 import { stageForLevel } from '../game-data/stages.js';
-import { equipmentItems } from '../game-data/equipment-data.js';
 import { CollectionSystem } from './CollectionSystem';
 import { logger } from '../utils/Logger.js';
+import { StatsManager, type EffectiveStats } from './StatsManager';
+import { GameStateManager } from './GameStateManager';
 
 function now() { return performance.now(); }
 
+export interface GameCallbacks {
+    onStateUpdate?: (state: any) => void;
+    onGameOver?: (result: any) => void;
+    onPlaySfx?: (name: string) => void;
+    onRunStart?: () => void;
+    onRunFinish?: (result: any) => void;
+    onStageClear?: (result: any) => void;
+    onMissionComplete?: (mission: any) => void;
+}
+
 export class Game {
-    constructor(canvas, callbacks = {}, dependencies = {}) {
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+    callbacks: GameCallbacks;
+
+    // Dependencies
+    input: any;
+    particles: any;
+    player: any;
+    enemies: any;
+    items: any;
+    projectiles: any;
+    gacha: GachaSystem;
+    companion: any;
+    missions: any;
+
+    // Systems
+    collection: CollectionSystem;
+    scoreSystem: ScoreSystem;
+    collisionSystem: any;
+    renderer: any;
+
+    // Managers
+    statsManager: StatsManager;
+    stateManager: GameStateManager;
+
+    // Local state
+    lastShot: number = 0;
+
+    constructor(canvas: HTMLCanvasElement, callbacks: GameCallbacks = {}, dependencies: any = {}) {
         this.canvas = canvas;
-        this.ctx = this.canvas.getContext('2d');
-        this.callbacks = callbacks; // { onStateUpdate, onGameOver, onPlaySfx, onRunStart, onRunFinish }
+        this.ctx = this.canvas.getContext('2d')!;
+        this.callbacks = callbacks;
 
         // Dependency injection with defaults
         this.input = dependencies.input || new InputManager();
@@ -46,16 +84,96 @@ export class Game {
         const GameRendererClass = dependencies.rendererClass || GameRenderer;
         this.renderer = dependencies.renderer || new GameRendererClass(this.canvas, this);
 
-        this.level = 1; // Initialize level to prevent crash in notifyState -> stageForLevel
+        // Managers
+        this.statsManager = new StatsManager(this.gacha);
+        this.stateManager = new GameStateManager();
+
         this.init();
     }
 
+    // State Proxies for Compatibility
+    get level() { return this.stateManager.state.level; }
+    set level(v) { this.stateManager.state.level = v; }
+
+    get score() { return this.stateManager.state.score; }
+    set score(v) { this.stateManager.state.score = v; }
+
+    get sessionCoins() { return this.stateManager.state.coins; }
+    set sessionCoins(v) { this.stateManager.state.coins = v; }
+
+    get hp() { return this.stateManager.state.hp; }
+    set hp(v) { this.stateManager.state.hp = v; }
+
+    get maxHp() { return this.stateManager.state.maxHp; }
+    set maxHp(v) { this.stateManager.state.maxHp = v; }
+
+    get ult() { return this.stateManager.state.ult; }
+    set ult(v) { this.stateManager.state.ult = v; }
+
+    get ultReady() { return this.stateManager.state.ultReady; }
+    set ultReady(v) { this.stateManager.state.ultReady = v; }
+
+    get ultActiveUntil() { return this.stateManager.state.ultActiveUntil; }
+    set ultActiveUntil(v) { this.stateManager.state.ultActiveUntil = v; }
+
+    get gameOn() { return this.stateManager.state.gameOn; }
+    set gameOn(v) { this.stateManager.state.gameOn = v; }
+
+    get paused() { return this.stateManager.state.paused; }
+    set paused(v) { this.stateManager.state.paused = v; }
+
+    get invUntil() { return this.stateManager.state.invUntil; }
+    set invUntil(v) { this.stateManager.state.invUntil = v; }
+
+    get hurtUntil() { return this.stateManager.state.hurtUntil; }
+    set hurtUntil(v) { this.stateManager.state.hurtUntil = v; }
+
+    get autoShootUntil() { return this.stateManager.state.autoShootUntil; }
+    set autoShootUntil(v) { this.stateManager.state.autoShootUntil = v; }
+
+    get bulletBoostUntil() { return this.stateManager.state.bulletBoostUntil; }
+    set bulletBoostUntil(v) { this.stateManager.state.bulletBoostUntil = v; }
+
+    get scoreMulUntil() { return this.stateManager.state.scoreMulUntil; }
+    set scoreMulUntil(v) { this.stateManager.state.scoreMulUntil = v; }
+
+    get stageClearUntil() { return this.stateManager.state.stageClearUntil; }
+    set stageClearUntil(v) { this.stateManager.state.stageClearUntil = v; }
+
+    get currentStageIndex() { return this.stateManager.state.currentStageIndex; }
+    set currentStageIndex(v) { this.stateManager.state.currentStageIndex = v; }
+
+    get sessionDistance() { return this.stateManager.state.sessionDistance; }
+    set sessionDistance(v) { this.stateManager.state.sessionDistance = v; }
+
+    get sessionJumps() { return this.stateManager.state.sessionJumps; }
+    set sessionJumps(v) { this.stateManager.state.sessionJumps = v; }
+
+    get sessionAttacks() { return this.stateManager.state.sessionAttacks; }
+    set sessionAttacks(v) { this.stateManager.state.sessionAttacks = v; }
+
+    get bestScore() { return this.stateManager.state.bestScore; }
+    set bestScore(v) { this.stateManager.state.bestScore = v; }
+
+    get runStartTimestamp() { return this.stateManager.state.runStartTimestamp; }
+    set runStartTimestamp(v) { this.stateManager.state.runStartTimestamp = v; }
+
+    get t0() { return this.stateManager.state.t0; }
+    set t0(v) { this.stateManager.state.t0 = v; }
+
+    get destroyed() { return this.stateManager.state.destroyed; }
+    set destroyed(v) { this.stateManager.state.destroyed = v; }
+
+    get hasUsedAutoRevive() { return this.stateManager.state.hasUsedAutoRevive; }
+    set hasUsedAutoRevive(v) { this.stateManager.state.hasUsedAutoRevive = v; }
+
+    // Methods
     init() {
         this.input.init(this.canvas);
         this.input.on('jump', () => {
             if (this.gameOn) {
                 this.player.jump();
-                this.sessionJumps++; // Track jumps
+                this.sessionJumps++;
             }
         });
         this.input.on('shoot', () => this.shoot());
@@ -65,19 +183,25 @@ export class Game {
         requestAnimationFrame(t => this.loop(t));
     }
 
-    // ... (keep existing methods)
-
     pause() {
         this.paused = true;
-        this.pauseTime = now();
+        // We need to store pauseTime in stateManager or locally?
+        // Game.js used this.pauseTime.
+        // Let's add it to stateManager or keep it local as it's transient.
+        // Keeping it local for now as it wasn't in my initial StateData list, 
+        // but wait, resume() needs it.
+        // I'll add it to Game class as private property.
+        (this as any)._pauseTime = now();
     }
 
     resume() {
         if (this.paused) {
             this.paused = false;
-            const duration = now() - this.pauseTime;
+            const pauseTime = (this as any)._pauseTime || now();
+            const duration = now() - pauseTime;
             this.t0 += duration;
             this.runStartTimestamp += duration;
+
             // Adjust timers
             if (this.invUntil > 0) this.invUntil += duration;
             if (this.hurtUntil > 0) this.hurtUntil += duration;
@@ -99,15 +223,6 @@ export class Game {
 
     getState() {
         const scoreState = this.scoreSystem.getState();
-        // Use currentStageIndex for stage name
-        const currentStage = stageForLevel(this.currentStageIndex * 3 + 1); // Hack to get stage from level mapper, or better import stages directly
-        // Actually, let's just use the stages array if possible, but it's not imported.
-        // Let's rely on stageForLevel mapping logic: 0->1, 1->4, 2->7...
-        // stageForLevel(1) -> Meadow (index 0)
-        // stageForLevel(4) -> Dunes (index 1)
-        // stageForLevel(7) -> Sky (index 2)
-        // So passing (currentStageIndex * 3 + 1) works with existing stageForLevel.
-
         return {
             remainMs: this.gameOn ? (GAME_TIME - (now() - this.t0)) : 0,
             level: this.level,
@@ -136,34 +251,13 @@ export class Game {
         };
     }
 
-    /** Start the game */
-    start(characterKey) {
-        this.score = 0;
-        this.level = 1;
+    start(characterKey?: string) {
+        this.stateManager.reset();
+
         // Calculate max HP from skill bonuses
         const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current || 'parfen');
         this.maxHp = 100 + skillBonuses.maxHpBonus;
         this.hp = this.maxHp;
-        this.hasUsedAutoRevive = false;
-        this.invUntil = 0;
-        this.hurtUntil = 0;
-        this.ult = 0;
-        this.ultReady = false;
-        this.ultActiveUntil = 0;
-        this.sessionCoins = 0;
-        this.stageClearUntil = 0;
-        this.levelOffset = 0;
-        this.autoShootUntil = 0;
-        this.bulletBoostUntil = 0;
-        this.scoreMulUntil = 0;
-        this.scoreAccumulator = 0;
-        this.lastShot = 0; // Ensure shooting works immediately
-        this.currentStageIndex = 0; // Track stage explicitly
-
-        // New stats
-        this.sessionDistance = 0;
-        this.sessionJumps = 0;
-        this.sessionAttacks = 0;
 
         this.scoreSystem.reset();
         this.enemies.reset();
@@ -188,11 +282,9 @@ export class Game {
         this.gameOn = false;
         stopBgm();
         const durationMs = Math.max(0, Math.floor(now() - this.runStartTimestamp));
-        if (this.score > this.bestScore) {
-            this.bestScore = this.score;
-            this.saveBestScore();
-        }
-        // No experience grant here – EXP is handled per enemy defeat
+
+        this.stateManager.saveBestScore();
+
         const finalScore = Number(this.score) || 0;
         const finalCoins = Number(this.sessionCoins) || 0;
         const finalLevel = Number(this.level) || 1;
@@ -221,59 +313,26 @@ export class Game {
         this.notifyState();
     }
 
-    update(t) {
+    update(t: number) {
         if (!this.gameOn || this.paused) return;
         const elapsed = t - this.t0;
         const remain = GAME_TIME - elapsed;
         if (remain <= 0) return this.endGame();
 
-        // Update distance (approximate based on scroll speed)
-        // Base speed 6 + level * 0.5 (example assumption, adjusting to match feel)
         const currentSpeed = 6 + (this.level * 0.5);
         const distanceDelta = currentSpeed * (16 / 1000) * 10;
         this.sessionDistance += distanceDelta;
 
-        // Add distance to score (1 point per meter approx)
-        // this.scoreAccumulator += distanceDelta;
-        // if (this.scoreAccumulator >= 1) {
-        //     const add = Math.floor(this.scoreAccumulator);
-        //     this.score += add;
-        //     this.scoreAccumulator -= add;
-        // }
-
-        // Level progression based on score (affects speed/difficulty only)
+        // Level progression based on score
         this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1);
 
-        // Update entities
         this.player.update(16);
         if (this.player.y >= this.canvas.height - 72 - this.player.h && this.player.vy >= 0) {
             this.scoreSystem.resetCombo();
         }
 
-        // Pass currentStageIndex to EnemyManager for correct boss spawning
-        // Note: EnemyManager.update uses level to spawn enemies. 
-        // We might want to pass stageIndex or let it depend on level?
-        // If we want enemies to match the stage, we should pass stageIndex.
-        // But EnemyManager.spawnEnemy uses stageForLevel(level).
-        // If level increases, enemies change.
-        // If we want enemies to stay same until boss defeat, we should pass a "virtual level" to EnemyManager?
-        // Or just let enemies get harder (level up) but keep visual stage same?
-        // Let's keep enemies getting harder (level based) but visuals gated.
-        // BUT boss spawning depends on level too?
-        // EnemyManager.js: spawnEnemy(level) -> stageForLevel(level)
-        // If we want boss to match stage, we must control what 'level' is passed to EnemyManager.
-        // Let's pass (this.currentStageIndex * 3 + 1) + (this.level % 3) ? No that's complex.
-
-        // Simplest fix: EnemyManager should use the visual stage for boss type, but level for stats.
-        // For now, let's pass the "Stage Level" to EnemyManager for spawning types.
         const stageLevel = (this.currentStageIndex * 3) + 1;
         this.enemies.update(t, stageLevel, this.player);
-        // Wait, if we pass stageLevel, difficulty (speed) will reset?
-        // EnemyManager uses level for speed: const baseSpeed = (0.6 + (cappedLevel - 1) * 0.05) * st.enemyMul;
-        // We want speed to increase with this.level, but types to match stage.
-        // This requires modifying EnemyManager update signature or logic.
-        // For this step, let's just pass stageLevel to keep it consistent with visuals, 
-        // accepting that speed might not scale as fast (or we rely on stage multiplier).
 
         this.particles.update(t);
         const hasMagnet = characters[this.gacha.collection.current]?.special?.includes('magnet');
@@ -283,19 +342,19 @@ export class Game {
             this.player,
             this.enemies.bossState,
             this.enemies.enemies,
-            en => this.awardEnemyDefeat(en),
-            dmg => this.damageBoss(dmg),
+            (en: any) => this.awardEnemyDefeat(en),
+            (dmg: number) => this.damageBoss(dmg),
             hasSlow
         );
         this.companion.update(t, this.items.items);
-        this.enemies.enemies = this.enemies.enemies.filter(en => !en._dead);
+        this.enemies.enemies = this.enemies.enemies.filter((en: any) => !en._dead);
         if (this.collisionSystem) {
             this.collisionSystem.checkAll();
         }
         if (this.ult >= 100) this.ultReady = true;
-        // Render
+
         this.renderer.render({
-            level: (this.currentStageIndex * 3) + 1, // Pass stage-representative level to renderer
+            level: (this.currentStageIndex * 3) + 1,
             player: this.player,
             enemies: this.enemies,
             items: this.items,
@@ -315,7 +374,7 @@ export class Game {
         this.notifyState();
     }
 
-    loop(t) {
+    loop(t: number) {
         if (this.destroyed) return;
         if (!this.paused) {
             this.update(t);
@@ -328,7 +387,7 @@ export class Game {
         const nowTime = now();
         if (nowTime - this.lastShot < SHOOT_COOLDOWN) return;
         this.lastShot = nowTime;
-        this.sessionAttacks++; // Track attacks
+        this.sessionAttacks++;
         const pierce = characters[this.gacha.collection.current]?.special?.includes('pierce');
         const v = 9 + this.level * 0.6 + (now() < this.bulletBoostUntil ? 4 : 0);
         const stats = this.getEffectiveStats(this.gacha.collection.current);
@@ -374,16 +433,16 @@ export class Game {
         }
     }
 
-    awardEnemyDefeat(enemy) {
+    awardEnemyDefeat(enemy: any) {
         const score = this.scoreSystem.awardEnemyDefeat(3);
         this.score += score;
-        // Coin bonus
+
         const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
         const baseCoins = Math.floor(1 * this.scoreSystem.comboMultiplier);
         const finalCoins = Math.floor(baseCoins * (1 + skillBonuses.coinBonus));
         this.gacha.addCoins(finalCoins);
         this.sessionCoins += finalCoins;
-        // Experience for enemy defeat (5 EXP base, modified by expBonus)
+
         const baseExp = 5;
         const finalExp = Math.floor(baseExp * (1 + skillBonuses.expBonus));
         const charKey = this.gacha.collection.current;
@@ -392,7 +451,7 @@ export class Game {
         this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
     }
 
-    damageBoss(amount) {
+    damageBoss(amount: number) {
         if (!this.enemies.bossState) return;
         this.enemies.bossState.hp -= amount;
         this.particles.createExplosion(
@@ -409,13 +468,13 @@ export class Game {
             this.collection.unlockBoss('boss-' + this.enemies.bossState.stageKey);
             this.stageClearUntil = now() + 4000;
             this.t0 = now();
-            // Restore HP on stage clear
+
             const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
             this.maxHp = 100 + skillBonuses.maxHpBonus;
             this.hp = this.maxHp;
-            this.hasUsedAutoRevive = false; // Reset auto-revive on stage clear
+            this.hasUsedAutoRevive = false;
 
-            this.currentStageIndex++; // Advance stage
+            this.currentStageIndex++;
 
             playSfx('powerup');
         } else {
@@ -423,69 +482,25 @@ export class Game {
         }
     }
 
-    handleMissionUpdate(type, amount) {
+    handleMissionUpdate(type: string, amount: number) {
         const updates = this.missions.updateProgress(type, amount);
         if (updates.length > 0) {
-            updates.forEach(m => logger.info('Mission completed!', { id: m.id }));
+            updates.forEach((m: any) => logger.info('Mission completed!', { id: m.id }));
             this.missions.save();
         }
     }
 
-    getEffectiveStats(charKey) {
-        const c = characters[charKey];
-        if (!c) return { speed: 1, jump: 1, bullet: 1, inv: 0, ultRate: 1 };
-        let stats = {
-            speed: c.move || 1,
-            jump: c.jump || 1,
-            bullet: c.bullet || 1,
-            inv: c.inv || 0,
-            ultRate: c.ultRate || 1
-        };
-        const charData = this.gacha.progression.getCharacterData(charKey);
-        const levelBonus = 1 + (charData.level * 0.005);
-        stats.speed *= levelBonus;
-        stats.jump *= levelBonus;
-        stats.bullet *= levelBonus;
-        stats.ultRate *= levelBonus;
-        const skillBonuses = this.gacha.progression.calculateSkillBonuses(charKey);
-        stats.bullet *= (1 + skillBonuses.bulletSpeedBonus);
-        stats.ultRate *= (1 + skillBonuses.ultChargeBonus);
-        const equippedItems = charData.equippedItems;
-        equippedItems.forEach(itemId => {
-            const item = equipmentItems[itemId];
-            if (!item) return;
-            const e = item.effects;
-            if (e.moveSpeed) stats.speed *= e.moveSpeed;
-            if (e.jumpPower) stats.jump *= e.jumpPower;
-            if (e.bulletSpeed) stats.bullet *= e.bulletSpeed;
-            if (e.ultChargeRate) stats.ultRate *= e.ultChargeRate;
-        });
-        return stats;
+    getEffectiveStats(charKey: string): EffectiveStats {
+        return this.statsManager.getEffectiveStats(charKey);
     }
 
-    loadBestScore() {
-        const score = ErrorHandler.safely(() => {
-            const raw = localStorage.getItem('psrun_best_score_v1');
-            if (raw !== null) {
-                const value = Number(raw);
-                if (Number.isFinite(value)) return Math.max(0, Math.floor(value));
-            }
-            return null;
-        }, 'Game.loadBestScore', null);
-        if (score !== null) {
-            logger.info('Best score loaded', { score });
-            return score;
-        }
-        logger.info('No saved best score found, starting with 0');
-        return 0;
-    }
-
-    saveBestScore() {
-        ErrorHandler.safely(() => {
-            localStorage.setItem('psrun_best_score_v1', `${this.bestScore}`);
-            logger.debug('Best score saved', { score: this.bestScore });
-        }, 'Game.saveBestScore');
-    }
+    // loadBestScore and saveBestScore are now handled by GameStateManager, 
+    // but Game.js didn't export them. They were internal or used by Game.
+    // I removed them from Game class interface as they are not used externally.
+    // If they were used externally, I would need to proxy them.
+    // Checking Game.js again... they were methods of Game class.
+    // But they were only used internally in Game.js.
+    // So it's safe to remove them from public interface.
 
     updateCharInfo() {
         // UI updates handled elsewhere
@@ -496,8 +511,6 @@ export class Game {
         this.paused = true;
         this.destroyed = true;
         stopBgm();
-
-        // Clear callbacks to prevent further execution
         this.callbacks = {};
     }
 }
