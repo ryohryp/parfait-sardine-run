@@ -126,7 +126,7 @@ export class GachaSystem {
     }
 
     doGacha(n) {
-        const cost = n === 10 ? 100 : 10;
+        const cost = n * 100;
         if (this.coins < cost) return null;
 
         this.saveCoinBalance(this.coins - cost);

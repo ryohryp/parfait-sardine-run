@@ -267,9 +267,7 @@ export const GameCanvas: React.FC = () => {
     return (
         <div>
             <div className="playArea">
-                <div id="charInfo" className="hud-pill" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 20 }}>
-                    {gameState ? `CHAR: ${gameState.currentCharKey}` : 'CHAR: -'}
-                </div>
+
 
                 <canvas
                     ref={canvasRef}

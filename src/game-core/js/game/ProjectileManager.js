@@ -42,13 +42,19 @@ export class ProjectileManager {
             for (let i = 0; i < enemies.length; i++) {
                 const en = enemies[i];
                 if (this.AABB(en, b)) {
+                    if (en.type === 'obstacle') {
+                        b.hitsLeft = 0; // Bullet destroyed
+                        // Optional: play 'clink' sound
+                        break; // Stop checking other enemies
+                    }
+
                     awardEnemyDefeat(en);
                     en._dead = true; // Mark for removal
                     b.hitsLeft--;
                     if (hasSlow) {
                         en.vx = Math.max(en.vx * 0.6, 1.6);
                     }
-                    if (b.hitsLeft <= 0) return false;
+                    if (b.hitsLeft <= 0) break; // Stop checking other enemies
                     // If piercing, continue to check other enemies
                 }
             }

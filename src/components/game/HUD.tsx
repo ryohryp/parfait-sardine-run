@@ -10,7 +10,7 @@ interface HUDProps {
 export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
     const {
         remainMs, level, score, coins, hp, maxHp, ult,
-        bestScore, invUntil, autoShootUntil, bulletBoostUntil, scoreMulUntil, ultActiveUntil, gameOn, stageName
+        invUntil, autoShootUntil, bulletBoostUntil, scoreMulUntil, ultActiveUntil, gameOn, stageName
     } = state;
 
     const sec = Math.max(0, Math.ceil(remainMs / 1000));
@@ -37,6 +37,7 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
             }}>
                 <span>{stageName}</span>
                 <span>Lv.{level}</span>
+                <span>👤 {state.currentCharKey}</span>
                 <span>🪙 {(coins || 0).toLocaleString()}</span>
             </div>
 
@@ -68,10 +69,7 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
 
             <div className="hud-group" style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
                 <div className="hud-score">{(score || 0).toLocaleString()}</div>
-                <div className="hud-pill" style={{ fontSize: '12px', padding: '4px 8px' }}>
-                    <span>🏆</span>
-                    <span>{(bestScore || 0).toLocaleString()}</span>
-                </div>
+
             </div>
 
             {/* Effects Bar */}

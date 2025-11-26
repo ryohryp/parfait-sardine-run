@@ -11,7 +11,8 @@ export const stages = [
       { src: './assets/bg/meadow_layer2.png', speed: 0.5, alpha: 1.0 },
       { src: './assets/bg/meadow_layer3.png', speed: 0.8, alpha: 1.0, bottomAligned: true }
     ],
-    foregroundLayer: { src: './assets/bg/meadow_layer4.png', speed: 1.0, alpha: 1.0 }
+    foregroundLayer: { src: './assets/bg/meadow_layer4.png', speed: 1.0, alpha: 1.0 },
+    gimmick: null
   },
   {
     key: 'dunes',
@@ -25,7 +26,8 @@ export const stages = [
       { src: './assets/bg/desert.png', speed: 0.5, alpha: 0.6 },
       { src: './assets/bg/desert.png', speed: 0.8, alpha: 0.3, bottomAligned: true }
     ],
-    foregroundLayer: { src: './assets/bg/dunes_layer4.png', speed: 1.0, alpha: 1.0 }
+    foregroundLayer: { src: './assets/bg/dunes_layer4.png', speed: 1.0, alpha: 1.0 },
+    gimmick: 'obstacle'
   },
   {
     key: 'sky',
@@ -39,7 +41,8 @@ export const stages = [
       { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, alpha: 0.9 },
       { src: './assets/bg/snow.png', speed: 0.8, alpha: 0.4, bottomAligned: true }
     ],
-    foregroundLayer: { src: './assets/bg/sky_layer4.png', speed: 1.0, alpha: 1.0 }
+    foregroundLayer: { src: './assets/bg/sky_layer4.png', speed: 1.0, alpha: 1.0 },
+    gimmick: 'obstacle'
   },
   {
     key: 'volcano',
@@ -53,7 +56,8 @@ export const stages = [
       { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, alpha: 0.7 },
       { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.8, alpha: 0.5, bottomAligned: true }
     ],
-    foregroundLayer: { src: './assets/bg/volcano_layer4.png', speed: 1.0, alpha: 1.0 }
+    foregroundLayer: { src: './assets/bg/volcano_layer4.png', speed: 1.0, alpha: 1.0 },
+    gimmick: 'obstacle'
   },
   {
     key: 'ocean',
@@ -67,7 +71,8 @@ export const stages = [
       { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.4, alpha: 0.5 },
       { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.7, alpha: 0.3, bottomAligned: true }
     ],
-    foregroundLayer: { src: './assets/bg/ocean_layer4.png', speed: 1.0, alpha: 1.0 }
+    foregroundLayer: { src: './assets/bg/ocean_layer4.png', speed: 1.0, alpha: 1.0 },
+    gimmick: 'obstacle'
   },
   {
     key: 'abyss',
@@ -81,7 +86,8 @@ export const stages = [
       { src: './assets/bg/space.png', speed: 0.3, alpha: 0.5 },
       { src: './assets/bg/space.png', speed: 0.6, alpha: 0.3, bottomAligned: true }
     ],
-    foregroundLayer: { src: './assets/bg/abyss_layer4.png', speed: 1.0, alpha: 1.0 }
+    foregroundLayer: { src: './assets/bg/abyss_layer4.png', speed: 1.0, alpha: 1.0 },
+    gimmick: 'obstacle'
   },
 ];
 
@@ -92,12 +98,10 @@ export function stageForKey(key) {
 
 // Legacy support - maps old level-based system to new stage keys
 export function stageForLevel(lv) {
-  if (lv >= 16) return stages[5]; // abyss
-  if (lv >= 13) return stages[4]; // ocean
-  if (lv >= 10) return stages[3]; // volcano
-  if (lv >= 7) return stages[2];  // sky
-  if (lv >= 4) return stages[1];  // dunes
-  return stages[0];               // meadow
+  const level = (typeof lv === 'number' && lv > 0) ? lv : 1;
+  // Loop stages: 1-3=0, 4-6=1, 7-9=2, 10-12=3, 13-15=4, 16-18=5, 19-21=0...
+  const stageIndex = Math.floor((level - 1) / 3) % 6;
+  return stages[stageIndex] || stages[0];
 }
 
 

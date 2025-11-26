@@ -31,7 +31,8 @@ export class EnemyManager {
             'boss-sky': { icon: stageBosses.sky.icon || '👑', label: 'Boss - Stratos Ranger', base: stageBosses.sky.rewardScore || ENEMY_BONUS },
             'boss-volcano': { icon: stageBosses.volcano.icon || '👑', label: 'Boss - Inferno Dragon', base: stageBosses.volcano.rewardScore || ENEMY_BONUS },
             'boss-ocean': { icon: stageBosses.ocean.icon || '👑', label: 'Boss - Leviathan', base: stageBosses.ocean.rewardScore || ENEMY_BONUS },
-            'boss-abyss': { icon: stageBosses.abyss.icon || '👑', label: 'Boss - Abyss Sovereign', base: stageBosses.abyss.rewardScore || ENEMY_BONUS }
+            'boss-abyss': { icon: stageBosses.abyss.icon || '👑', label: 'Boss - Abyss Sovereign', base: stageBosses.abyss.rewardScore || ENEMY_BONUS },
+            obstacle: { icon: '🧱', label: '障害物' }
         };
         this.enemyTypeIcons = Object.fromEntries(Object.entries(this.enemyTypeMeta).map(([type, meta]) => [type, meta.icon]));
 
@@ -84,7 +85,13 @@ export class EnemyManager {
         // Cap level at 10 for speed calculation to prevent late-game difficulty spike
         const cappedLevel = Math.min(level, 10);
         const baseSpeed = (0.6 + (cappedLevel - 1) * 0.05) * st.enemyMul;
-        const type = this.pickEnemyType(level);
+        let type = this.pickEnemyType(level);
+
+        // Gimmick: Obstacles
+        if (st.gimmick === 'obstacle' && Math.random() < 0.25) {
+            type = 'obstacle';
+        }
+
         const baseY = this.canvas.height - GROUND - 36;
 
         const enemy = {
@@ -118,10 +125,7 @@ export class EnemyManager {
             enemy.baseY = baseY - rand(40, 120);
         } else if (type === 'shield') {
             enemy.vx = baseSpeed * 0.6; // Slower
-            enemy.hp = 3; // Takes 3 hits (implemented in collision system usually, but here just marking it)
-            // Note: CollisionSystem needs to handle HP if it doesn't already. 
-            // If CollisionSystem just kills on contact, we might need to update it.
-            // For now, let's just make it slow and tanky-looking.
+            enemy.hp = 3;
             enemy.w = 40;
             enemy.h = 40;
         } else if (type === 'chaser') {
@@ -140,6 +144,12 @@ export class EnemyManager {
             enemy.canSplit = true;
             enemy.w = 42;
             enemy.h = 42;
+        } else if (type === 'obstacle') {
+            enemy.vx = baseSpeed; // Move with flow
+            enemy.w = 48;
+            enemy.h = 48;
+            enemy.y = this.canvas.height - GROUND - 48; // On ground
+            enemy.hp = 999; // Indestructible
         }
 
         this.enemies.push(enemy);
@@ -431,6 +441,14 @@ export class EnemyManager {
                 }
             } else if (en.type === 'splitter' && this.splitterImage.complete && this.splitterImage.naturalWidth > 0) {
                 ctx.drawImage(this.splitterImage, en.x, en.y, en.w, en.h);
+            } else if (en.type === 'obstacle') {
+                ctx.save();
+                ctx.font = '48px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // Adjust Y slightly (+4) because many emojis render a bit high
+                ctx.fillText('🧱', en.x + en.w / 2, en.y + en.h / 2 + 4);
+                ctx.restore();
             } else if (this.droneImage.complete && this.droneImage.naturalWidth > 0) {
                 // Draw drone sprite for others (or add more specific ones later)
                 ctx.drawImage(this.droneImage, en.x, en.y, en.w, en.h);

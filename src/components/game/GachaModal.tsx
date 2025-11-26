@@ -33,7 +33,8 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
     if (!visible) return null;
 
     const handleRoll = (n: number) => {
-        if (gachaSystem.coins < (n === 10 ? 100 : 10)) {
+        const cost = n * 100;
+        if (gachaSystem.coins < cost) {
             alert(t('notEnoughCoins'));
             return;
         }
@@ -139,13 +140,13 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                     className="primary"
                                     onClick={() => handleRoll(1)}
                                 >
-                                    {t('roll1')}
+                                    {t('roll1')} (100G)
                                 </button>
                                 <button
                                     className="secondary"
                                     onClick={() => handleRoll(10)}
                                 >
-                                    {t('roll10')}
+                                    {t('roll10')} (1000G)
                                 </button>
                             </div>
 

@@ -127,6 +127,23 @@ export class CollisionSystem {
             }
 
             if (this.AABB(game.player, en)) {
+                // Obstacle Platform Logic
+                if (en.type === 'obstacle') {
+                    const playerBottom = game.player.y + game.player.h;
+                    const enemyTop = en.y;
+                    const overlapY = playerBottom - enemyTop;
+
+                    // If falling and hitting the top part
+                    if (game.player.vy >= 0 && overlapY <= 30) {
+                        game.player.y = en.y - game.player.h;
+                        game.player.vy = 0;
+                        game.player.onGround = true;
+                        const hasDouble = characters[game.gacha.collection.current]?.special?.includes('doubleJump');
+                        game.player.canDouble = hasDouble;
+                        return true; // Safe landing
+                    }
+                }
+
                 if (now() < game.invUntil || now() < game.feverModeUntil) {
                     game.awardEnemyDefeat(en);
                     // Splitter logic
@@ -271,33 +288,49 @@ export class CollisionSystem {
 
         // 必殺技とボスの衝突
         if (now() < game.ultActiveUntil) {
-            const type = characters[game.gacha.collection.current].ult;
-            if (type === 'storm') {
-                const cx = game.player.x + game.player.w / 2;
-                const cy = game.player.y + game.player.h / 2;
-                const bx = boss.x + boss.w / 2;
-                const by = boss.y + boss.h / 2;
-                if (Math.hypot(cx - bx, cy - by) <= 120) {
-                    game.damageBoss(0.5);
+            // 必殺技のヒット間隔制限 (0.2秒に1回)
+            if (!this.lastUltHitTime || now() - this.lastUltHitTime > 200) {
+                const type = characters[game.gacha.collection.current].ult;
+                let hit = false;
+
+                if (type === 'storm') {
+                    const cx = game.player.x + game.player.w / 2;
+                    const cy = game.player.y + game.player.h / 2;
+                    const bx = boss.x + boss.w / 2;
+                    const by = boss.y + boss.h / 2;
+                    if (Math.hypot(cx - bx, cy - by) <= 120) {
+                        hit = true;
+                    }
+                } else if (type === 'ncha') {
+                    const beamX = game.player.x + game.player.w - 6;
+                    const beamTop = game.player.y - 36;
+                    const beamBottom = game.player.y + game.player.h + 36;
+                    // Check overlap with boss
+                    if ((boss.x + boss.w) >= beamX && boss.x <= game.canvas.width &&
+                        boss.y <= beamBottom && (boss.y + boss.h) >= beamTop) {
+                        hit = true;
+                    }
+                } else {
+                    // Rainbow (default)
+                    const lanes = [
+                        game.player.y + game.player.h / 2,
+                        game.player.y + game.player.h / 2 - 36,
+                        game.player.y + game.player.h / 2 + 36
+                    ];
+                    if (lanes.some(y => boss.y - 6 <= y && y <= boss.y + boss.h + 6)) {
+                        hit = true;
+                    }
                 }
-            } else if (type === 'ncha') {
-                const beamX = game.player.x + game.player.w - 6;
-                const beamTop = game.player.y - 36;
-                const beamBottom = game.player.y + game.player.h + 36;
-                // Check overlap with boss
-                if ((boss.x + boss.w) >= beamX && boss.x <= game.canvas.width &&
-                    boss.y <= beamBottom && (boss.y + boss.h) >= beamTop) {
-                    game.damageBoss(0.5);
-                }
-            } else {
-                // Rainbow (default)
-                const lanes = [
-                    game.player.y + game.player.h / 2,
-                    game.player.y + game.player.h / 2 - 36,
-                    game.player.y + game.player.h / 2 + 36
-                ];
-                if (lanes.some(y => boss.y - 6 <= y && y <= boss.y + boss.h + 6)) {
-                    game.damageBoss(0.5);
+
+                if (hit) {
+                    game.damageBoss(1); // ダメージを0.5 -> 1に少し上げるが、ヒット数を制限
+                    this.lastUltHitTime = now();
+                    // エフェクト
+                    game.particles.createSparkle(
+                        boss.x + boss.w / 2 + (Math.random() - 0.5) * 40,
+                        boss.y + boss.h / 2 + (Math.random() - 0.5) * 40,
+                        '#ffff00'
+                    );
                 }
             }
         }

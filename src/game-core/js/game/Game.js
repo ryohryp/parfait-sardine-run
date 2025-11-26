@@ -47,6 +47,7 @@ export class Game {
         const GameRendererClass = dependencies.rendererClass || GameRenderer;
         this.renderer = dependencies.renderer || new GameRendererClass(this.canvas, this);
 
+        this.level = 1; // Initialize level to prevent crash in notifyState -> stageForLevel
         this.init();
     }
 
@@ -99,6 +100,15 @@ export class Game {
 
     getState() {
         const scoreState = this.scoreSystem.getState();
+        // Use currentStageIndex for stage name
+        const currentStage = stageForLevel(this.currentStageIndex * 3 + 1); // Hack to get stage from level mapper, or better import stages directly
+        // Actually, let's just use the stages array if possible, but it's not imported.
+        // Let's rely on stageForLevel mapping logic: 0->1, 1->4, 2->7...
+        // stageForLevel(1) -> Meadow (index 0)
+        // stageForLevel(4) -> Dunes (index 1)
+        // stageForLevel(7) -> Sky (index 2)
+        // So passing (currentStageIndex * 3 + 1) works with existing stageForLevel.
+
         return {
             remainMs: this.gameOn ? (GAME_TIME - (now() - this.t0)) : 0,
             level: this.level,
@@ -117,7 +127,7 @@ export class Game {
             scoreMulUntil: this.scoreMulUntil,
             ultActiveUntil: this.ultActiveUntil,
             gameOn: this.gameOn,
-            stageName: stageForLevel(this.level).name,
+            stageName: stageForLevel(this.currentStageIndex * 3 + 1).name,
             fever: scoreState.feverGauge,
             isFever: scoreState.isFever,
             missions: this.missions.getMissions(),
@@ -147,6 +157,9 @@ export class Game {
         this.autoShootUntil = 0;
         this.bulletBoostUntil = 0;
         this.scoreMulUntil = 0;
+        this.scoreAccumulator = 0;
+        this.lastShot = 0; // Ensure shooting works immediately
+        this.currentStageIndex = 0; // Track stage explicitly
 
         // New stats
         this.sessionDistance = 0;
@@ -217,16 +230,51 @@ export class Game {
         // Update distance (approximate based on scroll speed)
         // Base speed 6 + level * 0.5 (example assumption, adjusting to match feel)
         const currentSpeed = 6 + (this.level * 0.5);
-        this.sessionDistance += currentSpeed * (16 / 1000) * 10; // Scale factor for "meters"
+        const distanceDelta = currentSpeed * (16 / 1000) * 10;
+        this.sessionDistance += distanceDelta;
 
-        // Level progression based on score
-        this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1) + this.levelOffset;
+        // Add distance to score (1 point per meter approx)
+        // this.scoreAccumulator += distanceDelta;
+        // if (this.scoreAccumulator >= 1) {
+        //     const add = Math.floor(this.scoreAccumulator);
+        //     this.score += add;
+        //     this.scoreAccumulator -= add;
+        // }
+
+        // Level progression based on score (affects speed/difficulty only)
+        this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1);
+
         // Update entities
         this.player.update(16);
         if (this.player.y >= this.canvas.height - 72 - this.player.h && this.player.vy >= 0) {
             this.scoreSystem.resetCombo();
         }
-        this.enemies.update(t, this.level, this.player);
+
+        // Pass currentStageIndex to EnemyManager for correct boss spawning
+        // Note: EnemyManager.update uses level to spawn enemies. 
+        // We might want to pass stageIndex or let it depend on level?
+        // If we want enemies to match the stage, we should pass stageIndex.
+        // But EnemyManager.spawnEnemy uses stageForLevel(level).
+        // If level increases, enemies change.
+        // If we want enemies to stay same until boss defeat, we should pass a "virtual level" to EnemyManager?
+        // Or just let enemies get harder (level up) but keep visual stage same?
+        // Let's keep enemies getting harder (level based) but visuals gated.
+        // BUT boss spawning depends on level too?
+        // EnemyManager.js: spawnEnemy(level) -> stageForLevel(level)
+        // If we want boss to match stage, we must control what 'level' is passed to EnemyManager.
+        // Let's pass (this.currentStageIndex * 3 + 1) + (this.level % 3) ? No that's complex.
+
+        // Simplest fix: EnemyManager should use the visual stage for boss type, but level for stats.
+        // For now, let's pass the "Stage Level" to EnemyManager for spawning types.
+        const stageLevel = (this.currentStageIndex * 3) + 1;
+        this.enemies.update(t, stageLevel, this.player);
+        // Wait, if we pass stageLevel, difficulty (speed) will reset?
+        // EnemyManager uses level for speed: const baseSpeed = (0.6 + (cappedLevel - 1) * 0.05) * st.enemyMul;
+        // We want speed to increase with this.level, but types to match stage.
+        // This requires modifying EnemyManager update signature or logic.
+        // For this step, let's just pass stageLevel to keep it consistent with visuals, 
+        // accepting that speed might not scale as fast (or we rely on stage multiplier).
+
         this.particles.update(t);
         const hasMagnet = characters[this.gacha.collection.current]?.special?.includes('magnet');
         this.items.update(t, this.level, this.player, hasMagnet);
@@ -247,7 +295,7 @@ export class Game {
         if (this.ult >= 100) this.ultReady = true;
         // Render
         this.renderer.render({
-            level: this.level,
+            level: (this.currentStageIndex * 3) + 1, // Pass stage-representative level to renderer
             player: this.player,
             enemies: this.enemies,
             items: this.items,
@@ -354,7 +402,7 @@ export class Game {
         );
         if (this.enemies.bossState.hp <= 0) {
             this.enemies.bossState.state = 'defeated';
-            this.score += 500;
+            this.score += 50;
             this.gacha.addCoins(50);
             this.sessionCoins += 50;
             this.handleMissionUpdate('defeat_boss', 1);
@@ -365,7 +413,9 @@ export class Game {
             this.maxHp = 100 + skillBonuses.maxHpBonus;
             this.hp = this.maxHp;
             this.hasUsedAutoRevive = false; // Reset auto-revive on stage clear
-            this.levelOffset++;
+
+            this.currentStageIndex++; // Advance stage
+
             playSfx('powerup');
         } else {
             playSfx('hit');
