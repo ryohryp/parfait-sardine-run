@@ -30,6 +30,8 @@
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    position: relative;
+    /* Ensure absolute children are relative to this */
 }
 
 .pb-header {
@@ -63,7 +65,7 @@
     background: #334155;
     border: none;
     border-radius: 6px;
-    color: #94a3b8;
+    color: #cbd5e1;
     cursor: pointer;
     font-weight: bold;
     transition: all 0.2s;
@@ -149,6 +151,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.pb-item-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Detail Overlay Styles */
 .pb-detail-overlay {
     position: absolute;
     top: 0;
@@ -204,18 +213,26 @@
     font-weight: bold;
 }
 
+.pb-detail-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+    color: #60a5fa;
+    font-weight: bold;
+    font-size: 16px;
+    background: rgba(15, 23, 42, 0.5);
+    padding: 12px;
+    border-radius: 8px;
+    width: 100%;
+}
+
 .pb-detail-desc {
     font-size: 14px;
-    color: #e2e8f0;
+    color: #ffffff;
     line-height: 1.5;
     margin-bottom: 20px;
     white-space: pre-wrap;
-}
-
-.pb-item-img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
 }
 
 .pb-detail-img {
