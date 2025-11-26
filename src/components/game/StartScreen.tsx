@@ -48,7 +48,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const [showComments, setShowComments] = useState(false);
 
     const [selectedCharForProgression, setSelectedCharForProgression] = useState('parfen');
-    const [playerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || 'プレイヤー');
+    const [playerName, setPlayerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || 'プレイヤー');
     const [coins, setCoins] = useState(0);
 
     React.useEffect(() => {
@@ -114,6 +114,21 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                     {/* Main Menu View */}
                     {viewState === 'menu' && (
                         <div className="main-menu-container" onClick={(e) => e.stopPropagation()}>
+                            <div className="player-name-input-container">
+                                <input
+                                    type="text"
+                                    className="player-name-input"
+                                    placeholder={t('enterName')}
+                                    value={playerName}
+                                    onChange={(e) => {
+                                        const newName = e.target.value;
+                                        setPlayerName(newName);
+                                        localStorage.setItem('psrun_player_name_v1', newName);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </div>
+
                             <div className="main-actions">
                                 <button className="title-btn title-btn-play" onClick={handlePlayClick}>
                                     <span className="btn-icon">🎮</span>
