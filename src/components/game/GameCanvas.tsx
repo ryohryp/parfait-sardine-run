@@ -27,6 +27,7 @@ export const GameCanvas: React.FC = () => {
     const gameRef = useRef<Game | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [showStartScreen, setShowStartScreen] = useState(true);
+    const [startScreenView, setStartScreenView] = useState<'title' | 'menu'>('title');
     const [result, setResult] = useState<GameResult | null>(null);
     const [missionNotification, setMissionNotification] = useState<Mission | null>(null);
     const [achievementNotification, setAchievementNotification] = useState<Achievement | null>(null);
@@ -232,6 +233,7 @@ export const GameCanvas: React.FC = () => {
     const handleMenu = () => {
         stopBgm();
         setResult(null);
+        setStartScreenView('menu');
         setShowStartScreen(true);
     };
 
@@ -282,6 +284,7 @@ export const GameCanvas: React.FC = () => {
                     gachaSystem={gachaSystem}
                     achievementSystem={achievementSystem}
                     dailyBonusSystem={dailyBonusSystem}
+                    initialView={startScreenView}
                 />
                 {result && <ResultScreen result={result} onRetry={handleRetry} onMenu={handleMenu} />}
                 <MissionNotification mission={missionNotification} onClose={() => setMissionNotification(null)} />

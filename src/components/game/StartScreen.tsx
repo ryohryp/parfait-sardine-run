@@ -25,9 +25,10 @@ interface StartScreenProps {
     gachaSystem: GachaSystem;
     achievementSystem: AchievementSystem;
     dailyBonusSystem: DailyBonusSystem;
+    initialView?: 'title' | 'menu';
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem, achievementSystem, dailyBonusSystem }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gachaSystem, achievementSystem, dailyBonusSystem, initialView = 'title' }) => {
     const { t } = useTranslation();
     const { playClick } = useSound();
 
@@ -54,7 +55,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     React.useEffect(() => {
         if (visible) {
             setCoins(gachaSystem.loadCoinBalance());
-            setViewState('title'); // Reset to title screen when visible
+            setViewState(initialView); // Reset to specified initial view when visible
 
             // Check daily bonus
             const availability = dailyBonusSystem.checkAvailability();
@@ -62,7 +63,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                 setTimeout(() => setShowDailyBonus(true), 800);
             }
         }
-    }, [visible, gachaSystem, dailyBonusSystem]);
+    }, [visible, gachaSystem, dailyBonusSystem, initialView]);
 
     const handleScreenClick = () => {
         if (viewState === 'title') {

@@ -27,7 +27,7 @@ export class ItemManager {
             x: this.canvas.width + 24,
             y: this.canvas.height - GROUND - 44 - rand(0, 95),
             w: 30, h: 30,
-            v: 1.2 + rand(0.3, 0.8) + (level - 1) * 0.05,
+            rv: rand(0.3, 0.8), // Relative velocity to scroll speed
             char: isParfait ? '🍨' : '🐟',
             score: isParfait ? 2 : 1
         });
@@ -38,7 +38,7 @@ export class ItemManager {
             x: this.canvas.width + 26,
             y: this.canvas.height - GROUND - 44 - rand(0, 120),
             w: 26, h: 26,
-            v: 1.2 + (level - 1) * 0.05,
+            rv: 0, // Matches scroll speed exactly
             char: '⭐'
         });
     }
@@ -47,6 +47,7 @@ export class ItemManager {
         // Balance Tweak: Reduced item frequency - start at 2500ms, decrease by 100ms per level
         const itemIv = clamp(2500 - (level - 1) * 100, 800, 2500);
         const powerIv = 11000;
+        const scrollSpeed = 6 + level * 0.5;
 
         if (t - this.lastItemTime > itemIv) {
             this.spawnItem(level);
@@ -62,19 +63,23 @@ export class ItemManager {
         this.items = this.items.filter(it => {
             if (hasMagnet) {
                 const dx = (player.x - it.x), dy = (player.y - it.y);
-                const dist = Math.hypot(dx, dy);
-                if (dist < 160) {
-                    it.x += dx * 0.18;
-                    it.y += dy * 0.18;
+                // Only attract if item is ahead of player (dx < 0) or very close
+                if (dx < 0) {
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 200) { // Increased range slightly to feel better for ahead items
+                        it.x += dx * 0.18;
+                        it.y += dy * 0.18;
+                    }
                 }
             }
-            it.x -= it.v;
+            // Move with scroll speed + relative velocity
+            it.x -= (scrollSpeed + (it.rv || 0));
             return it.x + it.w > 0;
         });
 
         // Update Powers
         this.powers = this.powers.filter(pw => {
-            pw.x -= pw.v;
+            pw.x -= (scrollSpeed + (pw.rv || 0));
             return pw.x + pw.w > 0;
         });
     }

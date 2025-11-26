@@ -255,7 +255,8 @@ export class CollisionSystem {
             } else if (now() > game.hurtUntil) {
                 // Calculate damage with reduction
                 const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
-                const baseDamage = 20;
+                // Scale damage with level: Base 20 + 2 per level
+                const baseDamage = 20 + (game.level - 1) * 2;
                 const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
 
                 game.hp = Math.max(0, game.hp - finalDamage);
@@ -356,7 +357,8 @@ export class CollisionSystem {
                 if (now() > game.hurtUntil) {
                     // Calculate damage with reduction
                     const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
-                    const baseDamage = 20;
+                    // Scale damage with level: Base 20 + 2 per level
+                    const baseDamage = 20 + (game.level - 1) * 2;
                     const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
 
                     game.hp = Math.max(0, game.hp - finalDamage);

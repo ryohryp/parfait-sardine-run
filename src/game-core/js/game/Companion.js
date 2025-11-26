@@ -24,18 +24,9 @@ export class Companion {
         this.floatOffset = Math.sin(t * 0.005) * 5;
 
         // Auto-collect items
-        items.forEach(item => {
-            if (!item.collected) {
-                const dx = (this.x + this.w / 2) - (item.x + item.w / 2);
-                const dy = (this.y + this.h / 2) - (item.y + item.h / 2);
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 150) {
-                    // Magnet effect
-                    item.x += (this.x - item.x) * 0.15;
-                    item.y += (this.y - item.y) * 0.15;
-                }
-            }
-        });
+        // Auto-collect items logic removed - Companion should not attract items by default
+        // If we want companion to collect, it should be skill-based or much shorter range
+        // For now, removing to fix the "unwanted attraction" issue.
     }
 
     draw(ctx) {
