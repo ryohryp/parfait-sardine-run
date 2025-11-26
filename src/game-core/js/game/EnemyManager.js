@@ -303,6 +303,7 @@ export class EnemyManager {
     updateBoss(t, player) {
         if (!this.bossState) return;
         const config = this.bossState.config;
+        const behavior = config.behavior || 'float';
 
         if (this.bossState.state === 'enter') {
             this.bossState.x -= this.bossState.vx;
@@ -311,12 +312,69 @@ export class EnemyManager {
                 this.bossState.state = 'battle';
                 this.bossState.nextAttack = t + config.attackInterval;
                 this.bossState.floatPhase = Math.random() * Math.PI * 2;
+                this.bossState.moveTimer = 0; // For timed behaviors
             }
         } else if (this.bossState.state === 'battle') {
             this.bossState.floatPhase += config.floatSpeed || 0.02;
-            this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase) * (config.floatRange || 28);
+
+            // Movement Behaviors
+            if (behavior === 'float') {
+                // Standard floating (Meadow)
+                this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase) * (config.floatRange || 28);
+            } else if (behavior === 'charge') {
+                // Horizontal charging (Dunes)
+                const chargeSpeed = 0.04;
+                const chargeRange = 80;
+                this.bossState.x = this.bossState.targetX + Math.sin(this.bossState.floatPhase * 1.5) * chargeRange;
+                this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase * 0.5) * 10;
+            } else if (behavior === 'swoop') {
+                // Swooping motion (Sky)
+                const swoopRangeY = 120;
+                const swoopRangeX = 60;
+                this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase) * swoopRangeY;
+                this.bossState.x = this.bossState.targetX + Math.cos(this.bossState.floatPhase) * swoopRangeX;
+            } else if (behavior === 'shake') {
+                // Vibrating/Shaking (Volcano)
+                if (Math.random() < 0.2) {
+                    this.bossState.x = this.bossState.targetX + rand(-4, 4);
+                    this.bossState.y = this.bossState.baseY + rand(-4, 4);
+                }
+                // Occasional large shift
+                this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase * 0.2) * 40;
+            } else if (behavior === 'sine') {
+                // Large vertical sine wave (Ocean)
+                this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase) * (config.floatRange * 1.5 || 60);
+            } else if (behavior === 'teleport') {
+                // Teleporting (Abyss)
+                this.bossState.moveTimer = (this.bossState.moveTimer || 0) + 1;
+                if (this.bossState.moveTimer > 180) {
+                    // Teleport sequence
+                    if (this.bossState.opacity > 0 && !this.bossState.teleporting) {
+                        this.bossState.opacity -= 0.05;
+                        if (this.bossState.opacity <= 0) {
+                            this.bossState.teleporting = true;
+                            this.bossState.y = rand(40, this.canvas.height - GROUND - this.bossState.h - 20);
+                            this.bossState.x = rand(this.canvas.width * 0.5, this.canvas.width - 100);
+                        }
+                    } else if (this.bossState.teleporting) {
+                        this.bossState.opacity += 0.05;
+                        if (this.bossState.opacity >= 1) {
+                            this.bossState.opacity = 1;
+                            this.bossState.teleporting = false;
+                            this.bossState.moveTimer = 0;
+                        }
+                    }
+                } else {
+                    // Slight hover while visible
+                    this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase) * 10;
+                }
+            } else {
+                // Fallback
+                this.bossState.y = this.bossState.baseY + Math.sin(this.bossState.floatPhase) * (config.floatRange || 28);
+            }
+
             if (t >= this.bossState.nextAttack) {
-                this.bossFireVolley(this.bossState, t, player);
+                this.bossAttack(this.bossState, t, player);
                 this.bossState.nextAttack = t + config.attackInterval;
             }
         } else if (this.bossState.state === 'defeated') {
@@ -351,42 +409,196 @@ export class EnemyManager {
         });
     }
 
-    bossFireVolley(boss, time, player) {
+    bossAttack(boss, time, player) {
         const config = boss.config;
+        const attackType = config.attack || 'spread';
         const count = Math.max(1, config.volley || 3);
         const speed = config.projectileSpeed || 3;
         const baseX = boss.x + boss.w * 0.15;
         const launchY = boss.y + boss.h * 0.65;
-        const targetX = player.x + player.w * 0.5;
-        const distanceX = Math.max(32, Math.abs(baseX - targetX));
-        const travelFrames = Math.max(12, distanceX / speed);
 
-        for (let i = 0; i < count; i++) {
-            const offset = i - (count - 1) / 2;
-            const laneOffset = offset * (player.h * 0.22);
-            const desiredY = player.y + player.h * 0.7 + laneOffset;
-            const targetY = clamp(desiredY, player.y + 12, this.canvas.height - GROUND - 18);
-            const vy = (targetY - launchY) / travelFrames;
+        if (attackType === 'spread') {
+            // Original spread logic
+            const targetX = player.x + player.w * 0.5;
+            const distanceX = Math.max(32, Math.abs(baseX - targetX));
+            const travelFrames = Math.max(12, distanceX / speed);
 
-            this.bossProjectiles.push({
-                x: baseX,
-                y: launchY,
-                w: 30,
-                h: 30,
-                vx: speed,
-                vy,
-                gravity: 0,
-                createdAt: time
-            });
+            for (let i = 0; i < count; i++) {
+                const offset = i - (count - 1) / 2;
+                const laneOffset = offset * (player.h * 0.22);
+                const desiredY = player.y + player.h * 0.7 + laneOffset;
+                const targetY = clamp(desiredY, player.y + 12, this.canvas.height - GROUND - 18);
+                const vy = (targetY - launchY) / travelFrames;
+
+                this.bossProjectiles.push({
+                    x: baseX,
+                    y: launchY,
+                    w: 30,
+                    h: 30,
+                    vx: speed,
+                    vy,
+                    gravity: 0,
+                    createdAt: time
+                });
+            }
+        } else if (attackType === 'rapid') {
+            // Rapid fire straight shots
+            // Refinement: Aim at player (Scorpion attack)
+            const gap = 180;
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    if (!this.bossState || this.bossState.state !== 'battle') return;
+
+                    // Telegraph
+                    this.bossParticles.push({
+                        x: this.bossState.x,
+                        y: this.bossState.y + this.bossState.h / 2,
+                        vx: 0,
+                        vy: 0,
+                        life: 0.5,
+                        color: '#ff0000'
+                    });
+
+                    // Calculate aim
+                    const startX = this.bossState.x;
+                    const startY = this.bossState.y + this.bossState.h * 0.6; // Lower spawn point
+                    const targetX = player.x + player.w / 2;
+                    const targetY = player.y + player.h / 2;
+
+                    const dx = targetX - startX;
+                    const dy = targetY - startY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    const aimVx = (dx / dist) * speed * 1.2;
+                    const aimVy = (dy / dist) * speed * 1.2;
+
+                    this.bossProjectiles.push({
+                        x: startX,
+                        y: startY,
+                        w: 24,
+                        h: 24,
+                        vx: -aimVx, // Projectile logic usually subtracts vx, so we invert or just use positive speed if logic expects it. 
+                        // Wait, updateBossProjectiles does x -= shot.vx. 
+                        // If aimVx is negative (towards left), -(-val) = +val (moves right).
+                        // Player is usually to the left. dx is negative. aimVx is negative.
+                        // x -= (-val) => x += val (moves right). WRONG.
+                        // We want it to move left towards player.
+                        // If player is left, dx is negative. aimVx is negative.
+                        // We want x to decrease. x += vx where vx is negative.
+                        // But updateBossProjectiles does x -= shot.vx.
+                        // So shot.vx should be POSITIVE to move LEFT.
+                        // So we want -aimVx (which is positive).
+                        // Let's just use absolute speed and direction.
+                        vx: Math.abs(aimVx), // Move left
+                        vy: aimVy,
+                        gravity: 0,
+                        createdAt: time
+                    });
+                }, i * gap);
+            }
+        } else if (attackType === 'drop') {
+            // Drop from above (Targeted)
+            // Refinement: Spawn directly above player
+            for (let i = 0; i < count; i++) {
+                this.bossProjectiles.push({
+                    x: player.x + rand(-20, 20), // Target player X
+                    y: -40 - rand(0, 100), // Start above
+                    w: 32,
+                    h: 32,
+                    vx: 0, // Fall straight down
+                    vy: speed * 0.8, // Move down
+                    gravity: 0,
+                    createdAt: time
+                });
+            }
+        } else if (attackType === 'arc') {
+            // Arcing shots
+            for (let i = 0; i < count; i++) {
+                const angle = -Math.PI / 4 - (i * 0.2); // Up and left
+                const power = speed * 1.2;
+                this.bossProjectiles.push({
+                    x: baseX,
+                    y: launchY,
+                    w: 28,
+                    h: 28,
+                    vx: Math.cos(angle) * power * -1, // Flip X
+                    vy: Math.sin(angle) * power,
+                    gravity: 0.15,
+                    createdAt: time
+                });
+            }
+        } else if (attackType === 'wave') {
+            // Sine wave projectiles
+            for (let i = 0; i < count; i++) {
+                this.bossProjectiles.push({
+                    x: baseX,
+                    y: launchY + (i - count / 2) * 40,
+                    w: 28,
+                    h: 28,
+                    vx: speed,
+                    vy: 0,
+                    gravity: 0,
+                    type: 'wave',
+                    phase: i * 0.5,
+                    baseY: launchY + (i - count / 2) * 40,
+                    createdAt: time
+                });
+            }
+        } else if (attackType === 'homing') {
+            // Homing projectiles
+            // Refinement: Reduce homing strength and duration
+            for (let i = 0; i < count; i++) {
+                this.bossProjectiles.push({
+                    x: baseX,
+                    y: launchY + rand(-40, 40),
+                    w: 24,
+                    h: 24,
+                    vx: speed * 0.6, // Start slower
+                    vy: rand(-2, 2),
+                    gravity: 0,
+                    type: 'homing',
+                    homingDuration: 120, // Stop homing after 2 seconds (60fps)
+                    createdAt: time
+                });
+            }
         }
     }
 
     updateBossProjectiles(player) {
         if (!this.bossProjectiles.length) return;
         this.bossProjectiles = this.bossProjectiles.filter((shot) => {
-            shot.x -= shot.vx;
-            shot.y += shot.vy;
-            if (shot.gravity) shot.vy += shot.gravity;
+            if (shot.type === 'wave') {
+                shot.phase = (shot.phase || 0) + 0.1;
+                shot.y = shot.baseY + Math.sin(shot.phase) * 40;
+                shot.x -= shot.vx;
+            } else if (shot.type === 'homing') {
+                // Simple homing with limited duration
+                shot.life = (shot.life || 0) + 1;
+
+                if (shot.life < (shot.homingDuration || 100)) {
+                    const dx = player.x - shot.x;
+                    const dy = player.y - shot.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 0) {
+                        // Reduced turning speed for fairness
+                        shot.vx += (dx / dist) * 0.08;
+                        shot.vy += (dy / dist) * 0.08;
+                    }
+                }
+
+                // Cap speed
+                const speed = Math.sqrt(shot.vx * shot.vx + shot.vy * shot.vy);
+                if (speed > 4.5) {
+                    shot.vx = (shot.vx / speed) * 4.5;
+                    shot.vy = (shot.vy / speed) * 4.5;
+                }
+                shot.x += shot.vx;
+                shot.y += shot.vy;
+            } else {
+                shot.x -= shot.vx;
+                shot.y += shot.vy;
+                if (shot.gravity) shot.vy += shot.gravity;
+            }
 
             if (shot.y > this.canvas.height + 120 || shot.x + shot.w < -80 || shot.y + shot.h < -120) {
                 return false;

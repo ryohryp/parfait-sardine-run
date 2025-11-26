@@ -43,6 +43,13 @@ export class Player {
             frameDuration: FRAME_DURATION
         };
 
+        this.isDashing = false;
+        this.isGuarding = false;
+        this.dashTimer = 0;
+        this.guardTimer = 0;
+        this.dashCooldown = 0;
+        this.guardCooldown = 0;
+
         this.loadSprite();
     }
 
@@ -90,6 +97,12 @@ export class Player {
         this.vy = 0;
         this.onGround = true;
         this.canDouble = characters[this.charKey]?.special?.includes('doubleJump');
+        this.isDashing = false;
+        this.isGuarding = false;
+        this.dashTimer = 0;
+        this.guardTimer = 0;
+        this.dashCooldown = 0;
+        this.guardCooldown = 0;
         this.resetAnimation();
     }
 
@@ -101,9 +114,49 @@ export class Player {
     }
 
     update(delta) {
+        // Cooldowns
+        if (this.dashCooldown > 0) this.dashCooldown -= delta;
+        if (this.guardCooldown > 0) this.guardCooldown -= delta;
+
+        // Dash Logic
+        if (this.isDashing) {
+            this.dashTimer -= delta;
+
+            // Dash Movement (Forward and Back)
+            const dashDuration = 300;
+            const progress = 1 - (this.dashTimer / dashDuration); // 0 to 1
+            const dashDistance = 150;
+
+            if (progress >= 0 && progress <= 1) {
+                this.x = PLAYER_INITIAL_X + Math.sin(progress * Math.PI) * dashDistance;
+            }
+
+            if (this.dashTimer <= 0) {
+                this.isDashing = false;
+                this.dashCooldown = 1000; // 1 second cooldown
+                this.x = PLAYER_INITIAL_X; // Reset position
+            }
+        } else {
+            // Ensure position is reset if not dashing
+            if (this.x !== PLAYER_INITIAL_X) this.x = PLAYER_INITIAL_X;
+        }
+
+        // Guard Logic
+        if (this.isGuarding) {
+            this.guardTimer -= delta;
+            if (this.guardTimer <= 0) {
+                this.isGuarding = false;
+                this.guardCooldown = 1000; // 1 second cooldown
+            }
+        }
+
         // Physics
-        this.vy += G;
-        this.y += this.vy;
+        if (!this.isDashing) {
+            this.vy += G;
+            this.y += this.vy;
+        } else {
+            this.vy = 0; // Hover during dash
+        }
 
         if (this.y + this.h >= this.canvas.height - GROUND) {
             this.y = this.canvas.height - GROUND - this.h;
@@ -119,7 +172,7 @@ export class Player {
     updateAnimation(delta) {
         if (delta < 0) delta = 0;
 
-        if (!this.onGround) {
+        if (!this.onGround && !this.isDashing) {
             // Jump animation
             if (this.anim.sequence !== this.anim.jumpFrames) {
                 this.anim.sequence = this.anim.jumpFrames;
@@ -148,6 +201,8 @@ export class Player {
     }
 
     jump() {
+        if (this.isDashing || this.isGuarding) return false;
+
         const hasDouble = characters[this.charKey]?.special?.includes('doubleJump');
 
         if (this.onGround) {
@@ -165,12 +220,43 @@ export class Player {
         return false;
     }
 
+    dash() {
+        if (this.isDashing || this.dashCooldown > 0 || this.isGuarding) return false;
+        this.isDashing = true;
+        this.dashTimer = 300; // 300ms dash
+        // Visual effect
+        if (this.particles) {
+            for (let i = 0; i < 5; i++) {
+                this.particles.createJumpDust(this.x + Math.random() * this.w, this.y + this.h / 2);
+            }
+        }
+        return true;
+    }
+
+    guard() {
+        if (this.isGuarding || this.guardCooldown > 0 || this.isDashing) return false;
+        this.isGuarding = true;
+        this.guardTimer = 500; // 500ms guard
+        return true;
+    }
+
     draw(ctx, now, invUntil, hurtUntil) {
         // Invincibility outline
-        if (now < invUntil) {
-            ctx.strokeStyle = '#f5c542';
+        if (now < invUntil || this.isDashing) {
+            ctx.strokeStyle = this.isDashing ? '#00ffff' : '#f5c542';
             ctx.lineWidth = 4;
             ctx.strokeRect(this.x - 2, this.y - 2, this.w + 4, this.h + 4);
+        }
+
+        // Guard Shield
+        if (this.isGuarding) {
+            ctx.save();
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(this.x + this.w / 2, this.y + this.h / 2, this.w, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
 
         // Blink on hurt
@@ -184,6 +270,12 @@ export class Player {
                 const col = frame % this.sprite.cols;
                 const row = Math.floor(frame / this.sprite.cols);
 
+                ctx.save();
+                if (this.isDashing) {
+                    ctx.globalAlpha = 0.7;
+                    ctx.filter = 'blur(2px)';
+                }
+
                 ctx.drawImage(
                     this.sprite.image,
                     col * this.sprite.frameWidth,
@@ -195,6 +287,8 @@ export class Player {
                     this.w,
                     this.h
                 );
+
+                ctx.restore();
 
                 ctx.imageSmoothingEnabled = smoothingBackup;
             } else {

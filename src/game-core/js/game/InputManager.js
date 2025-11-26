@@ -5,12 +5,17 @@ export class InputManager {
     this.touchState = {
       left: false,
       right: false,
-      rightPressedAt: 0
+      rightPressedAt: 0,
+      startX: 0,
+      startY: 0,
+      startTime: 0
     };
     this.handlers = {
       jump: [],
       shoot: [],
-      ult: []
+      ult: [],
+      dash: [],
+      guard: []
     };
     this.enabled = false;
   }
@@ -23,6 +28,7 @@ export class InputManager {
 
     if (this.canvas) {
       this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+      this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
       this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: true });
       // Mouse support for canvas (optional, if not handled by touch)
       this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -73,8 +79,11 @@ export class InputManager {
     this.keys[e.code] = true;
 
     if (e.code === 'Space' || e.code === 'ArrowUp') this.trigger('jump');
-    if (e.key === 'z' || e.key === 'x' || e.key === 'Z' || e.key === 'X') this.trigger('shoot');
-    if (e.key === 'c' || e.key === 'C') this.trigger('ult');
+    // Z: Guard, X: Shoot, C: Dash, V: Ult
+    if (e.key === 'x' || e.key === 'X') this.trigger('shoot');
+    if (e.key === 'z' || e.key === 'Z') this.trigger('guard');
+    if (e.key === 'c' || e.key === 'C') this.trigger('dash');
+    if (e.key === 'v' || e.key === 'V') this.trigger('ult');
   }
 
   handleKeyUp(e) {
@@ -84,9 +93,16 @@ export class InputManager {
   handleTouchStart(e) {
     if (!this.enabled) return;
     e.preventDefault();
+    const touch = e.changedTouches[0];
     const rect = this.canvas.getBoundingClientRect();
-    const x = e.changedTouches[0].clientX - rect.left;
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
     const isLeft = x < rect.width / 2;
+
+    // Store start position for swipe detection
+    this.touchState.startX = x;
+    this.touchState.startY = y;
+    this.touchState.startTime = performance.now();
 
     if (isLeft) {
       this.trigger('jump');
@@ -106,8 +122,36 @@ export class InputManager {
     }
   }
 
+  handleTouchMove(e) {
+    if (!this.enabled || !this.touchState.startTime) return;
+    e.preventDefault(); // Prevent scrolling
+  }
+
   handleTouchEnd(e) {
+    if (!this.enabled) return;
+    const touch = e.changedTouches[0];
+    const rect = this.canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    // Swipe Detection
+    if (this.touchState.startTime) {
+      const dx = x - this.touchState.startX;
+      const dy = y - this.touchState.startY;
+      const dt = performance.now() - this.touchState.startTime;
+
+      // Thresholds: Min distance 30px, Max time 300ms, Horizontal dominance
+      if (dt < 300 && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) {
+          this.trigger('dash'); // Swipe Right -> Dash
+        } else {
+          this.trigger('guard'); // Swipe Left -> Guard
+        }
+      }
+    }
+
     this.touchState.right = false;
+    this.touchState.startTime = 0;
   }
 
   on(event, handler) {

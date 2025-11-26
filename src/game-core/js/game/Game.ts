@@ -178,6 +178,16 @@ export class Game {
         });
         this.input.on('shoot', () => this.shoot());
         this.input.on('ult', () => this.tryUlt());
+        this.input.on('dash', () => {
+            if (this.gameOn) {
+                this.player.dash();
+            }
+        });
+        this.input.on('guard', () => {
+            if (this.gameOn) {
+                this.player.guard();
+            }
+        });
         initAudio();
         this.notifyState();
         requestAnimationFrame(t => this.loop(t));

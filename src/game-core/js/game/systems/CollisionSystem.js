@@ -150,6 +150,7 @@ export class CollisionSystem {
                     }
                 }
 
+                // Offensive Invincibility (Star, Fever, Revive)
                 if (now() < game.invUntil || now() < game.feverModeUntil) {
                     game.awardEnemyDefeat(en);
                     game.collection.unlockEnemy(en.type);
@@ -168,6 +169,12 @@ export class CollisionSystem {
                     }
                     return false;
                 }
+
+                // Defensive Invincibility (Dash, Guard) - Pass through
+                if (game.player.isDashing || game.player.isGuarding) {
+                    return true;
+                }
+
                 if (now() > game.hurtUntil) {
                     // Calculate damage with reduction
                     const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
@@ -262,6 +269,8 @@ export class CollisionSystem {
         if (this.AABB(game.player, boss)) {
             if (now() < game.invUntil || now() < game.feverModeUntil) {
                 game.damageBoss(2);
+            } else if (game.player.isDashing || game.player.isGuarding) {
+                // No damage to boss, no damage to player
             } else if (now() > game.hurtUntil) {
                 // Calculate damage with reduction
                 const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
@@ -359,7 +368,7 @@ export class CollisionSystem {
 
         game.enemies.bossProjectiles = game.enemies.bossProjectiles.filter(shot => {
             if (this.AABB(game.player, shot)) {
-                if (now() < game.invUntil || now() < game.feverModeUntil) {
+                if (now() < game.invUntil || now() < game.feverModeUntil || game.player.isDashing || game.player.isGuarding) {
                     // 無敵時は弾を消すだけ
                     game.particles.createExplosion(shot.x + shot.w / 2, shot.y + shot.h / 2, '#aaaaaa');
                     return false;

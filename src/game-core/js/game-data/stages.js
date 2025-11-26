@@ -126,7 +126,9 @@ export const stageBosses = {
     rewardScore: 150,
     rewardCoins: 9,
     spawnDelay: 6500,
-    groundOffset: 28
+    groundOffset: 28,
+    behavior: 'float',
+    attack: 'spread'
   },
   dunes: {
     key: 'boss-dunes',
@@ -148,7 +150,9 @@ export const stageBosses = {
     rewardScore: 180,
     rewardCoins: 12,
     spawnDelay: 7000,
-    groundOffset: 32
+    groundOffset: 32,
+    behavior: 'charge',
+    attack: 'rapid'
   },
   sky: {
     key: 'boss-sky',
@@ -170,7 +174,9 @@ export const stageBosses = {
     rewardScore: 220,
     rewardCoins: 14,
     spawnDelay: 7600,
-    groundOffset: 36
+    groundOffset: 36,
+    behavior: 'swoop',
+    attack: 'drop'
   },
   volcano: {
     key: 'boss-volcano',
@@ -192,7 +198,9 @@ export const stageBosses = {
     rewardScore: 250,
     rewardCoins: 16,
     spawnDelay: 7800,
-    groundOffset: 38
+    groundOffset: 38,
+    behavior: 'shake',
+    attack: 'arc'
   },
   ocean: {
     key: 'boss-ocean',
@@ -214,7 +222,9 @@ export const stageBosses = {
     rewardScore: 320,
     rewardCoins: 20,
     spawnDelay: 8500,
-    groundOffset: 42
+    groundOffset: 42,
+    behavior: 'sine',
+    attack: 'wave'
   },
   abyss: {
     key: 'boss-abyss',
@@ -236,6 +246,8 @@ export const stageBosses = {
     rewardScore: 280,
     rewardCoins: 18,
     spawnDelay: 8200,
-    groundOffset: 40
+    groundOffset: 40,
+    behavior: 'teleport',
+    attack: 'homing'
   }
 };
