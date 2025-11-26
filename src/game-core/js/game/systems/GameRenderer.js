@@ -45,8 +45,12 @@ export class GameRenderer {
 
         // 画像を読み込み
         this.bgLayers.forEach(l => {
-            // ./assets/... -> /assets/... に変換して読み込み
-            const src = l.src.startsWith('./') ? l.src.substring(1) : l.src;
+            // ./assets/... -> /base/assets/... に変換して読み込み
+            // import.meta.env.BASE_URL は vite.config.ts の base 設定 ('/parfait-sardine-run/') を反映する
+            const baseUrl = import.meta.env.BASE_URL;
+            const src = l.src.startsWith('./')
+                ? l.src.replace('./', baseUrl)
+                : l.src;
             l.img.src = src;
         });
 
@@ -58,8 +62,9 @@ export class GameRenderer {
                 alpha: stage.foregroundLayer.alpha,
                 img: new Image()
             };
+            const baseUrl = import.meta.env.BASE_URL;
             this.foregroundLayer.img.src = this.foregroundLayer.src.startsWith('./')
-                ? this.foregroundLayer.src.substring(1)
+                ? this.foregroundLayer.src.replace('./', baseUrl)
                 : this.foregroundLayer.src;
         } else {
             this.foregroundLayer = null;
