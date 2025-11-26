@@ -34,7 +34,7 @@ export const COLLECTION_ENEMIES = {
         id: 'zigzag',
         name: '蛇行型',
         icon: '🐍',
-        image: 'assets/sprite/enemy_cupcake.png',
+        image: 'assets/sprite/enemy_meandering.png',
         desc: 'ゆらゆらと蛇行しながら近づいてくる。',
         exp: 5,
         coin: 1
@@ -52,7 +52,7 @@ export const COLLECTION_ENEMIES = {
         id: 'hover',
         name: '浮遊型',
         icon: '🛸',
-        image: 'assets/sprite/enemy_cupcake.png',
+        image: 'assets/sprite/enemy_ufo.png',
         desc: '空中に留まりながら上下に動く。',
         exp: 5,
         coin: 1

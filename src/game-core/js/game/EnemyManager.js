@@ -58,12 +58,20 @@ export class EnemyManager {
         this.splitterImage = new Image();
         this.splitterImage.src = `${baseUrl}assets/sprite/enemy_splitter.png`;
 
+        this.meanderingImage = new Image();
+        this.meanderingImage.src = `${baseUrl}assets/sprite/enemy_meandering.png`;
+
+        this.ufoImage = new Image();
+        this.ufoImage.src = `${baseUrl}assets/sprite/enemy_ufo.png`;
+
         // Image map for cleaner drawing
         this.enemyImages = {
             shield: this.shieldImage,
             chaser: this.chaserImage,
             bomber: this.bomberImage,
-            splitter: this.splitterImage
+            splitter: this.splitterImage,
+            zigzag: this.meanderingImage,
+            hover: this.ufoImage
         };
 
         // Boss particles

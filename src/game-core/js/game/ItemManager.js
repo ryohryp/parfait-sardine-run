@@ -47,7 +47,7 @@ export class ItemManager {
         // Balance Tweak: Reduced item frequency - start at 2500ms, decrease by 100ms per level
         const itemIv = clamp(2500 - (level - 1) * 100, 800, 2500);
         const powerIv = 11000;
-        const scrollSpeed = 6 + level * 0.5;
+        const scrollSpeed = 1.5 + level * 0.1;
 
         if (t - this.lastItemTime > itemIv) {
             this.spawnItem(level);
