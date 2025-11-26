@@ -9,3 +9,7 @@ export const SHOOT_COOLDOWN = 250;
 export const POWER_DURATION = INVINCIBILITY_DURATION;
 export const ENEMY_BONUS = 3;
 export const ITEM_LEVEL = 250;
+
+export const PLAYER_WIDTH = 46;
+export const PLAYER_HEIGHT = 46;
+export const PLAYER_INITIAL_X = 50;

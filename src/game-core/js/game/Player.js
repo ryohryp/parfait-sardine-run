@@ -1,14 +1,18 @@
 
-import { G, BASE_JUMP, GROUND } from '../game-constants.js';
+import { G, BASE_JUMP, GROUND, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_INITIAL_X } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
+
+const WALK_FRAMES = [0, 1, 2, 3];
+const JUMP_FRAMES = [4, 5];
+const FRAME_DURATION = 120;
 
 export class Player {
     constructor(canvas, particleSystem) {
         this.canvas = canvas;
         this.particles = particleSystem;
-        this.w = 46;
-        this.h = 46;
-        this.x = 50;
+        this.w = PLAYER_WIDTH;
+        this.h = PLAYER_HEIGHT;
+        this.x = PLAYER_INITIAL_X;
         this.y = this.canvas.height - GROUND - this.h;
         this.vy = 0;
         this.onGround = true;
@@ -30,13 +34,13 @@ export class Player {
         };
 
         this.anim = {
-            walkFrames: [0, 1, 2, 3],
-            jumpFrames: [4, 5],
-            sequence: [0, 1, 2, 3],
+            walkFrames: WALK_FRAMES,
+            jumpFrames: JUMP_FRAMES,
+            sequence: WALK_FRAMES,
             index: 0,
             elapsed: 0,
             currentFrame: 0,
-            frameDuration: 120
+            frameDuration: FRAME_DURATION
         };
 
         this.loadSprite();
@@ -81,7 +85,7 @@ export class Player {
     }
 
     reset() {
-        this.x = 50;
+        this.x = PLAYER_INITIAL_X;
         this.y = this.canvas.height - GROUND - this.h;
         this.vy = 0;
         this.onGround = true;
@@ -115,28 +119,31 @@ export class Player {
     updateAnimation(delta) {
         if (delta < 0) delta = 0;
 
-        if (this.onGround) {
-            if (this.anim.sequence !== this.anim.walkFrames) {
-                this.anim.sequence = this.anim.walkFrames;
-                this.anim.index = 0;
-                this.anim.elapsed = 0;
-                this.anim.currentFrame = this.anim.walkFrames[0];
-            }
-
-            this.anim.elapsed += delta;
-            const frameAdvance = Math.floor(this.anim.elapsed / this.anim.frameDuration);
-            if (frameAdvance > 0) {
-                this.anim.elapsed -= frameAdvance * this.anim.frameDuration;
-                this.anim.index = (this.anim.index + frameAdvance) % this.anim.sequence.length;
-                this.anim.currentFrame = this.anim.sequence[this.anim.index];
-            }
-        } else {
+        if (!this.onGround) {
+            // Jump animation
             if (this.anim.sequence !== this.anim.jumpFrames) {
                 this.anim.sequence = this.anim.jumpFrames;
                 this.anim.index = 0;
             }
             this.anim.elapsed = 0;
             this.anim.currentFrame = this.vy < 0 ? this.anim.jumpFrames[0] : this.anim.jumpFrames[1];
+            return;
+        }
+
+        // Walk animation
+        if (this.anim.sequence !== this.anim.walkFrames) {
+            this.anim.sequence = this.anim.walkFrames;
+            this.anim.index = 0;
+            this.anim.elapsed = 0;
+            this.anim.currentFrame = this.anim.walkFrames[0];
+        }
+
+        this.anim.elapsed += delta;
+        const frameAdvance = Math.floor(this.anim.elapsed / this.anim.frameDuration);
+        if (frameAdvance > 0) {
+            this.anim.elapsed %= this.anim.frameDuration;
+            this.anim.index = (this.anim.index + frameAdvance) % this.anim.sequence.length;
+            this.anim.currentFrame = this.anim.sequence[this.anim.index];
         }
     }
 

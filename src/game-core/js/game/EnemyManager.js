@@ -1,8 +1,8 @@
-
 import { stageForLevel, stageBosses } from '../game-data/stages.js';
 import { G, GROUND, ENEMY_BONUS } from '../game-constants.js';
 import { showStageTitle, speedSE, cameraShake, floatText } from '../presentation.js';
 import { playSfx } from '../audio.js';
+import { ENEMY_TYPES } from './EnemyConfig.js';
 
 function now() { return performance.now(); }
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -18,23 +18,13 @@ export class EnemyManager {
         this.bossNextSpawnAt = 0;
         this.lastEnemyTime = 0;
 
-        this.enemyTypeMeta = {
-            straight: { icon: '👾', label: '直進型' },
-            zigzag: { icon: '🐍', label: '蛇行型' },
-            dash: { icon: '💥', label: '突進型' },
-            hover: { icon: '🛸', label: '浮遊型' },
-            chaser: { icon: '🎯', label: '追跡型' },
-            bomber: { icon: '💣', label: '爆弾型' },
-            splitter: { icon: '🔷', label: '分裂型' },
-            'boss-meadow': { icon: stageBosses.meadow.icon || '👑', label: 'Boss - Meadow Monarch', base: stageBosses.meadow.rewardScore || ENEMY_BONUS },
-            'boss-dunes': { icon: stageBosses.dunes.icon || '👑', label: 'Boss - Dune Typhoon', base: stageBosses.dunes.rewardScore || ENEMY_BONUS },
-            'boss-sky': { icon: stageBosses.sky.icon || '👑', label: 'Boss - Stratos Ranger', base: stageBosses.sky.rewardScore || ENEMY_BONUS },
-            'boss-volcano': { icon: stageBosses.volcano.icon || '👑', label: 'Boss - Inferno Dragon', base: stageBosses.volcano.rewardScore || ENEMY_BONUS },
-            'boss-ocean': { icon: stageBosses.ocean.icon || '👑', label: 'Boss - Leviathan', base: stageBosses.ocean.rewardScore || ENEMY_BONUS },
-            'boss-abyss': { icon: stageBosses.abyss.icon || '👑', label: 'Boss - Abyss Sovereign', base: stageBosses.abyss.rewardScore || ENEMY_BONUS },
-            obstacle: { icon: '🧱', label: '障害物' }
-        };
-        this.enemyTypeIcons = Object.fromEntries(Object.entries(this.enemyTypeMeta).map(([type, meta]) => [type, meta.icon]));
+        // Use imported configuration
+        this.enemyTypeMeta = ENEMY_TYPES;
+        // Create icon map for quick lookup
+        this.enemyTypeIcons = {};
+        Object.entries(this.enemyTypeMeta).forEach(([type, meta]) => {
+            this.enemyTypeIcons[type] = meta.icon;
+        });
 
         // Load Assets
         const baseUrl = import.meta.env.BASE_URL;
@@ -68,6 +58,14 @@ export class EnemyManager {
         this.splitterImage = new Image();
         this.splitterImage.src = `${baseUrl}assets/sprite/enemy_splitter.png`;
 
+        // Image map for cleaner drawing
+        this.enemyImages = {
+            shield: this.shieldImage,
+            chaser: this.chaserImage,
+            bomber: this.bomberImage,
+            splitter: this.splitterImage
+        };
+
         // Boss particles
         this.bossParticles = [];
     }
@@ -94,64 +92,54 @@ export class EnemyManager {
             type = 'obstacle';
         }
 
-        const baseY = this.canvas.height - GROUND - 36;
+        const config = ENEMY_TYPES[type];
+        if (!config) return; // Should not happen
+
+        const baseY = this.canvas.height - GROUND - (config.height || 36);
 
         const enemy = {
             x: this.canvas.width + 60 + offset,
             y: baseY,
-            w: 36,
-            h: 36,
-            vx: baseSpeed,
+            w: config.width || 36,
+            h: config.height || 36,
+            vx: baseSpeed * (config.speedFactor || 1),
             type,
-            icon: this.enemyTypeIcons[type] || '??',
+            icon: config.icon || '??',
             spawnAt: now(),
             phase: Math.random() * Math.PI * 2,
-            baseY
+            baseY,
+            hp: config.hp // Optional
         };
 
+        // Apply type-specific dynamic properties
         if (type === 'zigzag') {
-            enemy.vx = baseSpeed * 0.9;
-            enemy.amplitude = rand(28, 68);
-            enemy.frequency = rand(0.08, 0.14);
-            enemy.baseY = baseY - rand(10, 50);
+            enemy.amplitude = rand(config.amplitude.min, config.amplitude.max);
+            enemy.frequency = rand(config.frequency.min, config.frequency.max);
+            enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
         } else if (type === 'dash') {
-            enemy.vx = baseSpeed * 0.75;
-            enemy.maxV = baseSpeed * 1.9;
-            enemy.accel = baseSpeed * 0.045;
-            enemy.charge = rand(260, 460);
+            enemy.maxV = baseSpeed * config.maxSpeedFactor;
+            enemy.accel = baseSpeed * config.accelFactor;
+            enemy.charge = rand(config.chargeTime.min, config.chargeTime.max);
             enemy.boosted = false;
         } else if (type === 'hover') {
-            enemy.vx = baseSpeed * 0.85;
-            enemy.hoverRange = rand(28, 92);
-            enemy.hoverSpeed = rand(0.02, 0.035);
-            enemy.baseY = baseY - rand(40, 120);
-        } else if (type === 'shield') {
-            enemy.vx = baseSpeed * 0.6; // Slower
-            enemy.hp = 3;
-            enemy.w = 40;
-            enemy.h = 40;
+            enemy.hoverRange = rand(config.hoverRange.min, config.hoverRange.max);
+            enemy.hoverSpeed = rand(config.hoverSpeed.min, config.hoverSpeed.max);
+            enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
         } else if (type === 'chaser') {
-            enemy.vx = baseSpeed * 0.8;
             enemy.vy = 0;
-            enemy.chaseSpeed = baseSpeed * 0.3;
-            enemy.baseY = baseY - rand(20, 80);
+            enemy.chaseSpeed = baseSpeed * config.chaseSpeedFactor;
+            enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
         } else if (type === 'bomber') {
-            enemy.vx = baseSpeed * 0.7;
-            enemy.explosionRadius = 80;
-            enemy.triggerDistance = 120;
+            enemy.explosionRadius = config.explosionRadius;
+            enemy.triggerDistance = config.triggerDistance;
             enemy.exploding = false;
             enemy.explosionTimer = 0;
+            enemy.explosionDelay = config.explosionDelay;
         } else if (type === 'splitter') {
-            enemy.vx = baseSpeed * 0.85;
             enemy.canSplit = true;
-            enemy.w = 42;
-            enemy.h = 42;
         } else if (type === 'obstacle') {
-            enemy.vx = baseSpeed; // Move with flow
-            enemy.w = 48;
-            enemy.h = 48;
-            enemy.y = this.canvas.height - GROUND - 48; // On ground
-            enemy.hp = 999; // Indestructible
+            enemy.vx = baseSpeed; // Move with flow, ignore speedFactor? Or maybe config.speedFactor is 1.0 anyway
+            enemy.y = this.canvas.height - GROUND - enemy.h; // On ground
         }
 
         this.enemies.push(enemy);
@@ -294,7 +282,7 @@ export class EnemyManager {
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (!en.exploding && dist < en.triggerDistance) {
                     en.exploding = true;
-                    en.explosionTimer = now() + 600; // 600ms before explosion
+                    en.explosionTimer = now() + (en.explosionDelay || 600); // 600ms before explosion
                     en.vx *= 0.3; // Slow down
                 }
                 if (en.exploding && now() >= en.explosionTimer) {
@@ -429,21 +417,9 @@ export class EnemyManager {
     draw(ctx) {
         // Draw Enemies
         this.enemies.forEach(en => {
-            if (en.type === 'shield' && this.shieldImage.complete && this.shieldImage.naturalWidth > 0) {
-                ctx.drawImage(this.shieldImage, en.x, en.y, en.w, en.h);
-            } else if (en.type === 'chaser' && this.chaserImage.complete && this.chaserImage.naturalWidth > 0) {
-                ctx.drawImage(this.chaserImage, en.x, en.y, en.w, en.h);
-            } else if (en.type === 'bomber' && this.bomberImage.complete && this.bomberImage.naturalWidth > 0) {
-                if (en.exploding && Math.floor(now() / 50) % 2 === 0) {
-                    ctx.globalCompositeOperation = 'lighter';
-                    ctx.drawImage(this.bomberImage, en.x, en.y, en.w, en.h);
-                    ctx.globalCompositeOperation = 'source-over';
-                } else {
-                    ctx.drawImage(this.bomberImage, en.x, en.y, en.w, en.h);
-                }
-            } else if (en.type === 'splitter' && this.splitterImage.complete && this.splitterImage.naturalWidth > 0) {
-                ctx.drawImage(this.splitterImage, en.x, en.y, en.w, en.h);
-            } else if (en.type === 'obstacle') {
+            const img = this.enemyImages[en.type];
+
+            if (en.type === 'obstacle') {
                 ctx.save();
                 ctx.font = '48px serif';
                 ctx.textAlign = 'center';
@@ -451,6 +427,16 @@ export class EnemyManager {
                 // Adjust Y slightly (+4) because many emojis render a bit high
                 ctx.fillText('🧱', en.x + en.w / 2, en.y + en.h / 2 + 4);
                 ctx.restore();
+            } else if (en.type === 'bomber' && img && img.complete && img.naturalWidth > 0) {
+                if (en.exploding && Math.floor(now() / 50) % 2 === 0) {
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.drawImage(img, en.x, en.y, en.w, en.h);
+                    ctx.globalCompositeOperation = 'source-over';
+                } else {
+                    ctx.drawImage(img, en.x, en.y, en.w, en.h);
+                }
+            } else if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, en.x, en.y, en.w, en.h);
             } else if (this.droneImage.complete && this.droneImage.naturalWidth > 0) {
                 // Draw drone sprite for others (or add more specific ones later)
                 ctx.drawImage(this.droneImage, en.x, en.y, en.w, en.h);
