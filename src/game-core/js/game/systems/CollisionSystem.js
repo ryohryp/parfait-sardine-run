@@ -109,6 +109,16 @@ export class CollisionSystem {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < (en.explosionRadius || 80)) {
+                    // One Guard Check
+                    const hasOneGuard = characters[game.gacha.collection.current]?.special?.includes('oneGuard');
+                    if (hasOneGuard && !game.hasUsedOneGuard) {
+                        game.hasUsedOneGuard = true;
+                        game.particles.createExplosion(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#00ffff');
+                        playSfx('powerup'); // Shield sound
+                        logger.info('One Guard activated against bomber!');
+                        return false;
+                    }
+
                     if (now() > game.invUntil && now() > game.feverModeUntil && now() > game.hurtUntil) {
                         const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
                         const baseDamage = 30; // Explosion deals more damage
@@ -173,6 +183,18 @@ export class CollisionSystem {
                 // Defensive Invincibility (Dash, Guard) - Pass through
                 if (game.player.isDashing || game.player.isGuarding) {
                     return true;
+                }
+
+                // One Guard Check
+                const hasOneGuard = characters[game.gacha.collection.current]?.special?.includes('oneGuard');
+                if (hasOneGuard && !game.hasUsedOneGuard) {
+                    game.hasUsedOneGuard = true;
+                    game.particles.createExplosion(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#00ffff');
+                    playSfx('powerup'); // Shield sound
+                    logger.info('One Guard activated against enemy!');
+                    game.awardEnemyDefeat(en); // Optional: destroy enemy on guard?
+                    game.invUntil = now() + 1000; // Brief invincibility
+                    return false;
                 }
 
                 if (now() > game.hurtUntil) {
@@ -271,36 +293,51 @@ export class CollisionSystem {
                 game.damageBoss(2);
             } else if (game.player.isDashing || game.player.isGuarding) {
                 // No damage to boss, no damage to player
-            } else if (now() > game.hurtUntil) {
-                // Calculate damage with reduction
-                const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
-                // Scale damage with level: Base 20 + 2 per level
-                const baseDamage = 20 + (game.level - 1) * 2;
-                const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
+            } else {
+                // One Guard Check
+                const hasOneGuard = characters[game.gacha.collection.current]?.special?.includes('oneGuard');
+                if (hasOneGuard && !game.hasUsedOneGuard) {
+                    game.hasUsedOneGuard = true;
+                    game.particles.createExplosion(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#00ffff');
+                    playSfx('powerup');
+                    logger.info('One Guard activated against boss!');
+                    game.invUntil = now() + 1000;
+                    // Push player back slightly?
+                    game.player.vy = -5;
+                    return;
+                }
 
-                game.hp = Math.max(0, game.hp - finalDamage);
-                game.hurtUntil = now() + 900;
-                playSfx('hit');
-                game.particles.createExplosion(
-                    game.player.x + game.player.w / 2,
-                    game.player.y + game.player.h / 2,
-                    '#ff0000'
-                );
+                if (now() > game.hurtUntil) {
+                    // Calculate damage with reduction
+                    const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
+                    // Scale damage with level: Base 20 + 2 per level
+                    const baseDamage = 20 + (game.level - 1) * 2;
+                    const finalDamage = Math.floor(baseDamage * (1 - skillBonuses.damageReduction));
 
-                if (game.hp <= 0) {
-                    // Check for auto-revive
-                    if (skillBonuses.hasAutoRevive && !game.hasUsedAutoRevive) {
-                        game.hp = Math.floor(game.maxHp * 0.5);
-                        game.hasUsedAutoRevive = true;
-                        game.invUntil = now() + 3000;
-                        game.particles.createExplosion(
-                            game.player.x + game.player.w / 2,
-                            game.player.y + game.player.h / 2,
-                            '#00ff00'
-                        );
-                        logger.info('Auto-revive activated!');
-                    } else {
-                        game.endGame();
+                    game.hp = Math.max(0, game.hp - finalDamage);
+                    game.hurtUntil = now() + 900;
+                    playSfx('hit');
+                    game.particles.createExplosion(
+                        game.player.x + game.player.w / 2,
+                        game.player.y + game.player.h / 2,
+                        '#ff0000'
+                    );
+
+                    if (game.hp <= 0) {
+                        // Check for auto-revive
+                        if (skillBonuses.hasAutoRevive && !game.hasUsedAutoRevive) {
+                            game.hp = Math.floor(game.maxHp * 0.5);
+                            game.hasUsedAutoRevive = true;
+                            game.invUntil = now() + 3000;
+                            game.particles.createExplosion(
+                                game.player.x + game.player.w / 2,
+                                game.player.y + game.player.h / 2,
+                                '#00ff00'
+                            );
+                            logger.info('Auto-revive activated!');
+                        } else {
+                            game.endGame();
+                        }
                     }
                 }
             }
@@ -374,6 +411,15 @@ export class CollisionSystem {
                     return false;
                 }
                 if (now() > game.hurtUntil) {
+                    // One Guard Check
+                    const hasOneGuard = characters[game.gacha.collection.current]?.special?.includes('oneGuard');
+                    if (hasOneGuard && !game.hasUsedOneGuard) {
+                        game.hasUsedOneGuard = true;
+                        game.particles.createExplosion(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#00ffff');
+                        playSfx('powerup');
+                        logger.info('One Guard activated against boss projectile!');
+                        return false;
+                    }
                     // Calculate damage with reduction
                     const skillBonuses = game.gacha.progression.calculateSkillBonuses(game.gacha.collection.current);
                     // Scale damage with level: Base 20 + 2 per level

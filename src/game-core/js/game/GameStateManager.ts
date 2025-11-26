@@ -28,6 +28,7 @@ export interface GameStateData {
     t0: number;
     destroyed: boolean;
     hasUsedAutoRevive: boolean;
+    hasUsedOneGuard: boolean;
 }
 
 export class GameStateManager {
@@ -64,7 +65,8 @@ export class GameStateManager {
             runStartTimestamp: 0,
             t0: 0,
             destroyed: false,
-            hasUsedAutoRevive: false
+            hasUsedAutoRevive: false,
+            hasUsedOneGuard: false
         };
     }
 

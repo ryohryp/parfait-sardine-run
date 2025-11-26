@@ -167,6 +167,9 @@ export class Game {
     get hasUsedAutoRevive() { return this.stateManager.state.hasUsedAutoRevive; }
     set hasUsedAutoRevive(v) { this.stateManager.state.hasUsedAutoRevive = v; }
 
+    get hasUsedOneGuard() { return this.stateManager.state.hasUsedOneGuard; }
+    set hasUsedOneGuard(v) { this.stateManager.state.hasUsedOneGuard = v; }
+
     // Methods
     init() {
         this.input.init(this.canvas);
@@ -482,7 +485,9 @@ export class Game {
             const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
             this.maxHp = 100 + skillBonuses.maxHpBonus;
             this.hp = this.maxHp;
+            this.hp = this.maxHp;
             this.hasUsedAutoRevive = false;
+            this.hasUsedOneGuard = false;
 
             this.currentStageIndex++;
 
