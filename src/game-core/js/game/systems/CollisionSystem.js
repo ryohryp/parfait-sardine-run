@@ -280,6 +280,25 @@ export class CollisionSystem {
                 if (Math.hypot(cx - bx, cy - by) <= 120) {
                     game.damageBoss(0.5);
                 }
+            } else if (type === 'ncha') {
+                const beamX = game.player.x + game.player.w - 6;
+                const beamTop = game.player.y - 36;
+                const beamBottom = game.player.y + game.player.h + 36;
+                // Check overlap with boss
+                if ((boss.x + boss.w) >= beamX && boss.x <= game.canvas.width &&
+                    boss.y <= beamBottom && (boss.y + boss.h) >= beamTop) {
+                    game.damageBoss(0.5);
+                }
+            } else {
+                // Rainbow (default)
+                const lanes = [
+                    game.player.y + game.player.h / 2,
+                    game.player.y + game.player.h / 2 - 36,
+                    game.player.y + game.player.h / 2 + 36
+                ];
+                if (lanes.some(y => boss.y - 6 <= y && y <= boss.y + boss.h + 6)) {
+                    game.damageBoss(0.5);
+                }
             }
         }
     }

@@ -61,6 +61,25 @@ export class ProjectileManager {
             p.x += p.vx;
             p.y += p.vy;
             p.vy += p.gravity;
+
+            if (p.hits <= 0) return;
+
+            // Check collision with enemies
+            for (let i = 0; i < enemies.length; i++) {
+                const en = enemies[i];
+                if (!en._dead && this.AABB(en, p)) {
+                    awardEnemyDefeat(en);
+                    en._dead = true;
+                    p.hits--;
+                    if (p.hits <= 0) break;
+                }
+            }
+
+            // Check collision with boss
+            if (p.hits > 0 && bossState && bossState.state !== 'defeated' && this.AABB(bossState, p)) {
+                damageBoss(2);
+                p.hits--;
+            }
         });
 
         this.ultProjectiles = this.ultProjectiles.filter(p =>
