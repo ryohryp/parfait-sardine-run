@@ -16,11 +16,10 @@ import { GAME_TIME, INVINCIBILITY_DURATION, BASE_JUMP, SHOOT_COOLDOWN, POWER_DUR
 import { characters } from '../game-data/characters.js';
 import { stageForLevel } from '../game-data/stages.js';
 import { equipmentItems } from '../game-data/equipment-data.js';
-import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { CollectionSystem } from './CollectionSystem';
 import { logger } from '../utils/Logger.js';
 
 function now() { return performance.now(); }
-function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 export class Game {
     constructor(canvas, callbacks = {}, dependencies = {}) {
@@ -39,8 +38,8 @@ export class Game {
         this.companion = dependencies.companion || new Companion(this.player);
         this.missions = dependencies.missions || new MissionManager();
 
-        // System classes
-        // System classes
+        // Systems
+        this.collection = new CollectionSystem();
         this.scoreSystem = dependencies.scoreSystem || new ScoreSystem();
         const CollisionSystemClass = dependencies.collisionSystemClass || CollisionSystem;
         this.collisionSystem = dependencies.collisionSystem || new CollisionSystemClass(this);
@@ -191,6 +190,7 @@ export class Game {
         const durationMs = Math.max(0, Math.floor(now() - this.runStartTimestamp));
         if (this.score > this.bestScore) {
             this.bestScore = this.score;
+            this.saveBestScore();
         }
         // No experience grant here – EXP is handled per enemy defeat
         const finalScore = Number(this.score) || 0;
@@ -406,6 +406,7 @@ export class Game {
             this.gacha.addCoins(50);
             this.sessionCoins += 50;
             this.handleMissionUpdate('defeat_boss', 1);
+            this.collection.unlockBoss('boss-' + this.enemies.bossState.stageKey);
             this.stageClearUntil = now() + 4000;
             this.t0 = now();
             // Restore HP on stage clear

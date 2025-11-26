@@ -5,6 +5,7 @@ import { SkillTreeModal } from './SkillTreeModal';
 import { EquipmentModal } from './EquipmentModal';
 import { AchievementModal } from './AchievementModal';
 import { DailyBonusModal } from './DailyBonusModal';
+import { PictureBookModal } from './PictureBookModal';
 import { ModalWrapper } from '../common/ModalWrapper';
 import { ManualPage } from '../../routes/ManualPage';
 import { LeaderboardPage } from '../../routes/LeaderboardPage';
@@ -39,6 +40,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const [showEquipment, setShowEquipment] = useState(false);
     const [showAchievements, setShowAchievements] = useState(false);
     const [showDailyBonus, setShowDailyBonus] = useState(false);
+    const [showPictureBook, setShowPictureBook] = useState(false);
 
     // New modal states
     const [showManual, setShowManual] = useState(false);
@@ -155,6 +157,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                                     <span className="btn-icon">🏅</span>
                                     <span className="btn-label">{t('achievements')}</span>
                                 </button>
+                                <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowPictureBook(true); }}>
+                                    <span className="btn-icon">📒</span>
+                                    <span className="btn-label">図鑑</span>
+                                </button>
                                 <button className="sub-btn" onClick={(e) => { e.stopPropagation(); playClick(); setShowSettings(true); }}>
                                     <span className="btn-icon">⚙️</span>
                                     <span className="btn-label">{t('settings')}</span>
@@ -213,6 +219,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                     onClaim={() => updateGachaState()}
                 />
             )}
+            <PictureBookModal
+                visible={showPictureBook}
+                onClose={() => setShowPictureBook(false)}
+            />
 
             {/* Page Modals */}
             <ModalWrapper visible={showManual} onClose={() => setShowManual(false)} title={t('howToPlay')}>

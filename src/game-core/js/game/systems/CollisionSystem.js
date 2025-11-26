@@ -61,6 +61,11 @@ export class CollisionSystem {
                 // 必殺技ゲージ
                 const stats = game.getEffectiveStats(game.gacha.collection.current);
                 game.ult = clamp(game.ult + (it.char === '🍨' ? 10 : 6) * stats.ultRate, 0, 100);
+
+                // Collection Unlock
+                if (it.char === '🍨') game.collection.unlockItem('parfait');
+                else if (it.char === '🐟') game.collection.unlockItem('sardine');
+
                 return false;
             }
             return true;
@@ -79,6 +84,7 @@ export class CollisionSystem {
                 game.invUntil = now() + Math.max(POWER_DURATION, stats.inv);
                 game.ult = Math.min(100, game.ult + 12 * stats.ultRate);
                 game.particles.createExplosion(pw.x + pw.w / 2, pw.y + pw.h / 2, '#ffffff');
+                game.collection.unlockItem('star');
                 return false;
             }
             return true;
@@ -146,6 +152,7 @@ export class CollisionSystem {
 
                 if (now() < game.invUntil || now() < game.feverModeUntil) {
                     game.awardEnemyDefeat(en);
+                    game.collection.unlockEnemy(en.type);
                     // Splitter logic
                     if (en.type === 'splitter' && en.canSplit) {
                         for (let i = 0; i < 2; i++) {
@@ -207,6 +214,7 @@ export class CollisionSystem {
                     const ey = en.y + en.h / 2;
                     if (Math.hypot(cx - ex, cy - ey) <= 120) {
                         game.awardEnemyDefeat(en);
+                        game.collection.unlockEnemy(en.type);
                         return false;
                     }
                 } else if (type === 'ncha') {
@@ -216,6 +224,7 @@ export class CollisionSystem {
                     if ((en.x + en.w) >= beamX && en.x <= game.canvas.width &&
                         en.y <= beamBottom && (en.y + en.h) >= beamTop) {
                         game.awardEnemyDefeat(en);
+                        game.collection.unlockEnemy(en.type);
                         return false;
                     }
                 } else {
@@ -227,6 +236,7 @@ export class CollisionSystem {
                     ];
                     if (lanes.some(y => en.y - 6 <= y && y <= en.y + en.h + 6)) {
                         game.awardEnemyDefeat(en);
+                        game.collection.unlockEnemy(en.type);
                         return false;
                     }
                 }
