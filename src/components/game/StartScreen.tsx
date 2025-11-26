@@ -58,14 +58,18 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
         if (visible) {
             setCoins(gachaSystem.loadCoinBalance());
             setViewState(initialView); // Reset to specified initial view when visible
+        }
+    }, [visible, gachaSystem, initialView]);
 
-            // Check daily bonus
+    // Check daily bonus when entering menu
+    React.useEffect(() => {
+        if (visible && viewState === 'menu') {
             const availability = dailyBonusSystem.checkAvailability();
             if (availability.available) {
                 setTimeout(() => setShowDailyBonus(true), 800);
             }
         }
-    }, [visible, gachaSystem, dailyBonusSystem, initialView]);
+    }, [visible, viewState, dailyBonusSystem]);
 
     const handleScreenClick = () => {
         if (viewState === 'title') {

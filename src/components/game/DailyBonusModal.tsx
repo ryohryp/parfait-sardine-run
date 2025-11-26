@@ -72,7 +72,7 @@ export const DailyBonusModal: React.FC<DailyBonusModalProps> = ({
                                 key={index}
                                 className={`daily-bonus-item ${statusClass} ${isBig ? 'big' : ''}`}
                             >
-                                <div className="day-label">{t('day')} {day}</div>
+                                <div className="day-label">{t('day', { count: day })}</div>
                                 <div className="reward-icon">{isBig ? '💰' : '🪙'}</div>
                                 <div className="reward-amount">{reward}</div>
                                 {isPast && <div className="check-mark">✓</div>}
