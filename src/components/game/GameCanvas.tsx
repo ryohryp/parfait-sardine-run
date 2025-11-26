@@ -247,6 +247,10 @@ export const GameCanvas: React.FC = () => {
         if (tutorialStep === 'jump') {
             setTutorialStep('attack');
         } else if (tutorialStep === 'attack') {
+            setTutorialStep('dash');
+        } else if (tutorialStep === 'dash') {
+            setTutorialStep('guard');
+        } else if (tutorialStep === 'guard') {
             setTutorialStep('complete');
         } else {
             // Complete

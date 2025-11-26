@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 import './TutorialOverlay.css';
 
-export type TutorialStep = 'jump' | 'attack' | 'complete';
+export type TutorialStep = 'jump' | 'attack' | 'dash' | 'guard' | 'complete';
 
 interface TutorialOverlayProps {
     step: TutorialStep;
@@ -30,6 +30,18 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
                     desc: t('tutorial_attack_desc'),
                     action: t('tutorial_tap_attack')
                 };
+            case 'dash':
+                return {
+                    title: t('tutorial_dash_title'),
+                    desc: t('tutorial_dash_desc'),
+                    action: t('tutorial_swipe_right')
+                };
+            case 'guard':
+                return {
+                    title: t('tutorial_guard_title'),
+                    desc: t('tutorial_guard_desc'),
+                    action: t('tutorial_swipe_left')
+                };
             case 'complete':
                 return {
                     title: t('tutorial_complete_title'),
@@ -47,8 +59,10 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
         <div className="tutorial-overlay" onClick={onNext}>
             <div className="tutorial-content">
                 <div className="tutorial-step-indicator">
-                    {step === 'jump' && '1/2'}
-                    {step === 'attack' && '2/2'}
+                    {step === 'jump' && '1/4'}
+                    {step === 'attack' && '2/4'}
+                    {step === 'dash' && '3/4'}
+                    {step === 'guard' && '4/4'}
                     {step === 'complete' && '🎉'}
                 </div>
                 <h2>{content.title}</h2>
@@ -75,8 +89,10 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ step, onNext, 
                 </button>
             )}
 
-            {/* Visual Hints (Optional: could add arrows pointing to buttons) */}
+            {/* Visual Hints */}
             {step === 'attack' && <div className="tutorial-arrow attack-arrow">⬇️</div>}
+            {step === 'dash' && <div className="tutorial-arrow dash-arrow">➡️</div>}
+            {step === 'guard' && <div className="tutorial-arrow guard-arrow">⬅️</div>}
         </div>
     );
 };

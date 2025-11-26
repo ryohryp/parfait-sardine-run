@@ -521,7 +521,7 @@ export class EnemyManager {
                     y: launchY,
                     w: 28,
                     h: 28,
-                    vx: Math.cos(angle) * power * -1, // Flip X
+                    vx: Math.cos(angle) * power, // Positive vx moves left (x -= vx)
                     vy: Math.sin(angle) * power,
                     gravity: 0.15,
                     createdAt: time

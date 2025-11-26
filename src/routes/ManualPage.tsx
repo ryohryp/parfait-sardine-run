@@ -70,6 +70,20 @@ export const ManualPage: React.FC<ManualPageProps> = ({ onClose }) => {
                             </div>
                         </div>
                         <div className="manual-item">
+                            <span className="manual-icon">💨</span>
+                            <div className="manual-text">
+                                <h3>{t('howToDashTitle')}</h3>
+                                <p>{t('howToDash')}</p>
+                            </div>
+                        </div>
+                        <div className="manual-item">
+                            <span className="manual-icon">🛡️</span>
+                            <div className="manual-text">
+                                <h3>{t('howToGuardTitle')}</h3>
+                                <p>{t('howToGuard')}</p>
+                            </div>
+                        </div>
+                        <div className="manual-item">
                             <span className="manual-icon">🎁</span>
                             <div className="manual-text">
                                 <h3>{t('howToItemsTitle')}</h3>
