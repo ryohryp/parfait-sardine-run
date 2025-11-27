@@ -217,20 +217,20 @@ export const locales = {
         skip: "Skip",
 
         // Pity
-        pityL: "{{count}} pulls until L+ guaranteed!",
-        pityM: "{{count}} pulls until M guaranteed!",
+        pityL: "{{count}} pulls until SSR+ guaranteed!",
+        pityM: "{{count}} pulls until L guaranteed!",
 
         // Gacha Details
         ratesTitle: "Drop Rates",
         ratesDesc: "Probability per rarity:",
-        rateM: "M (Mythical): 1%",
-        rateL: "L (Legendary): 5%",
-        rateE: "E (Epic): 10%",
+        rateM: "L (Legendary): 1%",
+        rateL: "SSR (Double Super Rare): 5%",
+        rateE: "SR (Super Rare): 10%",
         rateR: "R (Rare): 24%",
-        rateC: "C (Common): 60%",
+        rateC: "N (Normal): 60%",
         pityTitle: "Pity System",
-        pityDescL: "If L+ is not obtained in 30 pulls, next pull guarantees L+.",
-        pityDescM: "If M is not obtained in 100 pulls, next pull guarantees M.",
+        pityDescL: "If SSR+ is not obtained in 29 pulls, next pull guarantees SSR+.",
+        pityDescM: "If L is not obtained in 99 pulls, next pull guarantees L.",
         viewRates: "Rates & Details",
 
         // Manual
@@ -465,20 +465,20 @@ export const locales = {
         skip: "スキップ",
 
         // Pity
-        pityL: "あと {{count}} 回でL以上確定！",
-        pityM: "あと {{count}} 回でM確定！",
+        pityL: "あと {{count}} 回でSSR以上確定！",
+        pityM: "あと {{count}} 回でL確定！",
 
         // Gacha Details
         ratesTitle: "提供割合",
         ratesDesc: "レアリティごとの排出率は以下の通りです。",
-        rateM: "M (ミシカル): 1%",
-        rateL: "L (レジェンド): 5%",
-        rateE: "E (エピック): 10%",
+        rateM: "L (レジェンド): 1%",
+        rateL: "SSR (ダブルスーパーレア): 5%",
+        rateE: "SR (スーパーレア): 10%",
         rateR: "R (レア): 24%",
-        rateC: "C (コモン): 60%",
+        rateC: "N (ノーマル): 60%",
         pityTitle: "天井システム",
-        pityDescL: "30回連続でL以上が出なかった場合、次回のガチャでL以上が確定します。",
-        pityDescM: "100回連続でMが出なかった場合、次回のガチャでMが確定します。",
+        pityDescL: "29回連続でSSR以上が出なかった場合、次回のガチャでSSR以上が確定します。",
+        pityDescM: "99回連続でLが出なかった場合、次回のガチャでLが確定します。",
         viewRates: "提供割合・詳細",
 
         // Manual

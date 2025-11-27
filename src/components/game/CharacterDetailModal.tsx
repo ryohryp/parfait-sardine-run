@@ -57,7 +57,22 @@ export const CharacterDetailModal: React.FC<CharacterDetailModalProps> = ({
 
                 <div className="detail-header">
                     <div className={`detail-icon-container ${rarClass(characterData.rar)}`}>
-                        <div className="detail-emoji">{characterData.emoji}</div>
+                        {characterData.image ? (
+                            characterData.spriteConfig ? (
+                                <div style={{
+                                    width: '64px',
+                                    height: '64px',
+                                    backgroundImage: `url(${import.meta.env.BASE_URL}${characterData.image})`,
+                                    backgroundSize: `${characterData.spriteConfig.cols * 100}% ${characterData.spriteConfig.rows * 100}%`,
+                                    backgroundPosition: '0 0',
+                                    imageRendering: 'pixelated'
+                                }} className="detail-img" />
+                            ) : (
+                                <img src={`${import.meta.env.BASE_URL}${characterData.image}`} alt={characterData.name} style={{ width: '64px', height: '64px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                            )
+                        ) : (
+                            <div className="detail-emoji">{characterData.emoji}</div>
+                        )}
                         <div className="detail-rarity">{characterData.rar}</div>
                     </div>
                     <div className="detail-title">

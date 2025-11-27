@@ -81,7 +81,18 @@ export const PictureBookModal: React.FC<PictureBookModalProps> = ({ visible, onC
                 >
                     <div className="pb-item-icon">
                         {hasImage ? (
-                            <img src={`${baseUrl}${item.image}`} alt={item.name} className="pb-item-img" />
+                            item.spriteConfig ? (
+                                <div style={{
+                                    width: '64px',
+                                    height: '64px',
+                                    backgroundImage: `url(${baseUrl}${item.image})`,
+                                    backgroundSize: `${item.spriteConfig.cols * 100}% ${item.spriteConfig.rows * 100}%`,
+                                    backgroundPosition: '0 0',
+                                    imageRendering: 'pixelated'
+                                }} className="pb-item-img" />
+                            ) : (
+                                <img src={`${baseUrl}${item.image}`} alt={item.name} className="pb-item-img" />
+                            )
                         ) : (
                             isUnlocked ? item.icon : '❓'
                         )}
@@ -143,7 +154,19 @@ export const PictureBookModal: React.FC<PictureBookModalProps> = ({ visible, onC
                         <div className="pb-detail-card" onClick={e => e.stopPropagation()}>
                             <div className="pb-detail-icon">
                                 {selectedItem.image ? (
-                                    <img src={`${import.meta.env.BASE_URL}${selectedItem.image}`} alt={selectedItem.name} className="pb-detail-img" />
+                                    selectedItem.spriteConfig ? (
+                                        <div style={{
+                                            width: '120px',
+                                            height: '120px',
+                                            backgroundImage: `url(${import.meta.env.BASE_URL}${selectedItem.image})`,
+                                            backgroundSize: `${selectedItem.spriteConfig.cols * 100}% ${selectedItem.spriteConfig.rows * 100}%`,
+                                            backgroundPosition: '0 0',
+                                            imageRendering: 'pixelated',
+                                            margin: '0 auto'
+                                        }} className="pb-detail-img" />
+                                    ) : (
+                                        <img src={`${import.meta.env.BASE_URL}${selectedItem.image}`} alt={selectedItem.name} className="pb-detail-img" />
+                                    )
                                 ) : (
                                     selectedItem.icon
                                 )}

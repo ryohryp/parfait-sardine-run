@@ -80,6 +80,21 @@ export class Player {
             ? (charConfig.image.startsWith('assets/') ? `${baseUrl}${charConfig.image}` : charConfig.image)
             : `${baseUrl}assets/char-${key}.png`;
 
+        // Apply Sprite Config if available
+        if (charConfig && charConfig.spriteConfig) {
+            this.sprite.cols = charConfig.spriteConfig.cols || 1;
+            this.sprite.rows = charConfig.spriteConfig.rows || 1;
+            this.anim.walkFrames = charConfig.spriteConfig.walkFrames || WALK_FRAMES;
+            this.anim.jumpFrames = charConfig.spriteConfig.jumpFrames || JUMP_FRAMES;
+        } else {
+            // Reset to defaults
+            this.sprite.cols = 1;
+            this.sprite.rows = 1;
+            this.anim.walkFrames = WALK_FRAMES;
+            this.anim.jumpFrames = JUMP_FRAMES;
+        }
+        this.resetAnimation();
+
         const newImage = new Image();
         newImage.onerror = () => {
             // If character sprite doesn't exist, use emoji rendering

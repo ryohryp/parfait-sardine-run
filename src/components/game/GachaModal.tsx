@@ -24,7 +24,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
     const { playUltraRare, playSuccess } = useSound();
     const [results, setResults] = useState<GachaResultItem[] | null>(null);
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
-    const [rollRarity, setRollRarity] = useState<'C' | 'L' | 'M'>('C'); // Highest rarity in current roll
+    const [rollRarity, setRollRarity] = useState<'N' | 'SSR' | 'L'>('N'); // Highest rarity in current roll
     const [ultraChar, setUltraChar] = useState<Character | null>(null); // For M rarity reveal
     const [ultraEquip, setUltraEquip] = useState<{ name: string; icon: string } | null>(null); // For M rarity equipment reveal
 
@@ -44,19 +44,19 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
         if (!res) return;
 
         // 2. Determine highest rarity
-        let highestRarity: 'C' | 'L' | 'M' = 'C';
+        let highestRarity: 'N' | 'SSR' | 'L' = 'N';
         let foundUltraChar: Character | null = null;
         let foundUltraEquip: { name: string; icon: string } | null = null;
 
         res.forEach(item => {
             const rarity = item.type === 'char' ? item.char.rar : item.rar;
 
-            if (rarity === 'M' || rarity === 'XL') {
-                highestRarity = 'M';
+            if (rarity === 'L' || rarity === 'XL') {
+                highestRarity = 'L';
                 if (item.type === 'char') foundUltraChar = item.char;
                 else foundUltraEquip = item.item;
-            } else if (rarity === 'L' && highestRarity !== 'M') {
-                highestRarity = 'L';
+            } else if (rarity === 'SSR' && highestRarity !== 'L') {
+                highestRarity = 'SSR';
             }
         });
 
@@ -68,14 +68,14 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
 
         // 3. Animation Sequence
         setTimeout(() => {
-            if (highestRarity === 'M') {
+            if (highestRarity === 'L') {
                 setAnimationState('ultra-cutscene');
                 playUltraRare();
                 setTimeout(() => {
                     setAnimationState('result');
                     onUpdate();
                 }, 4000); // Longer for ultra
-            } else if (highestRarity === 'L') {
+            } else if (highestRarity === 'SSR') {
                 setAnimationState('cutscene');
                 playSuccess();
                 setTimeout(() => {
@@ -92,7 +92,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
     const closeResults = () => {
         setResults(null);
         setAnimationState('idle');
-        setRollRarity('C');
+        setRollRarity('N');
         setUltraChar(null);
         setUltraEquip(null);
     };
@@ -124,10 +124,10 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 width: '100%'
                             }}>
                                 <div style={{ color: '#d97706', fontWeight: 'bold' }}>
-                                    {t('pityL', { count: 30 - gachaSystem.pity.sinceL })}
+                                    {t('pityL', { count: 30 - gachaSystem.pity.sinceSSR })}
                                 </div>
                                 <div style={{ color: '#db2777', fontWeight: 'bold' }}>
-                                    {t('pityM', { count: 100 - gachaSystem.pity.sinceM })}
+                                    {t('pityM', { count: 100 - gachaSystem.pity.sinceL })}
                                 </div>
                             </div>
 
@@ -190,16 +190,16 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            animation: rollRarity === 'M' ? 'shakeHard 0.5s infinite' : 'shake 0.5s infinite'
+                            animation: rollRarity === 'L' ? 'shakeHard 0.5s infinite' : 'shake 0.5s infinite'
                         }}>
                             <div style={{
                                 fontSize: '64px',
                                 animation: 'pulse 1s infinite',
                                 marginBottom: '20px',
-                                filter: rollRarity === 'M' ? 'drop-shadow(0 0 20px rgba(255,0,128,0.8))' : rollRarity === 'L' ? 'drop-shadow(0 0 15px rgba(255,215,0,0.8))' : 'none'
+                                filter: rollRarity === 'L' ? 'drop-shadow(0 0 20px rgba(255,0,128,0.8))' : rollRarity === 'SSR' ? 'drop-shadow(0 0 15px rgba(255,215,0,0.8))' : 'none'
                             }}>🎁</div>
                             <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                                {rollRarity === 'M' ? '!!!!' : 'ガチャを引いています...'}
+                                {rollRarity === 'L' ? '!!!!' : 'ガチャを引いています...'}
                             </div>
                         </div>
                     )}

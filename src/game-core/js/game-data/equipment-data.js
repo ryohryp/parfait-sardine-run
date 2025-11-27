@@ -18,20 +18,20 @@
  * @property {string} name - Japanese name
  * @property {string} nameEn - English name
  * @property {string} emoji
- * @property {'C'|'R'|'E'|'L'} rarity
+ * @property {'N'|'R'|'SR'|'SSR'} rarity
  * @property {EquipmentEffects} effects
  * @property {Object} [unlockCondition]
  */
 
 /** @type {Record<string, EquipmentItem>} */
 export const equipmentItems = {
-    // Common (C)
+    // Normal (N)
     clover: {
         id: 'clover',
         name: '🍀 幸運のクローバー',
         nameEn: '🍀 Lucky Clover',
         emoji: '🍀',
-        rarity: 'C',
+        rarity: 'N',
         effects: {
             coinBonus: 1.10
         }
@@ -41,7 +41,7 @@ export const equipmentItems = {
         name: '⚡ スピードブーツ',
         nameEn: '⚡ Speed Boots',
         emoji: '⚡',
-        rarity: 'C',
+        rarity: 'N',
         effects: {
             moveSpeed: 1.08
         }
@@ -51,7 +51,7 @@ export const equipmentItems = {
         name: '👟 ジャンプシューズ',
         nameEn: '👟 Jump Shoes',
         emoji: '👟',
-        rarity: 'C',
+        rarity: 'N',
         effects: {
             jumpPower: 1.08
         }
@@ -89,13 +89,13 @@ export const equipmentItems = {
         }
     },
 
-    // Epic (E)
+    // Super Rare (SR)
     starPendant: {
         id: 'starPendant',
         name: '🌟 スターペンダント',
         nameEn: '🌟 Star Pendant',
         emoji: '🌟',
-        rarity: 'E',
+        rarity: 'SR',
         effects: {
             ultChargeRate: 1.20
         }
@@ -105,7 +105,7 @@ export const equipmentItems = {
         name: '🎓 賢者の帽子',
         nameEn: '🎓 Scholar Hat',
         emoji: '🎓',
-        rarity: 'E',
+        rarity: 'SR',
         effects: {
             expBonus: 1.25
         }
@@ -115,20 +115,20 @@ export const equipmentItems = {
         name: '🪽 黄金の翼',
         nameEn: '🪽 Golden Wings',
         emoji: '🪽',
-        rarity: 'E',
+        rarity: 'SR',
         effects: {
             moveSpeed: 1.12,
             jumpPower: 1.12
         }
     },
 
-    // Legendary (L)
+    // Double Super Rare (SSR)
     kingsCrown: {
         id: 'kingsCrown',
         name: '👑 王の王冠',
         nameEn: '👑 King\'s Crown',
         emoji: '👑',
-        rarity: 'L',
+        rarity: 'SSR',
         effects: {
             moveSpeed: 1.10,
             jumpPower: 1.10,
@@ -140,7 +140,7 @@ export const equipmentItems = {
         name: '🌈 虹の宝玉',
         nameEn: '🌈 Rainbow Gem',
         emoji: '🌈',
-        rarity: 'L',
+        rarity: 'SSR',
         effects: {
             coinBonus: 1.30,
             expBonus: 1.30
@@ -151,7 +151,7 @@ export const equipmentItems = {
         name: '🛡️ 聖なる盾',
         nameEn: '🛡️ Holy Shield',
         emoji: '🛡️',
-        rarity: 'L',
+        rarity: 'SSR',
         effects: {
             damageReduction: 0.15,
             ultChargeRate: 1.15
@@ -162,7 +162,7 @@ export const equipmentItems = {
 export const equipmentList = Object.values(equipmentItems);
 
 // Rarity order for display
-export const rarityOrder = ['C', 'R', 'E', 'L'];
+export const rarityOrder = ['N', 'R', 'SR', 'SSR'];
 
 export function getEquipmentsByRarity(rarity) {
     return equipmentList.filter(item => item.rarity === rarity);

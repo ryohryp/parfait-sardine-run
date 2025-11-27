@@ -93,11 +93,28 @@ export class GachaSystem {
         }, 'GachaSystem.loadPity', null);
 
         if (pity !== null) {
+            // Migration Logic
+            // Check if old keys exist (sinceM, sinceL from previous version)
+            // Old: M(Mythic), L(Legendary)
+            // New: L(Legendary), SSR(Double Super Rare)
+            // Mapping: M -> L, L -> SSR
+            if (pity.sinceM !== undefined || pity.sinceL !== undefined) {
+                const newPity = {
+                    sinceL: pity.sinceM || 0,
+                    sinceSSR: pity.sinceL || 0
+                };
+                logger.info('Pity migrated from old version', { old: pity, new: newPity });
+                // Save immediately to complete migration
+                this.pity = newPity;
+                this.savePity();
+                return newPity;
+            }
+
             logger.debug('Pity loaded', pity);
             return pity;
         }
         logger.info('No saved pity found, starting fresh');
-        return { sinceL: 0, sinceM: 0 };
+        return { sinceL: 0, sinceSSR: 0 };
     }
 
     savePity() {
@@ -113,11 +130,12 @@ export class GachaSystem {
 
     rollRarity() {
         const p = Math.random();
-        if (p < 0.01) return 'M';
-        if (p < 0.06) return 'L';
-        if (p < 0.16) return 'E';
+        // L: 1%, SSR: 5%, SR: 10%, R: 24%, N: 60%
+        if (p < 0.01) return 'L';
+        if (p < 0.06) return 'SSR';
+        if (p < 0.16) return 'SR';
         if (p < 0.40) return 'R';
-        return 'C';
+        return 'N';
     }
 
     rollCharByRar(r) {
@@ -138,7 +156,7 @@ export class GachaSystem {
             let isCharacter = Math.random() < 0.5;
 
             // Check pity - if pity is hit, FORCE character
-            if (this.pity.sinceM >= 99 || this.pity.sinceL >= 29) {
+            if (this.pity.sinceL >= 99 || this.pity.sinceSSR >= 29) {
                 isCharacter = true;
             }
 
@@ -146,33 +164,43 @@ export class GachaSystem {
                 let r = this.rollRarity();
 
                 // Pity check
-                if (this.pity.sinceM >= 99) {
-                    r = 'M';
-                } else if (this.pity.sinceL >= 29) {
-                    // L pity: 16.7% chance for M (1/6), otherwise L
-                    r = (Math.random() < 0.167) ? 'M' : 'L';
+                if (this.pity.sinceL >= 99) {
+                    r = 'L';
+                } else if (this.pity.sinceSSR >= 29) {
+                    // SSR pity: 16.7% chance for L (1/6), otherwise SSR
+                    // (Maintaining similar logic: if SSR pity hit, chance for higher rarity)
+                    // Original was: L pity -> 1/6 for M.
+                    // New: SSR pity -> 1/6 for L.
+                    r = (Math.random() < 0.167) ? 'L' : 'SSR';
                 }
 
                 const ch = this.rollCharByRar(r);
                 const status = this.addToCollection(ch.key);
 
                 // Update pity counters
-                if (r === 'M') {
-                    this.pity.sinceM = 0;
+                if (r === 'L') {
                     this.pity.sinceL = 0;
-                } else if (r === 'L') {
-                    this.pity.sinceL = 0;
-                    this.pity.sinceM++;
+                    this.pity.sinceSSR = 0;
+                } else if (r === 'SSR') {
+                    this.pity.sinceSSR = 0;
+                    this.pity.sinceL++;
                 } else {
                     this.pity.sinceL++;
-                    this.pity.sinceM++;
+                    this.pity.sinceSSR++;
                 }
 
                 results.push({ type: 'char', char: ch, ...status });
             } else {
                 // Equipment Roll
                 // Equipment rarity is independent of character pity
-                const r = this.rollRarity(); // Use same rarity distribution for equipment
+                let r = this.rollRarity(); // Use same rarity distribution for equipment
+
+                // Fallback for Equipment: L character rarity maps to SSR equipment
+                // Because there is no L equipment yet.
+                if (r === 'L') {
+                    r = 'SSR';
+                }
+
                 const equipment = this.rollEquipment(r);
 
                 if (equipment) {
@@ -180,11 +208,11 @@ export class GachaSystem {
                     results.push({ type: 'equip', item: equipment, isNew: isNewEquip, rar: r });
                 } else {
                     // Fallback to low rarity equipment if something goes wrong, or just give coins?
-                    // For now, let's just force a Common equipment if null (shouldn't happen with correct data)
-                    const fallback = this.rollEquipment('C');
+                    // For now, let's just force a Normal equipment if null (shouldn't happen with correct data)
+                    const fallback = this.rollEquipment('N');
                     if (fallback) {
                         const isNewEquip = this.progression.addEquipmentToInventory(fallback.id);
-                        results.push({ type: 'equip', item: fallback, isNew: isNewEquip, rar: 'C' });
+                        results.push({ type: 'equip', item: fallback, isNew: isNewEquip, rar: 'N' });
                     }
                 }
 
@@ -194,7 +222,7 @@ export class GachaSystem {
                 // User didn't specify. Let's be generous and say they DON'T reset, but they DON'T increment either?
                 // Or maybe they increment? Let's increment to be nice.
                 this.pity.sinceL++;
-                this.pity.sinceM++;
+                this.pity.sinceSSR++;
             }
         }
 
@@ -253,10 +281,10 @@ export class GachaSystem {
 
         if (pool.length === 0) {
             // Fallback logic
-            if (rarity === 'M') pool = Object.values(equipmentItems).filter(e => e.rarity === 'L');
-            else if (rarity === 'L') pool = Object.values(equipmentItems).filter(e => e.rarity === 'E');
-            else if (rarity === 'E') pool = Object.values(equipmentItems).filter(e => e.rarity === 'R');
-            else pool = Object.values(equipmentItems).filter(e => e.rarity === 'C');
+            if (rarity === 'L') pool = Object.values(equipmentItems).filter(e => e.rarity === 'SSR');
+            else if (rarity === 'SSR') pool = Object.values(equipmentItems).filter(e => e.rarity === 'SR');
+            else if (rarity === 'SR') pool = Object.values(equipmentItems).filter(e => e.rarity === 'R');
+            else pool = Object.values(equipmentItems).filter(e => e.rarity === 'N');
         }
 
         if (pool.length === 0) return null;

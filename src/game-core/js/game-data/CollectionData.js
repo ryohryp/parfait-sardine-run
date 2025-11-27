@@ -168,7 +168,7 @@ export const COLLECTION_CHARACTERS = Object.values(characters).reduce((acc, char
         id: char.key,
         name: char.name,
         icon: char.emoji,
-        image: char.image || `assets/sprite/char_${char.key}.png`, // Use defined image or default path
+        image: char.image, // Only use image if explicitly defined
         desc: `レアリティ: ${char.rar}\nスキル: ${char.special.map(s => SPECIAL_LABELS[s]).join(', ') || 'なし'}\n必殺技: ${char.ult ? ULT_DETAILS[char.ult].name : 'なし'}`,
         ...char
     };

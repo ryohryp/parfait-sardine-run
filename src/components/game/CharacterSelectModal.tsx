@@ -105,7 +105,22 @@ export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({
                                         position: 'relative',
                                     }}
                                 >
-                                    <div style={{ fontSize: '32px' }}>{char.emoji}</div>
+                                    {char.image ? (
+                                        char.spriteConfig ? (
+                                            <div style={{
+                                                width: '64px',
+                                                height: '64px',
+                                                backgroundImage: `url(${import.meta.env.BASE_URL}${char.image})`,
+                                                backgroundSize: `${char.spriteConfig.cols * 100}% ${char.spriteConfig.rows * 100}%`,
+                                                backgroundPosition: '0 0',
+                                                imageRendering: 'pixelated'
+                                            }} />
+                                        ) : (
+                                            <img src={`${import.meta.env.BASE_URL}${char.image}`} alt={char.name} style={{ width: '64px', height: '64px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                                        )
+                                    ) : (
+                                        <div style={{ fontSize: '32px' }}>{char.emoji}</div>
+                                    )}
                                     {owned && progData && (
                                         <div style={{
                                             position: 'absolute',
@@ -154,7 +169,24 @@ export const CharacterSelectModal: React.FC<CharacterSelectModalProps> = ({
                             🔍
                         </button>
 
-                        <div style={{ fontSize: '64px', marginBottom: '16px' }}>{currentChar?.emoji}</div>
+                        <div style={{ marginBottom: '16px' }}>
+                            {currentChar?.image ? (
+                                currentChar.spriteConfig ? (
+                                    <div style={{
+                                        width: '128px',
+                                        height: '128px',
+                                        backgroundImage: `url(${import.meta.env.BASE_URL}${currentChar.image})`,
+                                        backgroundSize: `${currentChar.spriteConfig.cols * 100}% ${currentChar.spriteConfig.rows * 100}%`,
+                                        backgroundPosition: '0 0',
+                                        imageRendering: 'pixelated'
+                                    }} />
+                                ) : (
+                                    <img src={`${import.meta.env.BASE_URL}${currentChar.image}`} alt={currentChar.name} style={{ width: '128px', height: '128px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                                )
+                            ) : (
+                                <div style={{ fontSize: '64px' }}>{currentChar?.emoji}</div>
+                            )}
+                        </div>
                         <h3 style={{ fontSize: '24px', marginBottom: '8px' }}>{t(`char_${selectedChar}_name` as any)}</h3>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
                             <div className={`badge ${rarClass(currentChar?.rar)}`}>{currentChar?.rar}</div>
