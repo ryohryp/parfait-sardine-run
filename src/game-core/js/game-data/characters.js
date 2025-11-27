@@ -15,7 +15,7 @@ export const characters = {
 
   // Legendary
   king: { key: 'king', name: '👑キングパフェ', emoji: '👑', rar: 'L', move: 1.15, jump: 1.10, bullet: 1.10, inv: INVINCIBILITY_DURATION, ultRate: 1.20, special: [], ult: 'rainbow' },
-  ncha: { key: 'ncha', name: '🤖んちゃマシン', emoji: '🤖', rar: 'L', move: 1.20, jump: 1.05, bullet: 1.25, inv: INVINCIBILITY_DURATION, ultRate: 1.25, special: ['pierce'], ult: 'ncha' },
+  ncha: { key: 'ncha', name: '👒んちゃマシン', emoji: '👒', image: 'assets/sprite/player_ncha.png', rar: 'L', move: 1.20, jump: 1.05, bullet: 1.25, inv: INVINCIBILITY_DURATION, ultRate: 1.25, special: ['pierce'], ult: 'ncha' },
 
   // Mythic
   aurora: { key: 'aurora', name: '🌈オーロラパフェ', emoji: '🌈', rar: 'M', move: 1.18, jump: 1.12, bullet: 1.15, inv: INVINCIBILITY_DURATION, ultRate: 1.35, special: ['magnet', 'oneGuard'], ult: 'rainbow' },
@@ -48,6 +48,6 @@ export const SPECIAL_LABELS = {
 export const ULT_DETAILS = {
   rainbow: { name: 'レインボーレーザー', description: '3ラインのビームで前方の敵を一掃する。' },
   storm: { name: 'トルネードストーム', description: '竜巻を発生させ、一定時間周囲の敵に連続ヒット。' },
-  ncha: { name: 'んちゃメガバースト', description: '正面に極太ビームを放ち、貫通ダメージを与える。' },
+  ncha: { name: 'んちゃキャノン', description: '挨拶代わりの極太ビームを放ち、全てを貫通する。' },
   yadon: { name: 'ヤドン砲', description: '巨大な仲間を召喚し、広範囲に多段ヒットする弾をばらまく。' },
 };

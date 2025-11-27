@@ -64,6 +64,9 @@ export class EnemyManager {
         this.ufoImage = new Image();
         this.ufoImage.src = `${baseUrl}assets/sprite/enemy_ufo.png`;
 
+        this.dashImage = new Image();
+        this.dashImage.src = `${baseUrl}assets/sprite/enemy_dash.png`;
+
         // Image map for cleaner drawing
         this.enemyImages = {
             shield: this.shieldImage,
@@ -71,7 +74,8 @@ export class EnemyManager {
             bomber: this.bomberImage,
             splitter: this.splitterImage,
             zigzag: this.meanderingImage,
-            hover: this.ufoImage
+            hover: this.ufoImage,
+            dash: this.dashImage
         };
 
         // Boss particles

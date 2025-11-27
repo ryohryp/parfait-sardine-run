@@ -43,7 +43,7 @@ export const COLLECTION_ENEMIES = {
         id: 'dash',
         name: '突進型',
         icon: '💥',
-        image: 'assets/sprite/enemy_cupcake.png',
+        image: 'assets/sprite/enemy_dash.png',
         desc: '力を溜めてから急加速してくる。',
         exp: 5,
         coin: 1
@@ -168,7 +168,7 @@ export const COLLECTION_CHARACTERS = Object.values(characters).reduce((acc, char
         id: char.key,
         name: char.name,
         icon: char.emoji,
-        // image: `assets/sprite/char_${char.key}.png`, // Assuming character images exist or use icon
+        image: char.image || `assets/sprite/char_${char.key}.png`, // Use defined image or default path
         desc: `レアリティ: ${char.rar}\nスキル: ${char.special.map(s => SPECIAL_LABELS[s]).join(', ') || 'なし'}\n必殺技: ${char.ult ? ULT_DETAILS[char.ult].name : 'なし'}`,
         ...char
     };

@@ -74,7 +74,12 @@ export class Player {
 
         // Try to load character-specific sprite
         const baseUrl = import.meta.env.BASE_URL;
-        const charSpritePath = `${baseUrl}assets/char-${key}.png`;
+        const charConfig = characters[key];
+        // Use image from config if available, otherwise try default path
+        const charSpritePath = (charConfig && charConfig.image)
+            ? (charConfig.image.startsWith('assets/') ? `${baseUrl}${charConfig.image}` : charConfig.image)
+            : `${baseUrl}assets/char-${key}.png`;
+
         const newImage = new Image();
         newImage.onerror = () => {
             // If character sprite doesn't exist, use emoji rendering
