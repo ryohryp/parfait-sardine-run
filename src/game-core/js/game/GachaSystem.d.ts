@@ -15,7 +15,7 @@ export interface EquipmentItem {
     name: string;
     nameEn: string;
     emoji: string;
-    rarity: 'C' | 'R' | 'E' | 'L';
+    rarity: 'N' | 'R' | 'SR' | 'SSR';
     effects: EquipmentEffects;
     unlockCondition?: any;
 }
@@ -36,8 +36,8 @@ export interface CharacterCollection {
 }
 
 export interface PityState {
+    sinceSSR: number;
     sinceL: number;
-    sinceM: number;
 }
 
 export interface Character {
