@@ -2,14 +2,16 @@ import { registerUnlockableAudio } from './audio.js';
 
 /* ===== PSR Presentation Layer (Splash / Loader / VFX) ===== */
 
+const baseUrl = import.meta.env.BASE_URL;
+
 const PSR_ASSETS = [
-  '/assets/sprite/player.png',
-  '/assets/sprite/enemies.png',
-  '/assets/bg/layer1.png',
-  '/assets/bg/layer2.png',
-  '/assets/sfx/jump.ogg',
-  '/assets/sfx/hit.ogg',
-  '/assets/bgm/stage.ogg'
+  `${baseUrl}assets/sprite/player.png`,
+  `${baseUrl}assets/sprite/enemies.png`,
+  `${baseUrl}assets/bg/layer1.png`,
+  `${baseUrl}assets/bg/layer2.png`,
+  `${baseUrl}assets/sfx/jump.ogg`,
+  `${baseUrl}assets/sfx/hit.ogg`,
+  `${baseUrl}assets/bgm/stage.ogg`
 ];
 
 const PSR_VER = 'psr-preload-v20240929-01';
@@ -191,7 +193,7 @@ function floatText(text, x, y, color = '#ffec8b') {
   el.addEventListener('animationend', () => el.remove());
 }
 
-const speedSe = typeof Audio !== 'undefined' ? new Audio('/assets/sfx/whoosh.ogg') : null;
+const speedSe = typeof Audio !== 'undefined' ? new Audio(`${baseUrl}assets/sfx/whoosh.ogg`) : null;
 if (speedSe) {
   speedSe.volume = 0.35;
   registerUnlockableAudio(speedSe);
