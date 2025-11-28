@@ -75,10 +75,6 @@ export class Player {
         // Try to load character-specific sprite
         const baseUrl = import.meta.env.BASE_URL;
         const charConfig = characters[key];
-        // Use image from config if available, otherwise try default path
-        const charSpritePath = (charConfig && charConfig.image)
-            ? (charConfig.image.startsWith('assets/') ? `${baseUrl}${charConfig.image}` : charConfig.image)
-            : `${baseUrl}assets/char-${key}.png`;
 
         // Apply Sprite Config if available
         if (charConfig && charConfig.spriteConfig) {
@@ -95,20 +91,31 @@ export class Player {
         }
         this.resetAnimation();
 
-        const newImage = new Image();
-        newImage.onerror = () => {
-            // If character sprite doesn't exist, use emoji rendering
+        // Only load image if explicitly defined
+        if (charConfig && charConfig.image) {
+            const charSpritePath = charConfig.image.startsWith('assets/')
+                ? `${baseUrl}${charConfig.image}`
+                : charConfig.image;
+
+            const newImage = new Image();
+            newImage.onerror = () => {
+                // If character sprite doesn't exist, use emoji rendering
+                this.sprite.loaded = false;
+                this.sprite.useEmoji = true;
+            };
+            newImage.onload = () => {
+                this.sprite.image = newImage;
+                this.sprite.loaded = true;
+                this.sprite.useEmoji = false;
+                this.sprite.frameWidth = Math.floor(newImage.naturalWidth / this.sprite.cols);
+                this.sprite.frameHeight = Math.floor(newImage.naturalHeight / this.sprite.rows);
+            };
+            newImage.src = charSpritePath;
+        } else {
+            // No image defined, use emoji
             this.sprite.loaded = false;
             this.sprite.useEmoji = true;
-        };
-        newImage.onload = () => {
-            this.sprite.image = newImage;
-            this.sprite.loaded = true;
-            this.sprite.useEmoji = false;
-            this.sprite.frameWidth = Math.floor(newImage.naturalWidth / this.sprite.cols);
-            this.sprite.frameHeight = Math.floor(newImage.naturalHeight / this.sprite.rows);
-        };
-        newImage.src = charSpritePath;
+        }
     }
 
     reset() {
