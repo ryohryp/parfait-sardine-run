@@ -729,23 +729,51 @@ export class EnemyManager {
 
             // Boss HP Bar
             const barWidth = 180;
-            const barHeight = 10;
+            const barHeight = 12;
             const hpRatio = this.bossState.maxHp ? Math.max(0, this.bossState.hp / this.bossState.maxHp) : 0;
             const barX = 16;
             const barY = 80;
 
             ctx.save();
-            ctx.fillStyle = 'rgba(0,0,0,0.45)';
-            ctx.fillRect(barX, barY, barWidth, barHeight);
-            ctx.fillStyle = '#f87171';
-            ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
-            ctx.strokeStyle = '#fde68a';
+            // Container
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+            ctx.beginPath();
+            ctx.roundRect(barX, barY, barWidth, barHeight, 6);
+            ctx.fill();
+            ctx.strokeStyle = '#475569';
             ctx.lineWidth = 2;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
+            ctx.stroke();
+
+            // HP Fill
+            if (hpRatio > 0) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(barX, barY, barWidth * hpRatio, barHeight, 6);
+                ctx.clip();
+
+                const grad = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+                grad.addColorStop(0, '#f87171');
+                grad.addColorStop(0.5, '#ef4444');
+                grad.addColorStop(1, '#dc2626');
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Shine
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight / 2);
+                ctx.restore();
+            }
+
+            // Text
             ctx.fillStyle = '#fff';
-            ctx.font = '12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${this.bossState.config.displayName} HP ${Math.max(0, Math.ceil(this.bossState.hp))}/${this.bossState.maxHp}`, barX + barWidth / 2, barY - 6);
+            ctx.font = 'bold 10px "Nunito", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 4;
+            ctx.fillText(`${this.bossState.config.displayName}`, barX + 4, barY + barHeight + 12);
+
+            ctx.textAlign = 'right';
+            ctx.fillText(`${Math.ceil(this.bossState.hp)}/${this.bossState.maxHp}`, barX + barWidth - 2, barY + barHeight + 12);
             ctx.restore();
             ctx.textAlign = 'start';
         }
