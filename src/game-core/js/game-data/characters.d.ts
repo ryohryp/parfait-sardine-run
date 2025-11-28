@@ -1,3 +1,10 @@
+export interface SpriteConfig {
+    cols: number;
+    rows: number;
+    walkFrames: number[];
+    jumpFrames: number[];
+}
+
 export interface Character {
     key: string;
     name: string;
@@ -10,6 +17,8 @@ export interface Character {
     ultRate: number;
     special: string[];
     ult: string | null;
+    image?: string;
+    spriteConfig?: SpriteConfig;
 }
 
 export const characters: Record<string, Character>;
