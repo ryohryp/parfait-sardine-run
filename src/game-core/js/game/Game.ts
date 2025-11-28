@@ -11,7 +11,7 @@ import { CollisionSystem } from './systems/CollisionSystem.js';
 import { ScoreSystem } from './systems/ScoreSystem.js';
 import { GameRenderer } from './systems/GameRenderer.js';
 import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
-import { GAME_TIME, SHOOT_COOLDOWN, ITEM_LEVEL } from '../game-constants.js';
+import { GAME_TIME, SHOOT_COOLDOWN } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
 import { stageForLevel } from '../game-data/stages.js';
 import { CollectionSystem } from './CollectionSystem';
@@ -340,8 +340,9 @@ export class Game {
         const distanceDelta = currentSpeed * (16 / 1000) * 10;
         this.sessionDistance += distanceDelta;
 
-        // Level progression based on score
-        this.level = Math.max(1, Math.floor(this.score / ITEM_LEVEL) + 1);
+        // Level progression based on stage index
+        // Each stage cleared increases level by 1
+        this.level = this.currentStageIndex + 1;
 
         this.player.update(16);
         if (this.player.y >= this.canvas.height - 72 - this.player.h && this.player.vy >= 0) {
@@ -489,11 +490,14 @@ export class Game {
             const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
             this.maxHp = 100 + skillBonuses.maxHpBonus;
             this.hp = this.maxHp;
-            this.hp = this.maxHp;
             this.hasUsedAutoRevive = false;
             this.hasUsedOneGuard = false;
 
             this.currentStageIndex++;
+
+            // Update level based on new stage index
+            // Each stage cleared increases level by 1
+            this.level = this.currentStageIndex + 1;
 
             playSfx('powerup');
         } else {
