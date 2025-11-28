@@ -140,13 +140,13 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                     className="primary"
                                     onClick={() => handleRoll(1)}
                                 >
-                                    {t('roll1')} (100G)
+                                    {t('roll1')}
                                 </button>
                                 <button
                                     className="secondary"
                                     onClick={() => handleRoll(10)}
                                 >
-                                    {t('roll10')} (1000G)
+                                    {t('roll10')}
                                 </button>
                             </div>
 

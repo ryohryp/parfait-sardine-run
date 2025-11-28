@@ -181,7 +181,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                                 <button className="title-btn title-btn-gacha" onClick={(e) => { e.stopPropagation(); playClick(); setShowGacha(true); }}>
                                     <span className="btn-icon">💰</span>
                                     <span className="btn-text">ガチャ</span>
-                                    <span className="coin-badge">{coins} G</span>
+                                    <span className="coin-badge">{coins} コイン</span>
                                 </button>
                             </div>
 
