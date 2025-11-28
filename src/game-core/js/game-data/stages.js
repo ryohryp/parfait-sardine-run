@@ -52,9 +52,9 @@ export const stages = [
     ground: '#8b0000',
     enemyMul: 1.50,
     layers: [
-      { src: './assets/bg/bg_layer_1_sky.png', speed: 0.2, alpha: 0.5 },
-      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.5, alpha: 0.7 },
-      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.8, alpha: 0.5, bottomAligned: true }
+      { src: './assets/bg/volcano_layer1.jpg', speed: 0.2, alpha: 1.0 },
+      { src: './assets/bg/volcano_layer2.png', speed: 0.5, alpha: 1.0 },
+      { src: './assets/bg/volcano_layer3.png', speed: 0.8, alpha: 1.0, bottomAligned: true }
     ],
     foregroundLayer: { src: './assets/bg/volcano_layer4.png', speed: 1.0, alpha: 1.0 },
     gimmick: 'obstacle'
@@ -67,9 +67,9 @@ export const stages = [
     ground: '#1a3a52',
     enemyMul: 1.68,
     layers: [
-      { src: './assets/bg/bg_layer_1_sky.png', speed: 0.15, alpha: 0.6 },
-      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.4, alpha: 0.5 },
-      { src: './assets/bg/bg_layer_2_mountains.png', speed: 0.7, alpha: 0.3, bottomAligned: true }
+      { src: './assets/bg/ocean_layer1.png', speed: 0.15, alpha: 1.0 },
+      { src: './assets/bg/ocean_layer2.png', speed: 0.4, alpha: 1.0 },
+      { src: './assets/bg/ocean_layer3.png', speed: 0.7, alpha: 1.0, bottomAligned: true }
     ],
     foregroundLayer: { src: './assets/bg/ocean_layer4.png', speed: 1.0, alpha: 1.0 },
     gimmick: 'obstacle'
@@ -83,8 +83,8 @@ export const stages = [
     enemyMul: 1.38,
     layers: [
       { src: './assets/bg/space.png', speed: 0.1, alpha: 1.0 },
-      { src: './assets/bg/space.png', speed: 0.3, alpha: 0.5 },
-      { src: './assets/bg/space.png', speed: 0.6, alpha: 0.3, bottomAligned: true }
+      { src: './assets/bg/abyss_layer2.png', speed: 0.3, alpha: 1.0 },
+      { src: './assets/bg/abyss_layer3.png', speed: 0.6, alpha: 1.0, bottomAligned: true }
     ],
     foregroundLayer: { src: './assets/bg/abyss_layer4.png', speed: 1.0, alpha: 1.0 },
     gimmick: 'obstacle'

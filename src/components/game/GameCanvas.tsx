@@ -209,12 +209,12 @@ export const GameCanvas: React.FC = () => {
         };
     }, [fingerprint, gachaSystem, achievementSystem]);
 
-    const handleStart = (characterKey: string, playerName: string) => {
+    const handleStart = (characterKey: string, playerName: string, startStageIndex: number = 0) => {
         console.log('[GameCanvas] handleStart called');
-        console.log('[GameCanvas] Arguments:', { characterKey, playerName });
+        console.log('[GameCanvas] Arguments:', { characterKey, playerName, startStageIndex });
         if (gameRef.current) {
             playerNameRef.current = playerName;
-            gameRef.current.start(characterKey);
+            gameRef.current.start(characterKey, startStageIndex);
             setShowStartScreen(false);
             setResult(null);
             console.log('[GameCanvas] Game started, hiding start screen');

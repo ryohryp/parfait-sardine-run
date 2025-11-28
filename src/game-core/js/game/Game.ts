@@ -264,7 +264,7 @@ export class Game {
         };
     }
 
-    start(characterKey?: string) {
+    start(characterKey?: string, startStageIndex: number = 0) {
         this.stateManager.reset();
 
         // Calculate max HP from skill bonuses
@@ -273,11 +273,15 @@ export class Game {
         this.hp = this.maxHp;
 
         this.scoreSystem.reset();
+        this.scoreSystem.reset();
         this.enemies.reset();
         this.items.reset();
         this.projectiles.reset();
         this.player.reset();
         this.particles.particles = [];
+
+        // Set starting stage
+        this.currentStageIndex = startStageIndex;
 
         if (characterKey) this.gacha.collection.current = characterKey;
         this.player.setCharacter(this.gacha.collection.current, this.getEffectiveStats(this.gacha.collection.current));

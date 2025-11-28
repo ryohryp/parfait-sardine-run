@@ -19,9 +19,10 @@ import { AchievementSystem } from '../../game-core/js/game/AchievementSystem';
 import { DailyBonusSystem } from '../../game-core/js/game/DailyBonusSystem';
 import { useSound } from '../../hooks/useSound';
 import './TitleScreen.css';
+import { stages } from '../../game-core/js/game-data/stages';
 
 interface StartScreenProps {
-    onStart: (characterKey: string, playerName: string) => void;
+    onStart: (characterKey: string, playerName: string, startStageIndex?: number) => void;
     visible: boolean;
     gachaSystem: GachaSystem;
     achievementSystem: AchievementSystem;
@@ -53,6 +54,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const [selectedCharForProgression, setSelectedCharForProgression] = useState('parfen');
     const [playerName, setPlayerName] = useState(() => localStorage.getItem('psrun_player_name_v1') || 'プレイヤー');
     const [coins, setCoins] = useState(0);
+
+    // Debug: Stage Selection
+    const [debugStartStage, setDebugStartStage] = useState(0);
+    const isDev = import.meta.env.DEV;
 
     React.useEffect(() => {
         if (visible) {
@@ -87,7 +92,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const handleGameStart = (characterKey: string) => {
         localStorage.setItem('psrun_selected_char', characterKey);
         setShowCharSelect(false);
-        onStart(characterKey, playerName);
+        setShowCharSelect(false);
+        onStart(characterKey, playerName, debugStartStage);
     };
 
     const updateGachaState = () => {
@@ -135,6 +141,37 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             </div>
+
+                            {/* Debug Stage Selector */}
+                            {isDev && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '10px',
+                                    left: '10px',
+                                    zIndex: 1000,
+                                    background: 'rgba(0,0,0,0.7)',
+                                    padding: '5px',
+                                    borderRadius: '5px',
+                                    color: 'white',
+                                    fontSize: '12px'
+                                }}>
+                                    <label>
+                                        Debug Start Stage:
+                                        <select
+                                            value={debugStartStage}
+                                            onChange={(e) => setDebugStartStage(Number(e.target.value))}
+                                            style={{ marginLeft: '5px', color: 'black' }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {stages.map((stage, index) => (
+                                                <option key={stage.key} value={index}>
+                                                    {index + 1}: {stage.name} ({stage.key})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                            )}
 
                             <div className="main-actions">
                                 <button className="title-btn title-btn-play" onClick={handlePlayClick}>
