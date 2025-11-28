@@ -269,7 +269,7 @@ export class Game {
 
         // Calculate max HP from skill bonuses
         const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current || 'parfen');
-        this.maxHp = 100 + skillBonuses.maxHpBonus;
+        this.maxHp = 100 + (skillBonuses.maxHpBonus || 0);
         this.hp = this.maxHp;
 
         this.scoreSystem.reset();

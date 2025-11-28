@@ -728,11 +728,11 @@ export class EnemyManager {
             }
 
             // Boss HP Bar
-            const barWidth = 260;
-            const barHeight = 12;
+            const barWidth = 180;
+            const barHeight = 10;
             const hpRatio = this.bossState.maxHp ? Math.max(0, this.bossState.hp / this.bossState.maxHp) : 0;
-            const barX = this.canvas.width / 2 - barWidth / 2;
-            const barY = 64;
+            const barX = 16;
+            const barY = 80;
 
             ctx.save();
             ctx.fillStyle = 'rgba(0,0,0,0.45)';
