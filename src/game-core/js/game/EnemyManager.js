@@ -855,12 +855,12 @@ export class EnemyManager {
     }
 
     updateWave(t, level) {
-        const { pattern, startTime, spawnIndex } = this.waveState;
+        const { pattern, startTime } = this.waveState;
         const timeInWave = t - startTime;
 
         // Check for spawns
-        while (spawnIndex < pattern.spawns.length) {
-            const spawnDef = pattern.spawns[spawnIndex];
+        while (this.waveState.spawnIndex < pattern.spawns.length) {
+            const spawnDef = pattern.spawns[this.waveState.spawnIndex];
             if (timeInWave >= spawnDef.time) {
                 this.spawnEnemy(level, spawnDef);
                 this.waveState.spawnIndex++;

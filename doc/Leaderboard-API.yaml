@@ -2,12 +2,12 @@ openapi: 3.0.3
 info:
   title: PSRun Leaderboard REST API
   description: PSRunゲームのハイスコアを記録・取得するためのAPI。WordPress REST API上に構築されています。
-  version: v2
+  version: v2.1
 servers:
   - url: /{base_url}/wp-json/psrun/v2
     variables:
       base_url:
-        default: https://example.com # 実際のWordPressサイトのドメインに置き換えてください
+        default: https://example.com
         description: WordPressサイトのベースURL
 tags:
   - name: Leaderboard
@@ -23,6 +23,7 @@ paths:
       description: |
         リーダーボードの上位エントリ（最大100件）を取得します。
         結果はスコア降順、登録日時昇順でソートされます。
+        ユーザー紐付けがある場合、最新のニックネームが優先表示される場合があります。
       responses:
         '200':
           description: 成功。リーダーボードのリストを返します。
@@ -44,12 +45,6 @@ paths:
                     coins: 500
                     char: "Runner"
                     time: "2025-11-23 10:00:00"
-                  - name: "PlayerB"
-                    score: 10000
-                    level: 8
-                    coins: 300
-                    char: "Jumper"
-                    time: "2025-11-23 11:30:00"
 
     post:
       tags:
@@ -58,7 +53,7 @@ paths:
       operationId: addScore
       description: |
         新しいゲームのスコアをリーダーボードに登録します。
-        全ての必須パラメータはサーバー側でサニタイズされます。
+        fingerprintを指定することで、将来的にユーザー名変更をランキングに反映させることが可能です。
       requestBody:
         required: true
         content:
@@ -73,6 +68,7 @@ paths:
                   level: 7
                   coins: 250
                   char: "Dash"
+                  fingerprint: "user-browser-fingerprint-string"
           application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/NewScoreRequest'
@@ -90,8 +86,9 @@ paths:
               example:
                 success: true
         '400':
-          description: リクエストの検証エラー（例：必須パラメータ不足）
-          # WordPress REST APIは、通常、検証エラー時に特定のJSONレスポンスを返します
+          description: リクエストの検証エラー
+        '500':
+          description: データベースエラー
 
 components:
   schemas:
@@ -102,7 +99,6 @@ components:
         name:
           type: string
           description: プレイヤー名
-          maxLength: 255 # WordPressのsanitize_text_fieldによる推定
         score:
           type: integer
           description: スコア
@@ -117,12 +113,11 @@ components:
           format: int32
         char:
           type: string
-          description: 使用キャラクター名 (コード内のエイリアス)
-          maxLength: 255
+          description: 使用キャラクター名 (DBカラム character_name に対応)
         time:
           type: string
           format: date-time
-          description: スコアの登録日時 (MySQL形式)
+          description: スコアの登録日時
 
     NewScoreRequest:
       type: object
@@ -136,24 +131,27 @@ components:
       properties:
         name:
           type: string
-          description: プレイヤー名 (サニタイズされる)
-          maxLength: 255
+          description: プレイヤー名
+          maxLength: 64
         score:
           type: integer
-          description: スコア (整数に変換される)
+          description: スコア
           format: int32
           minimum: 0
         level:
           type: integer
-          description: 達成レベル (整数に変換される)
+          description: 達成レベル
           format: int32
           minimum: 0
         coins:
           type: integer
-          description: 獲得コイン数 (整数に変換される)
+          description: 獲得コイン数
           format: int32
           minimum: 0
         char:
           type: string
-          description: 使用キャラクター名 (サニタイズされる)
-          maxLength: 255
+          description: 使用キャラクター名
+          maxLength: 32
+        fingerprint:
+          type: string
+          description: ユーザー識別用のフィンガープリント（任意）。指定するとランキングとユーザーが紐付けられます。

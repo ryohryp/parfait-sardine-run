@@ -59,6 +59,7 @@ export class Game {
 
     // Local state
     lastShot: number = 0;
+    private inLoop: boolean = false;
 
     constructor(canvas: HTMLCanvasElement, callbacks: GameCallbacks = {}, dependencies: any = {}) {
         this.canvas = canvas;
@@ -394,10 +395,23 @@ export class Game {
 
     loop(t: number) {
         if (this.destroyed) return;
-        if (!this.paused) {
-            this.update(t);
+
+        // Recursion guard for synchronous requestAnimationFrame
+        if (this.inLoop) {
+            // Schedule next frame asynchronously to break recursion
+            setTimeout(() => this.loop(now()), 0);
+            return;
         }
-        requestAnimationFrame(t2 => this.loop(t2));
+
+        this.inLoop = true;
+        try {
+            if (!this.paused) {
+                this.update(t);
+            }
+            requestAnimationFrame(t2 => this.loop(t2));
+        } finally {
+            this.inLoop = false;
+        }
     }
 
     shoot() {

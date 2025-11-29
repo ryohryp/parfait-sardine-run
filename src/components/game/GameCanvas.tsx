@@ -97,7 +97,7 @@ export const GameCanvas: React.FC = () => {
                 if (fingerprint) {
                     try {
                         console.log('[GameCanvas] Starting run with fingerprint:', fingerprint);
-                        const res = await runsApi.startRun(fingerprint);
+                        const res = await runsApi.startRun(fingerprint, playerNameRef.current);
                         console.log('[GameCanvas] Run started:', res);
                         if (res.run_id && res.nonce) {
                             currentRunId.current = res.run_id;

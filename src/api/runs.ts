@@ -37,13 +37,14 @@ export interface StatsSummary {
 }
 
 export const runsApi = {
-    startRun: async (fingerprint: string) => {
+    startRun: async (fingerprint: string, nickname: string | null) => {
         if (!fingerprint) throw new Error('Fingerprint is required');
 
         return apiClient<{ run_id: string; nonce: string; started_gmt: string }>('/run/start', {
             method: 'POST',
             body: JSON.stringify({
                 fingerprint: fingerprint,
+                nickname: nickname,
                 device: 'Web',
                 build: import.meta.env.DEV ? 'dev' : 'prod'
             })
