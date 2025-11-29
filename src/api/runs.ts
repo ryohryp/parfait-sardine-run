@@ -88,8 +88,27 @@ export const runsApi = {
     },
 
     getStats: async (fingerprint: string) => {
-        return apiClient<StatsSummary>('/stats/summary', {
+        const response = await apiClient<StatsSummary | any[]>('/stats/summary', {
             headers: { 'X-PSR-Client': fingerprint }
         });
+
+        // Handle case where API returns empty array for no stats
+        if (Array.isArray(response)) {
+            if (response.length === 0) {
+                return {
+                    total_users: 0,
+                    played_users: 0,
+                    today_users: 0,
+                    total_runs: 0,
+                    today_runs: 0,
+                    avg_score: 0,
+                    max_score: 0,
+                    device_ratio: []
+                };
+            }
+            return response[0];
+        }
+
+        return response;
     }
 };
