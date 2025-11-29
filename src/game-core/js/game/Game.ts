@@ -1,6 +1,6 @@
-import { Player } from './Player.js';
+import { Player } from './Player';
 import { InputManager } from './InputManager.js';
-import { EnemyManager } from './EnemyManager.js';
+import { EnemyManager } from './EnemyManager';
 import { ItemManager } from './ItemManager.js';
 import { ProjectileManager } from './ProjectileManager.js';
 import { GachaSystem } from './GachaSystem.js';
@@ -60,6 +60,7 @@ export class Game {
     // Local state
     lastShot: number = 0;
     private inLoop: boolean = false;
+    private lastStateUpdate: number = 0;
 
     constructor(canvas: HTMLCanvasElement, callbacks: GameCallbacks = {}, dependencies: any = {}) {
         this.canvas = canvas;
@@ -193,7 +194,7 @@ export class Game {
             }
         });
         initAudio();
-        this.notifyState();
+        this.notifyState(true);
         requestAnimationFrame(t => this.loop(t));
     }
 
@@ -229,9 +230,13 @@ export class Game {
         }
     }
 
-    notifyState() {
-        if (this.callbacks.onStateUpdate) {
+    notifyState(force: boolean = false) {
+        if (!this.callbacks.onStateUpdate) return;
+
+        const nowTime = now();
+        if (force || nowTime - this.lastStateUpdate >= 32) { // ~30fps cap
             this.callbacks.onStateUpdate(this.getState());
+            this.lastStateUpdate = nowTime;
         }
     }
 
@@ -292,7 +297,7 @@ export class Game {
         this.gameOn = true;
         playBgm({ reset: true });
         if (this.callbacks.onRunStart) this.callbacks.onRunStart();
-        this.notifyState();
+        this.notifyState(true);
     }
 
     endGame() {
@@ -328,7 +333,7 @@ export class Game {
                 newBest: this.score === this.bestScore
             });
         }
-        this.notifyState();
+        this.notifyState(true);
     }
 
     update(t: number) {

@@ -13,3 +13,16 @@ export const ITEM_LEVEL = 250;
 export const PLAYER_WIDTH = 46;
 export const PLAYER_HEIGHT = 46;
 export const PLAYER_INITIAL_X = 50;
+
+// Player Actions
+export const DASH_DURATION = 300;
+export const DASH_DISTANCE = 150;
+export const DASH_COOLDOWN = 1000;
+export const GUARD_DURATION = 500;
+export const GUARD_COOLDOWN = 1000;
+
+// Boss UI
+export const BOSS_HP_BAR_WIDTH = 180;
+export const BOSS_HP_BAR_HEIGHT = 12;
+export const BOSS_HP_BAR_X = 16;
+export const BOSS_HP_BAR_Y = 80;
