@@ -3,6 +3,7 @@ import { G, GROUND, ENEMY_BONUS } from '../game-constants.js';
 import { showStageTitle, speedSE, cameraShake, floatText } from '../presentation.js';
 import { playSfx } from '../audio.js';
 import { ENEMY_TYPES } from './EnemyConfig.js';
+import { SPAWN_PATTERNS } from '../game-data/SpawnPatterns.js';
 
 function now() { return performance.now(); }
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -16,7 +17,16 @@ export class EnemyManager {
         this.bossProjectiles = [];
         this.defeatedBossStages = new Set();
         this.bossNextSpawnAt = 0;
-        this.lastEnemyTime = 0;
+        this.bossNextSpawnAt = 0;
+
+        // Wave System State
+        this.waveState = {
+            active: false,
+            startTime: 0,
+            pattern: null,
+            spawnIndex: 0,
+            nextWaveAt: 0
+        };
 
         // Use imported configuration
         this.enemyTypeMeta = ENEMY_TYPES;
@@ -88,16 +98,27 @@ export class EnemyManager {
         this.bossProjectiles = [];
         this.defeatedBossStages = new Set();
         this.bossNextSpawnAt = 0;
-        this.lastEnemyTime = now();
+        this.bossNextSpawnAt = 0;
+        this.waveState = {
+            active: false,
+            startTime: 0,
+            pattern: null,
+            spawnIndex: 0,
+            nextWaveAt: now() + 1000
+        };
     }
 
-    spawnEnemy(level, offset = 0) {
+    spawnEnemy(level, spawnDef = {}) {
         const st = stageForLevel(level);
         // Balance: Reduced base speed from 2.2 to 1.5, scaling from 0.25 to 0.15
         // Cap level at 10 for speed calculation to prevent late-game difficulty spike
         const cappedLevel = Math.min(level, 10);
         const baseSpeed = (0.6 + (cappedLevel - 1) * 0.05) * st.enemyMul;
-        let type = this.pickEnemyType(level);
+
+        let type = spawnDef.type || 'random';
+        if (type === 'random') {
+            type = this.pickEnemyType(level);
+        }
 
         // Gimmick: Obstacles
         if (st.gimmick === 'obstacle' && Math.random() < 0.25) {
@@ -107,10 +128,17 @@ export class EnemyManager {
         const config = ENEMY_TYPES[type];
         if (!config) return; // Should not happen
 
-        const baseY = this.canvas.height - GROUND - (config.height || 36);
+        // Calculate Y position
+        // Default: Ground level
+        let baseY = this.canvas.height - GROUND - (config.height || 36);
+
+        // Apply offset from spawn definition (e.g. for flying formations)
+        if (spawnDef.yOffset) {
+            baseY -= spawnDef.yOffset;
+        }
 
         const enemy = {
-            x: this.canvas.width + 60 + offset,
+            x: this.canvas.width + 60 + (spawnDef.xOffset || 0),
             y: baseY,
             w: config.width || 36,
             h: config.height || 36,
@@ -127,7 +155,9 @@ export class EnemyManager {
         if (type === 'zigzag') {
             enemy.amplitude = rand(config.amplitude.min, config.amplitude.max);
             enemy.frequency = rand(config.frequency.min, config.frequency.max);
-            enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
+            if (!spawnDef.yOffset) {
+                enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
+            }
         } else if (type === 'dash') {
             enemy.maxV = baseSpeed * config.maxSpeedFactor;
             enemy.accel = baseSpeed * config.accelFactor;
@@ -136,11 +166,15 @@ export class EnemyManager {
         } else if (type === 'hover') {
             enemy.hoverRange = rand(config.hoverRange.min, config.hoverRange.max);
             enemy.hoverSpeed = rand(config.hoverSpeed.min, config.hoverSpeed.max);
-            enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
+            if (!spawnDef.yOffset) {
+                enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
+            }
         } else if (type === 'chaser') {
             enemy.vy = 0;
             enemy.chaseSpeed = baseSpeed * config.chaseSpeedFactor;
-            enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
+            if (!spawnDef.yOffset) {
+                enemy.baseY = baseY - rand(config.baseYOffset.min, config.baseYOffset.max);
+            }
         } else if (type === 'bomber') {
             enemy.explosionRadius = config.explosionRadius;
             enemy.triggerDistance = config.triggerDistance;
@@ -237,16 +271,20 @@ export class EnemyManager {
 
         const bossBattleActive = this.bossState && this.bossState.state !== 'defeated';
 
-        // Enemy Spawning
-        // Balance Tweak: Make easier - start at 2500ms, ramp up slower (120ms per level)
-        const enemyIv = clamp(2500 - (level - 1) * 120, 600, 2500);
-        if (!bossBattleActive && !isBossBattle && t - this.lastEnemyTime > enemyIv) {
-            this.spawnEnemy(level);
-            const extraChance = clamp(0.06 + level * 0.018, 0.06, 0.45);
-            if (Math.random() < extraChance) {
-                this.spawnEnemy(level, rand(36, 120));
+        // Wave Spawning Logic
+        if (!bossBattleActive && !isBossBattle) {
+            if (!this.waveState.active) {
+                // Check if it's time for next wave
+                if (t >= this.waveState.nextWaveAt) {
+                    this.startNextWave(level, t);
+                }
+            } else {
+                // Process current wave
+                this.updateWave(t, level);
             }
-            this.lastEnemyTime = t;
+        } else {
+            // Pause wave timer during boss
+            this.waveState.nextWaveAt = t + 2000;
         }
 
         // Enemy Update
@@ -788,6 +826,56 @@ export class EnemyManager {
                 ctx.fill();
             });
             ctx.restore();
+        }
+    }
+    startNextWave(level, t) {
+        // Filter patterns by level
+        const availablePatterns = SPAWN_PATTERNS.filter(p => level >= p.minLevel);
+
+        // Weighted selection
+        const totalWeight = availablePatterns.reduce((sum, p) => sum + p.weight, 0);
+        let r = Math.random() * totalWeight;
+        let selected = availablePatterns[0];
+
+        for (const p of availablePatterns) {
+            r -= p.weight;
+            if (r <= 0) {
+                selected = p;
+                break;
+            }
+        }
+
+        this.waveState.active = true;
+        this.waveState.startTime = t;
+        this.waveState.pattern = selected;
+        this.waveState.spawnIndex = 0;
+
+        // Debug
+        // console.log(`Starting Wave: ${selected.id} at Level ${level}`);
+    }
+
+    updateWave(t, level) {
+        const { pattern, startTime, spawnIndex } = this.waveState;
+        const timeInWave = t - startTime;
+
+        // Check for spawns
+        while (spawnIndex < pattern.spawns.length) {
+            const spawnDef = pattern.spawns[spawnIndex];
+            if (timeInWave >= spawnDef.time) {
+                this.spawnEnemy(level, spawnDef);
+                this.waveState.spawnIndex++;
+            } else {
+                break; // Not time yet
+            }
+        }
+
+        // Check if wave is over
+        if (timeInWave >= pattern.duration) {
+            this.waveState.active = false;
+            // Calculate next wave time
+            // Base interval reduces with level
+            const baseInterval = Math.max(800, 2000 - (level * 100));
+            this.waveState.nextWaveAt = t + baseInterval;
         }
     }
 }
