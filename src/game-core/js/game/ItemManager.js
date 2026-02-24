@@ -10,6 +10,7 @@ export class ItemManager {
         this.canvas = canvas;
         this.items = [];
         this.powers = [];
+        this.exps = [];
         this.lastItemTime = 0;
         this.lastPowerTime = 0;
     }
@@ -17,6 +18,7 @@ export class ItemManager {
     reset() {
         this.items = [];
         this.powers = [];
+        this.exps = [];
         this.lastItemTime = now();
         this.lastPowerTime = now();
     }
@@ -30,6 +32,15 @@ export class ItemManager {
             rv: rand(0.3, 0.8), // Relative velocity to scroll speed
             char: isParfait ? '🍨' : '🐟',
             score: isParfait ? 2 : 1
+        });
+    }
+
+    spawnExp(x, y, amount) {
+        this.exps.push({
+            x: x, y: y,
+            w: 20, h: 20,
+            amount: amount,
+            rv: 0
         });
     }
 
@@ -82,6 +93,36 @@ export class ItemManager {
             pw.x -= (scrollSpeed + (pw.rv || 0));
             return pw.x + pw.w > 0;
         });
+
+        // Update EXPs
+        this.exps = this.exps.filter(exp => {
+            if (hasMagnet) {
+                // EXP gems are strongly magnetized
+                const dx = (player.x + player.w / 2) - (exp.x + exp.w / 2);
+                const dy = (player.y + player.h / 2) - (exp.y + exp.h / 2);
+                const dist = Math.hypot(dx, dy);
+                if (dist < 400) {
+                    const speed = 10;
+                    exp.x += (dx / dist) * speed;
+                    exp.y += (dy / dist) * speed;
+                } else {
+                    exp.x -= scrollSpeed;
+                }
+            } else {
+                // default slight pull
+                const dx = (player.x + player.w / 2) - (exp.x + exp.w / 2);
+                const dy = (player.y + player.h / 2) - (exp.y + exp.h / 2);
+                const dist = Math.hypot(dx, dy);
+                if (dist < 150) {
+                    const speed = 8;
+                    exp.x += (dx / dist) * speed;
+                    exp.y += (dy / dist) * speed;
+                } else {
+                    exp.x -= scrollSpeed;
+                }
+            }
+            return exp.x + exp.w > 0;
+        });
     }
 
     draw(ctx) {
@@ -90,5 +131,16 @@ export class ItemManager {
 
         this.items.forEach(it => ctx.fillText(it.char, it.x, it.y));
         this.powers.forEach(pw => ctx.fillText(pw.char || '⭐', pw.x, pw.y));
+
+        this.exps.forEach(exp => {
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(exp.x + exp.w / 2, exp.y + exp.h / 2, exp.w / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(exp.x + exp.w / 2 - 2, exp.y + exp.h / 2 - 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 }

@@ -21,6 +21,7 @@ import { useSound } from '../../hooks/useSound';
 
 import { TutorialOverlay } from './TutorialOverlay';
 import type { TutorialStep } from './TutorialOverlay';
+import { LevelUpModal } from './LevelUpModal';
 
 export const GameCanvas: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -282,6 +283,16 @@ export const GameCanvas: React.FC = () => {
                     height={640}
                 />
                 {gameState && <HUD state={gameState} onUlt={handleUlt} />}
+                {gameState && gameState.isLevelUp && (
+                    <LevelUpModal
+                        state={gameState}
+                        onSelect={(skillId) => {
+                            if (gameRef.current) {
+                                gameRef.current.selectRogueliteSkill(skillId);
+                            }
+                        }}
+                    />
+                )}
                 <StartScreen
                     onStart={handleStart}
                     visible={showStartScreen}

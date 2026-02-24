@@ -26,6 +26,13 @@ export class CollisionSystem {
     }
 
     /**
+     * Graze (かすり) 判定 - Hitboxをmargin分だけ拡張して判定
+     */
+    grazeAABB(a, b, margin) {
+        return a.x - margin < b.x + b.w && a.x + a.w + margin > b.x && a.y - margin < b.y + b.h && a.y + a.h + margin > b.y;
+    }
+
+    /**
      * プレイヤーとアイテムの衝突判定
      */
     checkPlayerItemCollisions() {
@@ -89,6 +96,58 @@ export class CollisionSystem {
             }
             return true;
         });
+    }
+
+    /**
+     * EXPとの衝突判定
+     */
+    checkPlayerExpCollisions() {
+        const game = this.game;
+
+        game.items.exps = game.items.exps.filter(exp => {
+            if (this.AABB(game.player, exp)) {
+                game.addBuildExp(exp.amount);
+                playSfx('powerup'); // Temporarily use powerup sound for exp
+                game.particles.createSparkle(exp.x + exp.w / 2, exp.y + exp.h / 2, '#38bdf8');
+                return false;
+            }
+            return true;
+        });
+    }
+
+    /**
+     * オービタルオプションとの衝突判定
+     */
+    checkOrbitalCollisions() {
+        const game = this.game;
+        if (!game.stateManager.state.rogueliteSkills || !game.stateManager.state.rogueliteSkills.includes('orbital_option')) return;
+
+        const time = now() / 150;
+        const orbitalDistance = 60;
+        const ox = game.player.x + game.player.w / 2 + Math.cos(time) * orbitalDistance;
+        const oy = game.player.y + game.player.h / 2 + Math.sin(time) * orbitalDistance;
+
+        const orbitalRect = { x: ox - 12, y: oy - 12, w: 24, h: 24 };
+
+        for (let i = 0; i < game.enemies.enemies.length; i++) {
+            const en = game.enemies.enemies[i];
+            if (!en._dead && this.AABB(en, orbitalRect)) {
+                if (en.type === 'obstacle') continue;
+                game.awardEnemyDefeat(en);
+                en._dead = true;
+                game.particles.createSparkle(ox, oy, '#a855f7');
+            }
+        }
+
+        if (game.enemies.bossState && game.enemies.bossState.state !== 'defeated') {
+            if (this.AABB(game.enemies.bossState, orbitalRect)) {
+                if (!game.orbitalLastHit || now() - game.orbitalLastHit > 500) {
+                    game.damageBoss(1.5);
+                    game.orbitalLastHit = now();
+                    game.particles.createExplosion(ox, oy, '#a855f7');
+                }
+            }
+        }
     }
 
     /**
@@ -182,6 +241,17 @@ export class CollisionSystem {
 
                 // Defensive Invincibility (Dash, Guard) - Pass through
                 if (game.player.isDashing || game.player.isGuarding) {
+                    if (game.player.isGuarding && game.player.guardTimer > 350 && !en._justGuarded) {
+                        en._justGuarded = true; // Prevent multiple triggers
+                        game.particles.createExplosion(en.x + en.w / 2, en.y + en.h / 2, '#00ffff', 40);
+                        playSfx('powerup');
+                        game.ult = Math.min(100, game.ult + 20);
+                        game.scoreSystem.awardEnemyDefeat(10);
+                        game.hitStopFrames = 5;
+                        game.shakeUntil = now() + 200;
+                        game.shakeIntensity = 5;
+                        logger.info('Just Guard (Enemy)!');
+                    }
                     return true;
                 }
 
@@ -231,6 +301,12 @@ export class CollisionSystem {
                         }
                     }
                 }
+            } else if (this.grazeAABB(game.player, en, 25) && !en._grazed) {
+                en._grazed = true;
+                game.score += 5;
+                game.scoreSystem.addFeverGauge(1);
+                game.bulletBoostUntil = now() + 2000; // Attack power up
+                game.particles.createSparkle(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#ffffff');
             }
 
             // 必殺技と敵の衝突
@@ -293,6 +369,16 @@ export class CollisionSystem {
                 game.damageBoss(2);
             } else if (game.player.isDashing || game.player.isGuarding) {
                 // No damage to boss, no damage to player
+                if (game.player.isGuarding && game.player.guardTimer > 350 && (!boss._lastJustGuard || now() - boss._lastJustGuard > 1000)) {
+                    boss._lastJustGuard = now();
+                    game.particles.createExplosion(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#00ffff', 40);
+                    playSfx('powerup');
+                    game.ult = Math.min(100, game.ult + 20);
+                    game.hitStopFrames = 5;
+                    game.shakeUntil = now() + 200;
+                    game.shakeIntensity = 5;
+                    logger.info('Just Guard (Boss)!');
+                }
             } else {
                 // One Guard Check
                 const hasOneGuard = characters[game.gacha.collection.current]?.special?.includes('oneGuard');
@@ -406,6 +492,18 @@ export class CollisionSystem {
         game.enemies.bossProjectiles = game.enemies.bossProjectiles.filter(shot => {
             if (this.AABB(game.player, shot)) {
                 if (now() < game.invUntil || now() < game.feverModeUntil || game.player.isDashing || game.player.isGuarding) {
+                    if (game.player.isGuarding && game.player.guardTimer > 350) {
+                        // Just Guard
+                        game.particles.createExplosion(shot.x + shot.w / 2, shot.y + shot.h / 2, '#00ffff', 40);
+                        playSfx('powerup');
+                        game.ult = Math.min(100, game.ult + 20);
+                        game.scoreSystem.awardEnemyDefeat(10);
+                        game.hitStopFrames = 5;
+                        game.shakeUntil = now() + 200;
+                        game.shakeIntensity = 5;
+                        logger.info('Just Guard (Projectile)!');
+                        return false; // Eliminate bullet
+                    }
                     // 無敵時は弾を消すだけ
                     game.particles.createExplosion(shot.x + shot.w / 2, shot.y + shot.h / 2, '#aaaaaa');
                     return false;
@@ -453,6 +551,12 @@ export class CollisionSystem {
                     }
                 }
                 return false;
+            } else if (this.grazeAABB(game.player, shot, 25) && !shot._grazed) {
+                shot._grazed = true;
+                game.score += 5;
+                game.scoreSystem.addFeverGauge(1);
+                game.bulletBoostUntil = now() + 2000;
+                game.particles.createSparkle(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, '#ffffff');
             }
             return true;
         });
@@ -464,6 +568,8 @@ export class CollisionSystem {
     checkAll() {
         this.checkPlayerItemCollisions();
         this.checkPlayerPowerCollisions();
+        this.checkPlayerExpCollisions();
+        this.checkOrbitalCollisions();
         this.checkPlayerEnemyCollisions();
         this.checkBossCollisions();
         this.checkBossProjectileCollisions();

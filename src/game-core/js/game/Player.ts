@@ -319,7 +319,30 @@ export class Player {
         return true;
     }
 
-    draw(ctx: CanvasRenderingContext2D, now: number, invUntil: number, hurtUntil: number) {
+    draw(ctx: CanvasRenderingContext2D, now: number, invUntil: number, hurtUntil: number, comboMultiplier: number = 1) {
+        // Combo Aura effect
+        if (comboMultiplier >= 1.5 && !this.isDashing && now >= invUntil) {
+            ctx.save();
+            ctx.shadowBlur = 10 * comboMultiplier;
+            if (comboMultiplier >= 5.0) {
+                ctx.shadowColor = '#d946ef'; // Fuchsia
+                ctx.strokeStyle = '#d946ef';
+            } else if (comboMultiplier >= 3.0) {
+                ctx.shadowColor = '#ef4444'; // Red
+                ctx.strokeStyle = '#ef4444';
+            } else if (comboMultiplier >= 2.0) {
+                ctx.shadowColor = '#f97316'; // Orange
+                ctx.strokeStyle = '#f97316';
+            } else {
+                ctx.shadowColor = '#eab308'; // Yellow
+                ctx.strokeStyle = '#eab308';
+            }
+            ctx.lineWidth = 2 + (comboMultiplier - 1);
+            ctx.globalAlpha = 0.5 + Math.sin(now * 0.01) * 0.2;
+            ctx.strokeRect(this.x - 2, this.y - 2, this.w + 4, this.h + 4);
+            ctx.restore();
+        }
+
         // Invincibility outline
         if (now < invUntil || this.isDashing) {
             ctx.strokeStyle = this.isDashing ? '#00ffff' : '#f5c542';

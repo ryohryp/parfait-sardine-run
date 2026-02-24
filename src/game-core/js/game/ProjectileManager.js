@@ -15,9 +15,15 @@ export class ProjectileManager {
         this.ultProjectiles = [];
     }
 
-    addBullet(x, y, v, hitsLeft, isCompanionShot = false) {
+    addBullet(x, y, opts = {}) {
         this.bullets.push({
-            x, y, w: 12, h: 6, v, hitsLeft, isCompanionShot
+            x, y,
+            w: 12, h: 6,
+            vx: opts.vx || 6,
+            vy: opts.vy || 0,
+            hitsLeft: opts.hitsLeft || 1,
+            damageRate: opts.damageRate || 1,
+            isCompanionShot: opts.isCompanionShot || false
         });
     }
 
@@ -28,11 +34,12 @@ export class ProjectileManager {
     update(player, bossState, enemies, awardEnemyDefeat, damageBoss, hasSlow) {
         // Player Bullets
         this.bullets = this.bullets.filter(b => {
-            b.x += b.v;
+            b.x += b.vx;
+            b.y += b.vy;
 
             // Hit Boss
             if (bossState && bossState.state !== 'defeated' && this.AABB(bossState, b)) {
-                damageBoss(b.isCompanionShot ? 0.5 : 1); // Companion deals less damage
+                damageBoss((b.isCompanionShot ? 0.5 : 1) * b.damageRate); // Apply damage rate
                 b.hitsLeft -= 1;
                 if (b.hitsLeft <= 0) return false;
             }

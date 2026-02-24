@@ -10,7 +10,8 @@ interface HUDProps {
 export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
     const {
         remainMs, level, score, coins, hp, maxHp, ult,
-        invUntil, autoShootUntil, bulletBoostUntil, scoreMulUntil, ultActiveUntil, gameOn, stageName
+        invUntil, autoShootUntil, bulletBoostUntil, scoreMulUntil, ultActiveUntil, gameOn, stageName,
+        buildLevel, buildExp, buildMaxExp
     } = state;
 
     const sec = Math.max(0, Math.ceil(remainMs / 1000));
@@ -47,6 +48,39 @@ export const HUD: React.FC<HUDProps> = ({ state, onUlt }) => {
                 <span>👤 {state.currentCharKey}</span>
                 <span style={{ color: '#eab308' }}>🪙 {(coins || 0).toLocaleString()}</span>
             </div>
+
+            {/* Run-based EXP Bar */}
+            {gameOn && (
+                <div style={{
+                    position: 'absolute', top: '50px', left: '50%', transform: 'translateX(-50%)',
+                    width: '320px', height: '16px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    backdropFilter: 'blur(4px)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.4)',
+                    overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', zIndex: 10,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}>
+                    <div style={{
+                        width: `${(buildMaxExp && buildMaxExp > 0) ? Math.min(100, ((buildExp || 0) / buildMaxExp) * 100) : 0}%`, height: '100%',
+                        background: 'linear-gradient(90deg, #0ea5e9, #38bdf8, #bae6fd)',
+                        boxShadow: '0 0 10px rgba(56,189,248,0.8)',
+                        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}>
+                        <div style={{ width: '100%', height: '50%', background: 'rgba(255,255,255,0.3)' }} />
+                    </div>
+                    <div style={{
+                        position: 'absolute', width: '100%', textAlign: 'center',
+                        fontSize: '11px', fontWeight: '800', color: '#fff',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.9)',
+                        letterSpacing: '0.5px',
+                        lineHeight: '16px'
+                    }}>
+                        Lv {buildLevel || 1}
+                    </div>
+                </div>
+            )}
 
             <div className="hud-group">
                 <div className="hud-pill" style={{

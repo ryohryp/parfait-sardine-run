@@ -13,6 +13,7 @@ import { GameRenderer } from './systems/GameRenderer.js';
 import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
 import { GAME_TIME, SHOOT_COOLDOWN } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
+import { getRandomSkills } from '../../../game-data/roguelite-skills';
 import { stageForLevel } from '../game-data/stages.js';
 import { CollectionSystem } from './CollectionSystem';
 import { logger } from '../utils/Logger.js';
@@ -172,6 +173,15 @@ export class Game {
     get hasUsedOneGuard() { return this.stateManager.state.hasUsedOneGuard; }
     set hasUsedOneGuard(v) { this.stateManager.state.hasUsedOneGuard = v; }
 
+    get hitStopFrames() { return this.stateManager.state.hitStopFrames; }
+    set hitStopFrames(v) { this.stateManager.state.hitStopFrames = v; }
+
+    get shakeUntil() { return this.stateManager.state.shakeUntil; }
+    set shakeUntil(v) { this.stateManager.state.shakeUntil = v; }
+
+    get shakeIntensity() { return this.stateManager.state.shakeIntensity; }
+    set shakeIntensity(v) { this.stateManager.state.shakeIntensity = v; }
+
     // Methods
     init() {
         this.input.init(this.canvas);
@@ -266,7 +276,15 @@ export class Game {
             missions: this.missions.getMissions(),
             comboCount: scoreState.comboCount,
             comboMultiplier: scoreState.comboMultiplier,
-            stageClearUntil: this.stageClearUntil
+            stageClearUntil: this.stageClearUntil,
+            shakeUntil: this.shakeUntil,
+            shakeIntensity: this.shakeIntensity,
+            buildLevel: this.stateManager.state.buildLevel,
+            buildExp: this.stateManager.state.buildExp,
+            buildMaxExp: this.stateManager.getBuildMaxExp(),
+            rogueliteSkills: this.stateManager.state.rogueliteSkills,
+            isLevelUp: this.stateManager.state.isLevelUp,
+            levelUpChoices: this.stateManager.state.levelUpChoices
         };
     }
 
@@ -338,6 +356,35 @@ export class Game {
 
     update(t: number) {
         if (!this.gameOn || this.paused) return;
+
+        if (this.hitStopFrames > 0) {
+            this.hitStopFrames--;
+            // Render freeze frame with shake
+            const scoreState = this.scoreSystem.getState();
+            this.renderer.render({
+                level: (this.currentStageIndex * 3) + 1,
+                player: this.player,
+                enemies: this.enemies,
+                items: this.items,
+                projectiles: this.projectiles,
+                companion: this.companion,
+                particles: this.particles,
+                invUntil: this.invUntil,
+                hurtUntil: this.hurtUntil,
+                feverModeUntil: this.scoreSystem.feverModeUntil,
+                ultActiveUntil: this.ultActiveUntil,
+                currentCharKey: this.gacha.collection.current,
+                comboCount: scoreState.comboCount,
+                comboMultiplier: scoreState.comboMultiplier,
+                lastComboTime: this.scoreSystem.lastComboTime,
+                stageClearUntil: this.stageClearUntil,
+                shakeUntil: this.shakeUntil,
+                shakeIntensity: this.shakeIntensity,
+                rogueliteSkills: this.stateManager.state.rogueliteSkills
+            });
+            return;
+        }
+
         const elapsed = t - this.t0;
         const remain = GAME_TIME - elapsed;
         if (remain <= 0) return this.endGame();
@@ -393,7 +440,10 @@ export class Game {
             comboCount: this.scoreSystem.comboCount,
             comboMultiplier: this.scoreSystem.comboMultiplier,
             lastComboTime: this.scoreSystem.lastComboTime,
-            stageClearUntil: this.stageClearUntil
+            stageClearUntil: this.stageClearUntil,
+            shakeUntil: this.shakeUntil,
+            shakeIntensity: this.shakeIntensity,
+            rogueliteSkills: this.stateManager.state.rogueliteSkills
         });
         this.notifyState();
     }
@@ -422,18 +472,43 @@ export class Game {
     shoot() {
         if (!this.gameOn) return;
         const nowTime = now();
-        if (nowTime - this.lastShot < SHOOT_COOLDOWN) return;
+
+        let currentCooldown = SHOOT_COOLDOWN;
+        const attackSpeedCount = this.stateManager.state.rogueliteSkills.filter(s => s === 'attack_speed').length;
+        if (attackSpeedCount > 0) {
+            currentCooldown *= Math.pow(0.8, attackSpeedCount);
+        }
+
+        if (this.scoreSystem.comboCount > 0 && (nowTime - this.scoreSystem.lastComboTime < 2000)) {
+            const speedBuff = 1 + (this.scoreSystem.comboMultiplier - 1) * 0.2;
+            currentCooldown /= Math.min(2.5, speedBuff);
+        }
+
+        if (nowTime - this.lastShot < currentCooldown) return;
         this.lastShot = nowTime;
         this.sessionAttacks++;
-        const pierce = characters[this.gacha.collection.current]?.special?.includes('pierce');
+
+        let pierce = characters[this.gacha.collection.current]?.special?.includes('pierce');
+        if (this.stateManager.state.rogueliteSkills.includes('piercing_shot')) {
+            pierce = true;
+        }
+
         const v = 9 + this.level * 0.6 + (now() < this.bulletBoostUntil ? 4 : 0);
         const stats = this.getEffectiveStats(this.gacha.collection.current);
-        this.projectiles.addBullet(
-            this.player.x + this.player.w,
-            this.player.y + this.player.h / 2 - 3,
-            v * stats.bullet,
-            pierce ? 2 : 1
-        );
+        const speed = v * stats.bullet;
+
+        let attackPowerCount = this.stateManager.state.rogueliteSkills.filter(s => s === 'attack_power').length;
+        const finalDamageRate = 1 * Math.pow(1.2, attackPowerCount);
+        const hitsLeft = pierce ? 3 : 1;
+        const has3Way = this.stateManager.state.rogueliteSkills.includes('3way_shot');
+
+        if (has3Way) {
+            this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed, vy: 0, hitsLeft, damageRate: finalDamageRate });
+            this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed * 0.95, vy: -2, hitsLeft, damageRate: finalDamageRate });
+            this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed * 0.95, vy: 2, hitsLeft, damageRate: finalDamageRate });
+        } else {
+            this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed, vy: 0, hitsLeft, damageRate: finalDamageRate });
+        }
     }
 
     tryUlt() {
@@ -486,6 +561,53 @@ export class Game {
         this.gacha.progression.addExperience(charKey, finalExp);
         this.handleMissionUpdate('defeat_enemy', 1);
         this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
+
+        // Spawn EXP
+        this.items.spawnExp(enemy.x + enemy.w / 2 - 10, enemy.y + enemy.h / 2 - 10, 1);
+
+        // Juice effects
+        this.hitStopFrames = 3;
+        this.shakeUntil = now() + 150;
+        this.shakeIntensity = 4;
+    }
+
+    addBuildExp(amount: number) {
+        this.stateManager.addBuildExp(amount);
+        if (this.stateManager.checkBuildLevelUp()) {
+            this.triggerLevelUp();
+        }
+    }
+
+    triggerLevelUp() {
+        playSfx('powerup');
+        this.paused = true;
+
+        const choices = getRandomSkills(3, this.stateManager.state.rogueliteSkills);
+        this.stateManager.state.levelUpChoices = choices;
+        this.stateManager.state.isLevelUp = true;
+
+        this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#38bdf8', 60);
+
+        if (this.callbacks && this.callbacks.onStateUpdate) {
+            this.callbacks.onStateUpdate(this.getState());
+        }
+    }
+
+    selectRogueliteSkill(skillId: string) {
+        this.stateManager.state.rogueliteSkills.push(skillId);
+
+        if (skillId === 'max_hp_up') {
+            this.stateManager.state.maxHp = Math.floor(this.stateManager.state.maxHp * 1.2);
+            this.stateManager.heal(Math.floor(this.stateManager.state.maxHp * 0.2));
+        }
+
+        this.stateManager.state.isLevelUp = false;
+        this.stateManager.state.levelUpChoices = [];
+        this.paused = false;
+
+        if (this.callbacks && this.callbacks.onStateUpdate) {
+            this.callbacks.onStateUpdate(this.getState());
+        }
     }
 
     damageBoss(amount: number) {
@@ -519,8 +641,15 @@ export class Game {
             this.level = this.currentStageIndex + 1;
 
             playSfx('powerup');
+
+            this.hitStopFrames = 10;
+            this.shakeUntil = now() + 600;
+            this.shakeIntensity = 10;
         } else {
             playSfx('hit');
+            this.hitStopFrames = 2;
+            this.shakeUntil = now() + 100;
+            this.shakeIntensity = 4;
         }
     }
 

@@ -140,9 +140,29 @@ export class GameRenderer {
     /**
      * エンティティの描画
      */
-    drawEntities(player, enemies, items, projectiles, companion, particles, invUntil, hurtUntil) {
+    drawEntities(player, enemies, items, projectiles, companion, particles, invUntil, hurtUntil, comboMultiplier, rogueliteSkills) {
         const time = now();
-        player.draw(this.ctx, time, invUntil, hurtUntil);
+        player.draw(this.ctx, time, invUntil, hurtUntil, comboMultiplier);
+
+        if (rogueliteSkills && rogueliteSkills.includes('orbital_option')) {
+            const orbitalDistance = 60;
+            const ox = player.x + player.w / 2 + Math.cos(time / 150) * orbitalDistance;
+            const oy = player.y + player.h / 2 + Math.sin(time / 150) * orbitalDistance;
+
+            this.ctx.fillStyle = '#a855f7';
+            this.ctx.shadowColor = '#a855f7';
+            this.ctx.shadowBlur = 10;
+            this.ctx.beginPath();
+            this.ctx.arc(ox, oy, 12, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.shadowBlur = 0;
+
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.beginPath();
+            this.ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
         enemies.draw(this.ctx);
         items.draw(this.ctx);
         projectiles.draw(this.ctx);
@@ -395,6 +415,16 @@ export class GameRenderer {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        this.ctx.save();
+
+        // Apply screen shake
+        if (gameState.shakeUntil && now() < gameState.shakeUntil) {
+            const intensity = gameState.shakeIntensity || 5;
+            const dx = (Math.random() - 0.5) * intensity;
+            const dy = (Math.random() - 0.5) * intensity;
+            this.ctx.translate(dx, dy);
+        }
+
         // Draw background
         this.drawBackground(gameState.level);
 
@@ -407,7 +437,9 @@ export class GameRenderer {
             gameState.companion,
             gameState.particles,
             gameState.invUntil,
-            gameState.hurtUntil
+            gameState.hurtUntil,
+            gameState.comboMultiplier,
+            gameState.rogueliteSkills
         );
 
         // Draw foreground layer (in front of characters)
@@ -433,5 +465,7 @@ export class GameRenderer {
         if (gameState.stageClearUntil && now() < gameState.stageClearUntil) {
             this.drawStageClear(gameState.stageClearUntil);
         }
+
+        this.ctx.restore();
     }
 }

@@ -29,6 +29,14 @@ export interface GameStateData {
     destroyed: boolean;
     hasUsedAutoRevive: boolean;
     hasUsedOneGuard: boolean;
+    hitStopFrames: number;
+    shakeUntil: number;
+    shakeIntensity: number;
+    buildLevel: number;
+    buildExp: number;
+    rogueliteSkills: string[];
+    isLevelUp: boolean;
+    levelUpChoices: any[];
 }
 
 export class GameStateManager {
@@ -66,7 +74,15 @@ export class GameStateManager {
             t0: 0,
             destroyed: false,
             hasUsedAutoRevive: false,
-            hasUsedOneGuard: false
+            hasUsedOneGuard: false,
+            hitStopFrames: 0,
+            shakeUntil: 0,
+            shakeIntensity: 0,
+            buildLevel: 1,
+            buildExp: 0,
+            rogueliteSkills: [],
+            isLevelUp: false,
+            levelUpChoices: []
         };
     }
 
@@ -122,5 +138,23 @@ export class GameStateManager {
 
     heal(amount: number) {
         this.state.hp = Math.min(this.state.maxHp, this.state.hp + amount);
+    }
+
+    getBuildMaxExp() {
+        return Math.floor(10 * Math.pow(1.5, this.state.buildLevel - 1));
+    }
+
+    addBuildExp(amount: number) {
+        this.state.buildExp += amount;
+    }
+
+    checkBuildLevelUp(): boolean {
+        const maxExp = this.getBuildMaxExp();
+        if (this.state.buildExp >= maxExp) {
+            this.state.buildExp -= maxExp;
+            this.state.buildLevel++;
+            return true;
+        }
+        return false;
     }
 }

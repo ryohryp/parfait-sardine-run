@@ -65,6 +65,12 @@ export interface GameState {
     fever: number;
     isFever: boolean;
     missions: Mission[];
+    buildLevel?: number;
+    buildExp?: number;
+    buildMaxExp?: number;
+    rogueliteSkills?: string[];
+    isLevelUp?: boolean;
+    levelUpChoices?: any[];
 }
 
 export interface GameResult {
