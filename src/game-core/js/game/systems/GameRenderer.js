@@ -409,6 +409,90 @@ export class GameRenderer {
     }
 
     /**
+     * スライディングビートバー（ビートインジケーター）の描画
+     */
+    drawBeatBar(gameState) {
+        if (gameState.currentBeat === undefined) return;
+
+        const ctx = this.ctx;
+        const centerX = this.canvas.width / 2;
+        const centerY = 35;
+        const trackLength = 180; // half width of track
+
+        ctx.save();
+
+        // 1. Draw track background
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(centerX - trackLength, centerY);
+        ctx.lineTo(centerX + trackLength, centerY);
+        ctx.stroke();
+
+        // Draw track boundary ticks
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX - trackLength, centerY - 8);
+        ctx.lineTo(centerX - trackLength, centerY + 8);
+        ctx.moveTo(centerX + trackLength, centerY - 8);
+        ctx.lineTo(centerX + trackLength, centerY + 8);
+        ctx.stroke();
+
+        // 2. Draw sliding notes (visual beats)
+        const currentBeat = gameState.currentBeat;
+        const startBeat = Math.floor(currentBeat) - 1;
+
+        for (let b = startBeat; b <= startBeat + 3; b++) {
+            const distFactor = b - currentBeat;
+            const offset = distFactor * trackLength;
+            if (Math.abs(offset) <= trackLength) {
+                // Left sliding note
+                const lx = centerX - offset;
+                // Right sliding note
+                const rx = centerX + offset;
+
+                // Color fades out at edges
+                const opacity = 1 - Math.abs(distFactor);
+                ctx.strokeStyle = `rgba(255, 0, 127, ${opacity})`;
+                ctx.lineWidth = 5;
+
+                ctx.beginPath();
+                ctx.moveTo(lx, centerY - 12);
+                ctx.lineTo(lx, centerY + 12);
+                ctx.moveTo(rx, centerY - 12);
+                ctx.lineTo(rx, centerY + 12);
+                ctx.stroke();
+            }
+        }
+
+        // 3. Draw central target (Beat Pulsator)
+        const beatFraction = currentBeat % 1.0;
+        const pulse = Math.max(0, 1 - (beatFraction < 0.5 ? beatFraction : 1 - beatFraction) * 4.0);
+        const radius = 14 + pulse * 6;
+
+        // Glow effect
+        ctx.shadowBlur = 10 + pulse * 10;
+        ctx.shadowColor = '#00f5ff';
+
+        // Outer ring
+        ctx.strokeStyle = '#00f5ff';
+        ctx.lineWidth = 3 + pulse * 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner solid core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 6 + pulse * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    /**
      * 全体の描画を実行
      */
     render(gameState) {
@@ -460,6 +544,9 @@ export class GameRenderer {
             gameState.comboMultiplier,
             gameState.lastComboTime
         );
+
+        // Draw Beat Bar Visualizer
+        this.drawBeatBar(gameState);
 
         // Draw stage clear effect
         if (gameState.stageClearUntil && now() < gameState.stageClearUntil) {

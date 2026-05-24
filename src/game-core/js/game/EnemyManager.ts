@@ -81,6 +81,7 @@ export interface Enemy {
     explosionDelay?: number;
     canSplit?: boolean;
     explode?: boolean;
+    isBeatEnemy?: boolean;
 }
 
 export interface BossState {
@@ -298,7 +299,8 @@ export class EnemyManager {
             spawnAt: now(),
             phase: Math.random() * Math.PI * 2,
             baseY,
-            hp: config.hp // Optional
+            hp: config.hp, // Optional
+            isBeatEnemy: !!spawnDef.isBeatEnemy
         };
 
         // Apply type-specific dynamic properties
@@ -400,10 +402,11 @@ export class EnemyManager {
         speedSE();
     }
 
-    update(t: number, level: number, player: Player, _stageKey: string, isBossBattle: boolean) {
-        const st = stageForLevel(level); // Note: level might be decoupled from stageKey in future
+    update(t: number, _level: number, player: Player, _stageKey: string, _isBossBattle: boolean) {
+        // const st = stageForLevel(level); // Note: level might be decoupled from stageKey in future
 
-        // Boss Spawning Logic
+        // Boss Spawning Logic disabled in Reverse Tower Defense
+        /*
         const stageBoss = (stageBosses as any)[st.key];
         if (!this.bossState && stageBoss && !this.defeatedBossStages.has(st.key)) {
             if (!this.bossNextSpawnAt) {
@@ -413,38 +416,29 @@ export class EnemyManager {
                 this.bossNextSpawnAt = 0;
             }
         }
+        */
 
         // Boss Update
         if (this.bossState) {
             this.updateBoss(t, player);
         }
 
-        const bossBattleActive = this.bossState && this.bossState.state !== 'defeated';
+        // const bossBattleActive = this.bossState && this.bossState.state !== 'defeated';
 
-        // Wave Spawning Logic
+        // Wave Spawning Logic disabled in Reverse Tower Defense
+        /*
         if (!bossBattleActive && !isBossBattle) {
             if (!this.waveState.active) {
-                // Check if it's time for next wave
                 if (t >= this.waveState.nextWaveAt) {
-                    // this.startNextWave(level, t); // FIXME: startNextWave is missing in original file? Or I missed it.
-                    // Checking original file... it seems startNextWave was NOT in the file content I read?
-                    // Ah, I might have missed it or it was in a part I didn't see?
-                    // Wait, I read lines 1-800. The file has 882 lines.
-                    // I should check if startNextWave is defined.
-                    // Based on previous conversation history, `updateWave` and `startNextWave` might be related to the "Fix EnemyManager Stack Overflow" task.
-                    // I will assume for now I need to implement or find it.
-                    // Actually, looking at the code I read, `updateWave` is called on line 283.
-                    // But `startNextWave` is called on line 279.
-                    // I need to read the rest of the file to be sure.
+                    this.startNextWave(level, t);
                 }
             } else {
-                // Process current wave
-                // this.updateWave(t, level); // Same here.
+                this.updateWave(t, level);
             }
         } else {
-            // Pause wave timer during boss
             this.waveState.nextWaveAt = t + 2000;
         }
+        */
 
         // Enemy Update
         this.enemies = this.enemies.filter(en => {
@@ -827,6 +821,28 @@ export class EnemyManager {
         // Draw Enemies
         this.enemies.forEach(en => {
             const img = this.enemyImages[en.type];
+
+            if (en.isBeatEnemy) {
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = `hsl(${(now() * 0.2) % 360}, 100%, 65%)`;
+                ctx.fillStyle = `hsla(${(now() * 0.2) % 360}, 100%, 65%, 0.15)`;
+                ctx.strokeStyle = `hsl(${(now() * 0.2) % 360}, 100%, 65%)`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(en.x + en.w / 2, en.y + en.h / 2, Math.max(en.w, en.h) * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = `hsl(${(now() * 0.15) % 360}, 100%, 70%)`;
+                const bounceY = Math.sin(now() * 0.015) * 4;
+                ctx.fillText('🎵', en.x + en.w / 2, en.y - 8 + bounceY);
+                ctx.restore();
+            }
 
             if (en.type === 'obstacle') {
                 ctx.save();

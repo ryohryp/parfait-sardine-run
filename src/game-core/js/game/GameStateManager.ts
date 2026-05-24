@@ -37,6 +37,9 @@ export interface GameStateData {
     rogueliteSkills: string[];
     isLevelUp: boolean;
     levelUpChoices: any[];
+    energy: number;
+    maxEnergy: number;
+    energyRegenRate: number;
 }
 
 export class GameStateManager {
@@ -82,7 +85,10 @@ export class GameStateManager {
             buildExp: 0,
             rogueliteSkills: [],
             isLevelUp: false,
-            levelUpChoices: []
+            levelUpChoices: [],
+            energy: 0,
+            maxEnergy: 100,
+            energyRegenRate: 5
         };
     }
 

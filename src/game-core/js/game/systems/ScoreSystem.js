@@ -52,6 +52,10 @@ export class ScoreSystem {
      * コンボ数に応じて倍率を更新
      */
     updateComboMultiplier() {
+        if (this.isFeverActive()) {
+            this.comboMultiplier = 5;
+            return;
+        }
         if (this.comboCount < 5) this.comboMultiplier = 1;
         else if (this.comboCount < 10) this.comboMultiplier = 1.5;
         else if (this.comboCount < 20) this.comboMultiplier = 2;
@@ -118,6 +122,9 @@ export class ScoreSystem {
      * 現在の状態を取得
      */
     getState() {
+        if (this.isFeverActive()) {
+            this.comboMultiplier = 5;
+        }
         return {
             comboCount: this.comboCount,
             comboMultiplier: this.comboMultiplier,

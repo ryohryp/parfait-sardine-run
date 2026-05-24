@@ -17,7 +17,7 @@ function App() {
   };
 
   return (
-    <>
+    <div style={{ display: 'contents' }}>
       {isLoading && <LoadingScreen onComplete={handleLoadingComplete} />}
       <Routes>
         <Route path="/" element={<GamePage />} />
@@ -28,7 +28,7 @@ function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/manual" element={<ManualPage />} />
       </Routes>
-    </>
+    </div>
   );
 }
 

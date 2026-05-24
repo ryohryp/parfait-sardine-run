@@ -71,6 +71,14 @@ export interface GameState {
     rogueliteSkills?: string[];
     isLevelUp?: boolean;
     levelUpChoices?: any[];
+    energy?: number;
+    maxEnergy?: number;
+    currentBeat?: number;
+    latestRating?: string;
+    latestRatingTime?: number;
+    comboCount?: number;
+    comboMultiplier?: number;
+    isBossActive?: boolean;
 }
 
 export interface GameResult {

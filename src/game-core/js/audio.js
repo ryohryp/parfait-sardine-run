@@ -1,8 +1,9 @@
-const BGM_SRC = '';
+const baseUrl = import.meta.env.BASE_URL || '/';
+const BGM_SRC = `${baseUrl}assets/bgm/stage.ogg`;
 const SFX_SOURCES = {
-  jump: '',
-  hit: '',
-  powerup: ''
+  jump: `${baseUrl}assets/sfx/jump.ogg`,
+  hit: `${baseUrl}assets/sfx/hit.ogg`,
+  powerup: `${baseUrl}assets/sfx/whoosh.ogg`
 };
 
 const SFX_POOL_SIZE = 4;
@@ -176,6 +177,14 @@ function initAudio() {
   bindUnlockListeners();
 }
 
+function getBgmCurrentTime() {
+  return stageBgm ? stageBgm.currentTime : 0;
+}
+
+function isBgmPlaying() {
+  return !!stageBgm && !stageBgm.paused;
+}
+
 initAudio();
 
-export { initAudio, playBgm, stopBgm, playSfx, registerUnlockableAudio, setBgmVolume, setSfxVolume, getBgmVolume, getSfxVolume };
+export { initAudio, playBgm, stopBgm, playSfx, registerUnlockableAudio, setBgmVolume, setSfxVolume, getBgmVolume, getSfxVolume, getBgmCurrentTime, isBgmPlaying };

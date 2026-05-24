@@ -10,7 +10,7 @@ import { ParticleSystem } from './ParticleSystem.js';
 import { CollisionSystem } from './systems/CollisionSystem.js';
 import { ScoreSystem } from './systems/ScoreSystem.js';
 import { GameRenderer } from './systems/GameRenderer.js';
-import { initAudio, playBgm, stopBgm, playSfx } from '../audio.js';
+import { initAudio, playBgm, stopBgm, playSfx, getBgmCurrentTime, isBgmPlaying } from '../audio.js';
 import { GAME_TIME, SHOOT_COOLDOWN } from '../game-constants.js';
 import { characters } from '../game-data/characters.js';
 import { getRandomSkills } from '../../../game-data/roguelite-skills';
@@ -60,8 +60,12 @@ export class Game {
 
     // Local state
     lastShot: number = 0;
+    lastTime: number = 0;
     private inLoop: boolean = false;
     private lastStateUpdate: number = 0;
+    currentBeat: number = 0;
+    latestRating: string = '';
+    latestRatingTime: number = 0;
 
     constructor(canvas: HTMLCanvasElement, callbacks: GameCallbacks = {}, dependencies: any = {}) {
         this.canvas = canvas;
@@ -109,6 +113,15 @@ export class Game {
 
     get maxHp() { return this.stateManager.state.maxHp; }
     set maxHp(v) { this.stateManager.state.maxHp = v; }
+
+    get energy() { return this.stateManager.state.energy; }
+    set energy(v) { this.stateManager.state.energy = v; }
+
+    get maxEnergy() { return this.stateManager.state.maxEnergy; }
+    set maxEnergy(v) { this.stateManager.state.maxEnergy = v; }
+
+    get energyRegenRate() { return this.stateManager.state.energyRegenRate; }
+    set energyRegenRate(v) { this.stateManager.state.energyRegenRate = v; }
 
     get ult() { return this.stateManager.state.ult; }
     set ult(v) { this.stateManager.state.ult = v; }
@@ -203,6 +216,16 @@ export class Game {
                 this.player.guard();
             }
         });
+        this.input.on('heal', () => {
+            if (this.gameOn) {
+                this.healHero();
+            }
+        });
+        this.input.on('shield', () => {
+            if (this.gameOn) {
+                this.shieldHero();
+            }
+        });
         initAudio();
         this.notifyState(true);
         requestAnimationFrame(t => this.loop(t));
@@ -226,6 +249,7 @@ export class Game {
             const duration = now() - pauseTime;
             this.t0 += duration;
             this.runStartTimestamp += duration;
+            if (this.lastTime) this.lastTime += duration;
 
             // Adjust timers
             if (this.invUntil > 0) this.invUntil += duration;
@@ -259,6 +283,8 @@ export class Game {
             coins: this.sessionCoins,
             hp: this.hp,
             maxHp: this.maxHp,
+            energy: this.energy,
+            maxEnergy: this.maxEnergy,
             ult: this.ult,
             ultReady: this.ultReady,
             currentCharKey: this.gacha.collection.current,
@@ -273,6 +299,9 @@ export class Game {
             stageName: stageForLevel(this.currentStageIndex * 3 + 1).name,
             fever: scoreState.feverGauge,
             isFever: scoreState.isFever,
+            currentBeat: this.currentBeat,
+            latestRating: this.latestRating,
+            latestRatingTime: this.latestRatingTime,
             missions: this.missions.getMissions(),
             comboCount: scoreState.comboCount,
             comboMultiplier: scoreState.comboMultiplier,
@@ -284,7 +313,8 @@ export class Game {
             buildMaxExp: this.stateManager.getBuildMaxExp(),
             rogueliteSkills: this.stateManager.state.rogueliteSkills,
             isLevelUp: this.stateManager.state.isLevelUp,
-            levelUpChoices: this.stateManager.state.levelUpChoices
+            levelUpChoices: this.stateManager.state.levelUpChoices,
+            isBossActive: this.isBossActive()
         };
     }
 
@@ -295,6 +325,10 @@ export class Game {
         const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current || 'parfen');
         this.maxHp = 100 + (skillBonuses.maxHpBonus || 0);
         this.hp = this.maxHp;
+
+        this.energy = 50; // Start with some initial energy
+        this.maxEnergy = 100;
+        this.energyRegenRate = 10; // energy per second
 
         this.scoreSystem.reset();
         this.scoreSystem.reset();
@@ -312,13 +346,14 @@ export class Game {
 
         this.t0 = now();
         this.runStartTimestamp = this.t0;
+        this.lastTime = this.t0;
         this.gameOn = true;
         playBgm({ reset: true });
         if (this.callbacks.onRunStart) this.callbacks.onRunStart();
         this.notifyState(true);
     }
 
-    endGame() {
+    endGame(victory = false) {
         if (!this.gameOn) return;
         this.gameOn = false;
         stopBgm();
@@ -335,7 +370,7 @@ export class Game {
             stage: `level-${finalLevel}`,
             duration: durationMs,
             coins: finalCoins,
-            result: 'gameover',
+            result: victory ? 'stage_clear' : 'gameover',
             distance: Math.floor(this.sessionDistance),
             jumps: this.sessionJumps,
             attacks: this.sessionAttacks
@@ -354,8 +389,35 @@ export class Game {
         this.notifyState(true);
     }
 
+    isBossActive(): boolean {
+        return !!(this.enemies && this.enemies.bossState && this.enemies.bossState.state !== 'defeated');
+    }
+
     update(t: number) {
         if (!this.gameOn || this.paused) return;
+
+        if (!this.lastTime) {
+            this.lastTime = t;
+        }
+        const dt = t - this.lastTime;
+        this.lastTime = t;
+
+        if (this.isBossActive()) {
+            this.t0 += dt;
+        }
+
+        if (this.stageClearUntil && now() < this.stageClearUntil) {
+            this.t0 = now();
+            this.lastTime = now();
+        }
+
+        let bgmTime = 0;
+        if (isBgmPlaying()) {
+            bgmTime = getBgmCurrentTime();
+        } else {
+            bgmTime = (t - this.t0) / 1000;
+        }
+        this.currentBeat = bgmTime * 2.0;
 
         if (this.hitStopFrames > 0) {
             this.hitStopFrames--;
@@ -380,7 +442,8 @@ export class Game {
                 stageClearUntil: this.stageClearUntil,
                 shakeUntil: this.shakeUntil,
                 shakeIntensity: this.shakeIntensity,
-                rogueliteSkills: this.stateManager.state.rogueliteSkills
+                rogueliteSkills: this.stateManager.state.rogueliteSkills,
+                currentBeat: this.currentBeat
             });
             return;
         }
@@ -389,20 +452,36 @@ export class Game {
         const remain = GAME_TIME - elapsed;
         if (remain <= 0) return this.endGame();
 
+        const stageLevel = (this.currentStageIndex * 3) + 1;
+        const st = stageForLevel(stageLevel);
+
+        if (!this.isBossActive() && !this.enemies.defeatedBossStages.has(st.key) && (!this.stageClearUntil || now() > this.stageClearUntil)) {
+            const shouldSpawnBoss = (this.stateManager.state.buildLevel >= 3) || (elapsed >= 45000);
+            if (shouldSpawnBoss) {
+                this.enemies.spawnBossForStage(st.key, t);
+            }
+        }
+
         const currentSpeed = 6 + (this.level * 0.5);
         const distanceDelta = currentSpeed * (16 / 1000) * 10;
         this.sessionDistance += distanceDelta;
 
+        // Energy Regen
+        const timeDeltaSeconds = 16 / 1000;
+        this.energy = Math.min(this.maxEnergy, this.energy + (this.energyRegenRate * timeDeltaSeconds));
+
         // Level progression based on stage index
         // Each stage cleared increases level by 1
         this.level = this.currentStageIndex + 1;
+
+        // AI Logic for Player (Hero)
+        this.updatePlayerAI(t);
 
         this.player.update(16);
         if (this.player.y >= this.canvas.height - 72 - this.player.h && this.player.vy >= 0) {
             this.scoreSystem.resetCombo();
         }
 
-        const stageLevel = (this.currentStageIndex * 3) + 1;
         this.enemies.update(t, stageLevel, this.player);
 
         this.particles.update(t);
@@ -443,7 +522,8 @@ export class Game {
             stageClearUntil: this.stageClearUntil,
             shakeUntil: this.shakeUntil,
             shakeIntensity: this.shakeIntensity,
-            rogueliteSkills: this.stateManager.state.rogueliteSkills
+            rogueliteSkills: this.stateManager.state.rogueliteSkills,
+            currentBeat: this.currentBeat
         });
         this.notifyState();
     }
@@ -500,7 +580,7 @@ export class Game {
         let attackPowerCount = this.stateManager.state.rogueliteSkills.filter(s => s === 'attack_power').length;
         const finalDamageRate = 1 * Math.pow(1.2, attackPowerCount);
         const hitsLeft = pierce ? 3 : 1;
-        const has3Way = this.stateManager.state.rogueliteSkills.includes('3way_shot');
+        const has3Way = this.stateManager.state.rogueliteSkills.includes('3way_shot') || this.scoreSystem.isFeverActive();
 
         if (has3Way) {
             this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed, vy: 0, hitsLeft, damageRate: finalDamageRate });
@@ -508,6 +588,119 @@ export class Game {
             this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed * 0.95, vy: 2, hitsLeft, damageRate: finalDamageRate });
         } else {
             this.projectiles.addBullet(this.player.x + this.player.w, this.player.y + this.player.h / 2 - 3, { vx: speed, vy: 0, hitsLeft, damageRate: finalDamageRate });
+        }
+    }
+
+    spawnEnemyByPlayer(type: string) {
+        if (!this.gameOn) return;
+        const costs: Record<string, number> = {
+            'straight': 10,
+            'zigzag': 15,
+            'hover': 20,
+            'dash': 25,
+            'chaser': 30,
+            'shield': 35,
+            'bomber': 40
+        };
+        const cost = costs[type] || 20;
+        if (this.energy < cost) {
+            return; // Not enough energy
+        }
+
+        // Rhythm summoning logic
+        const beat = this.currentBeat;
+        const nearestBeat = Math.round(beat);
+        const diff = Math.abs(beat - nearestBeat);
+
+        let rating = 'OFF BEAT';
+        let refundPercent = 0;
+        let feverPoints = 0;
+        let isBeatEnemy = false;
+        let color = '#888888';
+
+        if (diff <= 0.15) {
+            rating = 'PERFECT!';
+            refundPercent = 0.20;
+            feverPoints = 10;
+            isBeatEnemy = true;
+            color = '#00e6ff'; // Electric Cyan
+        } else if (diff <= 0.30) {
+            rating = 'GREAT!';
+            refundPercent = 0.10;
+            feverPoints = 5;
+            isBeatEnemy = true;
+            color = '#ff007f'; // Neon Pink
+        }
+
+        this.latestRating = rating;
+        this.latestRatingTime = now();
+
+        // Energy deduct and refund
+        const refundAmount = cost * refundPercent;
+        this.energy = Math.max(0, Math.min(this.maxEnergy, this.energy - cost + refundAmount));
+
+        // Spawn beat enemy
+        this.enemies.spawnEnemy(this.level, { type, isBeatEnemy });
+
+        // Add text particle above the player
+        this.particles.addTextParticle(this.player.x + this.player.w / 2, this.player.y - 20, rating, color, rating === 'PERFECT!' ? '24px' : '18px');
+
+        // Play rhythm SFX
+        if (rating === 'PERFECT!') {
+            playSfx('powerup');
+        } else if (rating === 'GREAT!') {
+            playSfx('jump');
+        } else {
+            playSfx('hit');
+        }
+
+        // Fever logic
+        if (feverPoints > 0) {
+            const triggered = this.scoreSystem.addFeverGauge(feverPoints);
+            if (triggered) {
+                this.scoreSystem.activateFever();
+                this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#ff00ff');
+            }
+        }
+    }
+
+    updatePlayerAI(_t: number) {
+        // AI Auto-shoot
+        this.shoot();
+
+        // AI Auto-jump logic
+        const aheadDistance = 180;
+        let shouldJump = false;
+
+        // Check enemies
+        for (const en of this.enemies.enemies) {
+            // Distance check
+            if (en.x > this.player.x + this.player.w && en.x < this.player.x + this.player.w + aheadDistance) {
+                // Height overlap check
+                if (en.y + en.h > this.player.y && en.y < this.player.y + this.player.h - 10) {
+                    shouldJump = true;
+                    break;
+                }
+            }
+        }
+
+        // Check boss projectiles
+        if (!shouldJump && this.enemies.bossProjectiles) {
+            for (const proj of this.enemies.bossProjectiles) {
+                if (proj.x > this.player.x + this.player.w && proj.x < this.player.x + this.player.w + aheadDistance) {
+                    if (proj.y + proj.h > this.player.y && proj.y < this.player.y + this.player.h - 10) {
+                        shouldJump = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (shouldJump && this.player.onGround) {
+            // High chance to jump
+            if (Math.random() < 0.85) {
+                this.player.jump();
+            }
         }
     }
 
@@ -545,6 +738,51 @@ export class Game {
         }
     }
 
+    healHero() {
+        if (!this.gameOn || this.paused) return;
+        const cost = 30;
+        if (this.energy < cost) return;
+        this.energy -= cost;
+
+        const healAmount = Math.floor(this.maxHp * 0.25);
+        this.hp = Math.min(this.maxHp, this.hp + healAmount);
+
+        for (let i = 0; i < 15; i++) {
+            this.particles.createSparkle(
+                this.player.x + Math.random() * this.player.w,
+                this.player.y + Math.random() * this.player.h,
+                '#22c55e'
+            );
+        }
+        playSfx('powerup');
+        this.notifyState(true);
+    }
+
+    shieldHero() {
+        if (!this.gameOn || this.paused) return;
+        const cost = 45;
+        if (this.energy < cost) return;
+        this.energy -= cost;
+
+        this.invUntil = now() + 2000;
+
+        for (let i = 0; i < 20; i++) {
+            this.particles.createSparkle(
+                this.player.x + this.player.w / 2 + (Math.random() - 0.5) * 60,
+                this.player.y + this.player.h / 2 + (Math.random() - 0.5) * 60,
+                '#3b82f6'
+            );
+        }
+        this.particles.createExplosion(
+            this.player.x + this.player.w / 2,
+            this.player.y + this.player.h / 2,
+            '#00ffff',
+            40
+        );
+        playSfx('powerup');
+        this.notifyState(true);
+    }
+
     awardEnemyDefeat(enemy: any) {
         const score = this.scoreSystem.awardEnemyDefeat(3);
         this.score += score;
@@ -555,15 +793,47 @@ export class Game {
         this.gacha.addCoins(finalCoins);
         this.sessionCoins += finalCoins;
 
-        const baseExp = 5;
+        let baseExp = 5;
+        if (enemy.type === 'dash') {
+            baseExp = 15;
+        }
         const finalExp = Math.floor(baseExp * (1 + skillBonuses.expBonus));
         const charKey = this.gacha.collection.current;
         this.gacha.progression.addExperience(charKey, finalExp);
         this.handleMissionUpdate('defeat_enemy', 1);
-        this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
+
+        if (enemy.isBeatEnemy) {
+            // Beat Enemy Combo Resonance
+            this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#00e6ff');
+            this.particles.createSparkle(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff007f');
+
+            // Extra Fever Points
+            const triggered = this.scoreSystem.addFeverGauge(3);
+            if (triggered) {
+                this.scoreSystem.activateFever();
+                this.particles.createExplosion(this.player.x + this.player.w / 2, this.player.y + this.player.h / 2, '#ff00ff');
+            }
+
+            // Player temporary attack boost (bullet boost for 1s)
+            this.bulletBoostUntil = now() + 1000;
+            playSfx('powerup');
+        } else {
+            this.particles.createExplosion(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ff4400');
+        }
 
         // Spawn EXP
-        this.items.spawnExp(enemy.x + enemy.w / 2 - 10, enemy.y + enemy.h / 2 - 10, 1);
+        let expAmount = 1;
+        if (enemy.type === 'dash') {
+            expAmount = 3;
+        }
+        this.items.spawnExp(enemy.x + enemy.w / 2 - 10, enemy.y + enemy.h / 2 - 10, expAmount);
+
+        // Spawn Potion drops
+        if (enemy.type === 'zigzag') {
+            this.items.spawnEnergyPotion(enemy.x + enemy.w / 2 - 12, enemy.y + enemy.h / 2 - 12);
+        } else if (enemy.type === 'hover') {
+            this.items.spawnHpPotion(enemy.x + enemy.w / 2 - 12, enemy.y + enemy.h / 2 - 12);
+        }
 
         // Juice effects
         this.hitStopFrames = 3;
@@ -625,8 +895,16 @@ export class Game {
             this.sessionCoins += 50;
             this.handleMissionUpdate('defeat_boss', 1);
             this.collection.unlockBoss('boss-' + this.enemies.bossState.stageKey);
+            this.enemies.defeatedBossStages.add(this.enemies.bossState.stageKey);
+
+            if (this.currentStageIndex === 5) {
+                this.endGame(true);
+                return;
+            }
+
             this.stageClearUntil = now() + 4000;
             this.t0 = now();
+            this.lastTime = now();
 
             const skillBonuses = this.gacha.progression.calculateSkillBonuses(this.gacha.collection.current);
             this.maxHp = 100 + skillBonuses.maxHpBonus;

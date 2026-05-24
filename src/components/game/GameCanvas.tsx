@@ -274,17 +274,24 @@ export const GameCanvas: React.FC = () => {
     return (
         <div>
             <div className="playArea">
-
-
                 <canvas
+                    key="game-canvas"
                     ref={canvasRef}
                     id="cv"
                     width={360}
                     height={640}
                 />
-                {gameState && <HUD state={gameState} onUlt={handleUlt} />}
+                {gameState && <HUD 
+                    key="game-hud"
+                    state={gameState} 
+                    onUlt={handleUlt} 
+                    onSummon={(type) => { if (gameRef.current) gameRef.current.spawnEnemyByPlayer(type); }} 
+                    onHeal={() => { if (gameRef.current) gameRef.current.healHero(); }}
+                    onShield={() => { if (gameRef.current) gameRef.current.shieldHero(); }}
+                />}
                 {gameState && gameState.isLevelUp && (
                     <LevelUpModal
+                        key="level-up-modal"
                         state={gameState}
                         onSelect={(skillId) => {
                             if (gameRef.current) {
@@ -294,6 +301,7 @@ export const GameCanvas: React.FC = () => {
                     />
                 )}
                 <StartScreen
+                    key="start-screen"
                     onStart={handleStart}
                     visible={showStartScreen}
                     gachaSystem={gachaSystem}
@@ -301,10 +309,11 @@ export const GameCanvas: React.FC = () => {
                     dailyBonusSystem={dailyBonusSystem}
                     initialView={startScreenView}
                 />
-                {result && <ResultScreen result={result} onRetry={handleRetry} onMenu={handleMenu} />}
-                <MissionNotification mission={missionNotification} onClose={() => setMissionNotification(null)} />
+                {result && <ResultScreen key="result-screen" result={result} onRetry={handleRetry} onMenu={handleMenu} />}
+                <MissionNotification key="mission-notification" mission={missionNotification} onClose={() => setMissionNotification(null)} />
                 {achievementNotification && (
                     <AchievementNotification
+                        key="achievement-notification"
                         title={achievementNotification.titleKey} // Note: This needs translation in component
                         description={achievementNotification.descKey} // Note: This needs translation in component
                         icon={achievementNotification.icon}
@@ -313,6 +322,7 @@ export const GameCanvas: React.FC = () => {
                     />
                 )}
                 <TutorialOverlay
+                    key="tutorial-overlay"
                     visible={showTutorial}
                     step={tutorialStep}
                     onNext={handleTutorialNext}

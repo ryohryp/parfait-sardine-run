@@ -190,11 +190,11 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            animation: rollRarity === 'L' ? 'shakeHard 0.5s infinite' : 'shake 0.5s infinite'
+                            animation: rollRarity === 'L' ? 'shakeHardGacha 0.5s infinite' : 'shakeGacha 0.5s infinite'
                         }}>
                             <div style={{
                                 fontSize: '64px',
-                                animation: 'pulse 1s infinite',
+                                animation: 'pulseGacha 1s infinite',
                                 marginBottom: '20px',
                                 filter: rollRarity === 'L' ? 'drop-shadow(0 0 20px rgba(255,0,128,0.8))' : rollRarity === 'SSR' ? 'drop-shadow(0 0 15px rgba(255,215,0,0.8))' : 'none'
                             }}>🎁</div>
@@ -221,7 +221,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                         }}>
                             <div style={{
                                 fontSize: '80px',
-                                animation: 'bounce 1s infinite',
+                                animation: 'bounceGacha 1s infinite',
                                 marginBottom: '30px'
                             }}>✨</div>
                             <div style={{
@@ -229,7 +229,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 fontWeight: 'bold',
                                 color: '#fff',
                                 textShadow: '0 0 20px rgba(255,255,255,0.8)',
-                                animation: 'glow 1s infinite'
+                                animation: 'glowGacha 1s infinite'
                             }}>
                                 HIGH RARITY!
                             </div>
@@ -250,21 +250,21 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                             alignItems: 'center',
                             justifyContent: 'center',
                             zIndex: 200,
-                            animation: 'rainbowMove 3s ease infinite, fadeIn 0.5s',
+                            animation: 'rainbowMoveGacha 3s ease infinite, fadeIn 0.5s',
                             overflow: 'hidden'
                         }}>
                             {/* Particle effects */}
-                            <div style={{ position: 'absolute', top: '10%', left: '20%', fontSize: '60px', animation: 'float 2s ease-in-out infinite' }}>💎</div>
-                            <div style={{ position: 'absolute', top: '20%', right: '15%', fontSize: '50px', animation: 'float 2.5s ease-in-out infinite 0.5s' }}>⭐</div>
-                            <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: '55px', animation: 'float 2.2s ease-in-out infinite 0.3s' }}>🌟</div>
-                            <div style={{ position: 'absolute', bottom: '25%', right: '20%', fontSize: '65px', animation: 'float 2.8s ease-in-out infinite 0.7s' }}>✨</div>
-                            <div style={{ position: 'absolute', top: '50%', left: '5%', fontSize: '45px', animation: 'float 2.3s ease-in-out infinite 0.2s' }}>🎆</div>
-                            <div style={{ position: 'absolute', top: '40%', right: '8%', fontSize: '50px', animation: 'float 2.6s ease-in-out infinite 0.9s' }}>💫</div>
+                            <div style={{ position: 'absolute', top: '10%', left: '20%', fontSize: '60px', animation: 'floatGacha 2s ease-in-out infinite' }}>💎</div>
+                            <div style={{ position: 'absolute', top: '20%', right: '15%', fontSize: '50px', animation: 'floatGacha 2.5s ease-in-out infinite 0.5s' }}>⭐</div>
+                            <div style={{ position: 'absolute', bottom: '15%', left: '10%', fontSize: '55px', animation: 'floatGacha 2.2s ease-in-out infinite 0.3s' }}>🌟</div>
+                            <div style={{ position: 'absolute', bottom: '25%', right: '20%', fontSize: '65px', animation: 'floatGacha 2.8s ease-in-out infinite 0.7s' }}>✨</div>
+                            <div style={{ position: 'absolute', top: '50%', left: '5%', fontSize: '45px', animation: 'floatGacha 2.3s ease-in-out infinite 0.2s' }}>🎆</div>
+                            <div style={{ position: 'absolute', top: '40%', right: '8%', fontSize: '50px', animation: 'floatGacha 2.6s ease-in-out infinite 0.9s' }}>💫</div>
 
                             {/* Center content - Reveal Character or Equipment */}
                             <div style={{
                                 fontSize: '120px',
-                                animation: 'megaBounce 1s infinite, rotate 3s linear infinite',
+                                animation: 'megaBounceGacha 1s infinite, rotateGacha 3s linear infinite',
                                 marginBottom: '40px',
                                 filter: 'drop-shadow(0 0 30px rgba(255,255,255,1))'
                             }}>
@@ -275,7 +275,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 fontWeight: 'bold',
                                 color: '#fff',
                                 textShadow: '0 0 30px rgba(255,215,0,1), 0 0 60px rgba(255,215,0,0.8)',
-                                animation: 'megaGlow 1s infinite, pulse 2s infinite',
+                                animation: 'megaGlowGacha 1s infinite, pulseGacha 2s infinite',
                                 letterSpacing: '4px',
                                 textAlign: 'center'
                             }}>
@@ -287,7 +287,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                 color: '#fff',
                                 marginTop: '20px',
                                 textShadow: '0 0 20px rgba(255,255,255,0.8)',
-                                animation: 'glow 1.5s infinite'
+                                animation: 'glowGacha 1.5s infinite'
                             }}>
                                 🎊 LEGENDARY PULL! 🎊
                             </div>
@@ -322,7 +322,7 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                                             border: '1px solid #ccc',
                                             background: '#fff',
                                             position: 'relative',
-                                            animation: `slideIn 0.3s ease-out ${idx * 0.1}s backwards`
+                                            animation: `slideInGacha 0.3s ease-out ${idx * 0.1}s backwards`
                                         }}>
                                             {item.isNew && <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#facc15', color: '#000', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>NEW!</div>}
                                             {!isChar && <div style={{ position: 'absolute', top: '-8px', left: '-8px', background: '#a855f7', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>EQP</div>}
@@ -342,75 +342,6 @@ export const GachaModal: React.FC<GachaModalProps> = ({ visible, onClose, gachaS
                 </div>
             </div>
 
-            <style>{`
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    25% { transform: translateX(-5px) rotate(-5deg); }
-                    75% { transform: translateX(5px) rotate(5deg); }
-                }
-                @keyframes shakeHard {
-                    0%, 100% { transform: translateX(0) scale(1); }
-                    25% { transform: translateX(-10px) rotate(-10deg) scale(1.1); }
-                    75% { transform: translateX(10px) rotate(10deg) scale(1.1); }
-                }
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); }
-                    50% { transform: scale(1.2); }
-                }
-                @keyframes bounce {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-20px); }
-                }
-                @keyframes megaBounce {
-                    0%, 100% { transform: translateY(0) scale(1); }
-                    50% { transform: translateY(-30px) scale(1.3); }
-                }
-                @keyframes glow {
-                    0%, 100% { text-shadow: 0 0 20px rgba(255,255,255,0.8); }
-                    50% { text-shadow: 0 0 40px rgba(255,255,255,1); }
-                }
-                @keyframes megaGlow {
-                    0%, 100% { 
-                        text-shadow: 0 0 30px rgba(255,215,0,1), 0 0 60px rgba(255,215,0,0.8);
-                    }
-                    50% { 
-                        text-shadow: 0 0 50px rgba(255,215,0,1), 0 0 100px rgba(255,215,0,1), 0 0 150px rgba(255,100,200,0.8);
-                    }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                @keyframes rainbowMove {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                }
-                @keyframes float {
-                    0%, 100% { 
-                        transform: translateY(0) rotate(0deg);
-                        opacity: 0.8;
-                    }
-                    50% { 
-                        transform: translateY(-30px) rotate(180deg);
-                        opacity: 1;
-                    }
-                }
-                @keyframes rotate {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
         </div>
     );
 };

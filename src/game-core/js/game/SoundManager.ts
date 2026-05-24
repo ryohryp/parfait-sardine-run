@@ -78,6 +78,14 @@ export class SoundManager {
         }
     }
 
+    public getBgmCurrentTime(): number {
+        return this.bgmAudio ? this.bgmAudio.currentTime : 0;
+    }
+
+    public isBgmPlaying(): boolean {
+        return !!this.bgmAudio && !this.bgmAudio.paused;
+    }
+
     private ensureContext() {
         if (this.audioContext && this.audioContext.state === 'suspended') {
             this.audioContext.resume();

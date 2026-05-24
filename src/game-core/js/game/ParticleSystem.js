@@ -36,6 +36,14 @@ export class ParticleSystem {
                 ctx.fill();
             } else if (p.type === 'star') {
                 this.drawStar(ctx, p.x, p.y, 5, p.size, p.size / 2);
+            } else if (p.type === 'text') {
+                ctx.font = p.font || 'bold 16px "Outfit", "Inter", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.strokeText(p.text, p.x, p.y);
+                ctx.fillText(p.text, p.x, p.y);
             } else {
                 ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
             }
@@ -79,7 +87,27 @@ export class ParticleSystem {
             size: config.size || 4,
             gravity: config.gravity || 0,
             decay: config.decay || 1,
-            type: config.type || 'rect'
+            type: config.type || 'rect',
+            text: config.text || '',
+            font: config.font || ''
+        });
+    }
+
+    addTextParticle(x, y, text, color, fontSize = '20px') {
+        this.particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: -1.8 - Math.random() * 0.6,
+            life: 800,
+            maxLife: 800,
+            color: color || '#fff',
+            size: 0,
+            gravity: 0.02,
+            decay: 0.98,
+            type: 'text',
+            text: text,
+            font: `bold ${fontSize} "Outfit", "Inter", sans-serif`
         });
     }
 

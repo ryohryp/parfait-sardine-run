@@ -40,6 +40,19 @@ export class CollisionSystem {
 
         game.items.items = game.items.items.filter(it => {
             if (this.AABB(game.player, it)) {
+                if (it.char === '💚') {
+                    game.hp = Math.min(game.maxHp, game.hp + 10);
+                    game.particles.createSparkle(it.x + it.w / 2, it.y + it.h / 2, '#22c55e');
+                    playSfx('powerup');
+                    return false;
+                }
+                if (it.char === '🧪') {
+                    game.energy = Math.min(game.maxEnergy, game.energy + 15);
+                    game.particles.createSparkle(it.x + it.w / 2, it.y + it.h / 2, '#eab308');
+                    playSfx('powerup');
+                    return false;
+                }
+
                 const scoreState = game.scoreSystem.getState();
                 const isFever = scoreState.isFever;
                 const mul = (now() < game.scoreMulUntil || isFever) ? 2 : 1;
@@ -193,7 +206,7 @@ export class CollisionSystem {
                                 game.invUntil = now() + 3000;
                                 game.particles.createExplosion(game.player.x, game.player.y, '#00ff00');
                             } else {
-                                game.endGame();
+                                game.endGame(false);
                             }
                         }
                     }
@@ -296,7 +309,7 @@ export class CollisionSystem {
                             );
                             logger.info('Auto-revive activated!');
                         } else {
-                            game.endGame();
+                            game.endGame(false);
                             return false;
                         }
                     }
@@ -422,7 +435,7 @@ export class CollisionSystem {
                             );
                             logger.info('Auto-revive activated!');
                         } else {
-                            game.endGame();
+                            game.endGame(false);
                         }
                     }
                 }
@@ -546,7 +559,7 @@ export class CollisionSystem {
                             );
                             logger.info('Auto-revive activated!');
                         } else {
-                            game.endGame();
+                            game.endGame(false);
                         }
                     }
                 }

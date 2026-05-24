@@ -92,7 +92,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     const handleGameStart = (characterKey: string) => {
         localStorage.setItem('psrun_selected_char', characterKey);
         setShowCharSelect(false);
-        setShowCharSelect(false);
         onStart(characterKey, playerName, debugStartStage);
     };
 
@@ -105,7 +104,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
     if (!visible) return null;
 
     return (
-        <>
+        <div style={{ display: 'contents' }}>
             <div className={`title-screen-container ${viewState === 'menu' ? 'menu-mode' : ''}`} onClick={handleScreenClick}>
                 <div className="title-screen-content">
                     {/* Background */}
@@ -289,6 +288,6 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart, visible, gach
             <ModalWrapper visible={showComments} onClose={() => setShowComments(false)} title={t('comments')}>
                 <CommentsPage onClose={() => setShowComments(false)} />
             </ModalWrapper>
-        </>
+        </div>
     );
 };

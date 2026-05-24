@@ -44,6 +44,26 @@ export class ItemManager {
         });
     }
 
+    spawnHpPotion(x, y) {
+        this.items.push({
+            x: x,
+            y: y,
+            w: 24, h: 24,
+            rv: 0,
+            char: '💚'
+        });
+    }
+
+    spawnEnergyPotion(x, y) {
+        this.items.push({
+            x: x,
+            y: y,
+            w: 24, h: 24,
+            rv: 0,
+            char: '🧪'
+        });
+    }
+
     spawnPower(level) {
         this.powers.push({
             x: this.canvas.width + 26,

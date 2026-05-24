@@ -15,7 +15,9 @@ export class InputManager {
       shoot: [],
       ult: [],
       dash: [],
-      guard: []
+      guard: [],
+      heal: [],
+      shield: []
     };
     this.enabled = false;
   }
@@ -84,6 +86,8 @@ export class InputManager {
     if (e.key === 'z' || e.key === 'Z') this.trigger('guard');
     if (e.key === 'c' || e.key === 'C') this.trigger('dash');
     if (e.key === 'v' || e.key === 'V') this.trigger('ult');
+    if (e.key === '1' || e.key === 'q' || e.key === 'Q') this.trigger('heal');
+    if (e.key === '2' || e.key === 'e' || e.key === 'E') this.trigger('shield');
   }
 
   handleKeyUp(e) {
