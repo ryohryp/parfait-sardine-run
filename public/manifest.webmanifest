@@ -1,12 +1,12 @@
 {
-  "name": "パフェといわしRUN!",
-  "short_name": "パフェRUN",
+  "name": "PARFAIT SARDINE RUN — Midnight Delivery",
+  "short_name": "Sardine Run",
   "start_url": "./index.html?src=pwa",
   "scope": "./",
   "display": "fullscreen",
-  "background_color": "#101018",
-  "theme_color": "#ff7ad9",
-  "orientation": "portrait-primary",
+  "background_color": "#0f0e24",
+  "theme_color": "#0f0e24",
+  "orientation": "landscape-primary",
   "icons": [
     {
       "src": "icons/icon-192.png",
