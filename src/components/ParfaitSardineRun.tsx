@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import './ParfaitSardineRun.css';
 
 type Phase = 'menu' | 'playing' | 'paused' | 'over';
+export type ParfaitSardineRunPhase = Phase;
+
+type ParfaitSardineRunProps = {
+  onPhaseChange?: (phase: ParfaitSardineRunPhase) => void;
+};
 type ObstacleKind = 'crate' | 'fork' | 'bird';
 type PickupKind = 'sardine' | 'cherry' | 'star';
 
@@ -89,13 +94,17 @@ const initialHud = (): HudState => ({
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-export function ParfaitSardineRun() {
+export function ParfaitSardineRun({ onPhaseChange }: ParfaitSardineRunProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controlsRef = useRef<GameControls | null>(null);
   const mutedRef = useRef(false);
   const [phase, setPhase] = useState<Phase>('menu');
   const [hud, setHud] = useState<HudState>(initialHud);
   const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    onPhaseChange?.(phase);
+  }, [onPhaseChange, phase]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -1,0 +1,4 @@
+.app-shell { position: relative; }
+.app-shell__ranking-trigger { position: fixed; z-index: 30; top: 78px; right: clamp(14px, 3vw, 46px); padding: 8px 12px; color: #f8f4e8; background: #17152e; border: 1px solid rgba(248, 244, 232, .35); border-radius: 999px; font-family: 'DM Mono', monospace; font-size: .68rem; font-weight: 700; letter-spacing: .07em; cursor: pointer; }
+.app-shell__ranking-trigger:hover { color: #17152e; background: #79f2ff; border-color: #79f2ff; }.app-shell__ranking-trigger:disabled { opacity: .42; cursor: not-allowed; }
+@media (max-width: 700px) { .app-shell__ranking-trigger { top: 62px; right: 9px; font-size: .58rem; } }
