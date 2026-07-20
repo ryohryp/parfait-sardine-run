@@ -36,7 +36,11 @@ describe('CollisionSystem', () => {
             projectiles: { active: [] },
             scoreSystem: {
                 awardEnemyDefeat: vi.fn(),
-                addFeverGauge: vi.fn()
+                addFeverGauge: vi.fn(),
+                getState: vi.fn().mockReturnValue({ isFever: false, comboMultiplier: 1 }),
+                comboCount: 0,
+                updateComboMultiplier: vi.fn(),
+                lastComboTime: 0
             },
             particles: {
                 createExplosion: vi.fn(),
@@ -46,6 +50,9 @@ describe('CollisionSystem', () => {
             gacha: {
                 collection: { current: 'parfen' },
                 addCoins: vi.fn()
+            },
+            collection: {
+                unlockItem: vi.fn()
             },
             callbacks: {
                 onPlaySfx: vi.fn()

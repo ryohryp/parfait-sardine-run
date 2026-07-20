@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ParfaitSardineRun } from './ParfaitSardineRun';
+import { ParfaitSardineRunPhase1 } from './ParfaitSardineRunPhase1';
 import { RankingModal } from '../features/ranking/RankingModal';
 import { WordPressRankingAdapter } from '../features/ranking/WordPressRankingAdapter';
 import {
@@ -96,7 +96,7 @@ export function AppShell() {
 
   return (
     <>
-      <div ref={gameRootRef}><ParfaitSardineRun /></div>
+      <div ref={gameRootRef}><ParfaitSardineRunPhase1 /></div>
       <button
         ref={rankingButtonRef}
         type="button"

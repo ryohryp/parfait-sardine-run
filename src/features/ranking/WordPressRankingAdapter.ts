@@ -72,7 +72,11 @@ export const buildRankingUrl = (baseUrl: string): URL => {
 };
 
 export class WordPressRankingAdapter implements RankingPort {
-  constructor(private readonly baseUrl: string | undefined) {}
+  private readonly baseUrl: string | undefined;
+
+  constructor(baseUrl: string | undefined) {
+    this.baseUrl = baseUrl;
+  }
 
   async load(signal?: AbortSignal): Promise<RankingEntry[]> {
     if (!this.baseUrl?.trim()) {
