@@ -35,13 +35,6 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Upload build diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-diagnostics
-          path: build.log
-
       - name: Fail on build error
         if: steps.build.outputs.status != '0'
         run: |
@@ -49,4 +42,28 @@ jobs:
           exit 1
 
       - name: Test
-        run: npm run test:run
+        id: test
+        if: steps.build.outputs.status == '0'
+        shell: bash
+        run: |
+          set +e
+          npm run test:run > test.log 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics
+          path: |
+            build.log
+            test.log
+          if-no-files-found: ignore
+
+      - name: Fail on test error
+        if: steps.test.outputs.status != '' && steps.test.outputs.status != '0'
+        run: |
+          cat test.log
+          exit 1
