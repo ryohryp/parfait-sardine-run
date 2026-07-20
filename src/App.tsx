@@ -1,8 +1,8 @@
-import { ParfaitSardineRun } from './components/ParfaitSardineRun';
+import { AppShell } from './components/AppShell';
 import './App.css';
 
 function App() {
-  return <ParfaitSardineRun />;
+  return <AppShell />;
 }
 
 export default App;
