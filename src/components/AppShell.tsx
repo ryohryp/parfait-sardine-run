@@ -1,5 +1,5 @@
-import { IwashiIntrusionPrototype } from './IwashiIntrusionPrototype';
+import { FactoryFloorPrototype } from './FactoryFloorPrototype';
 
 export function AppShell() {
-  return <IwashiIntrusionPrototype />;
+  return <FactoryFloorPrototype />;
 }
