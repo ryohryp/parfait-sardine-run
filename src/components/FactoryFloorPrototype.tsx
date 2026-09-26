@@ -72,7 +72,7 @@ export function FactoryFloorPrototype() {
       if (mode === 'belt') {
         const tile = current.tiles[keyOf(x, y)];
         const next = rotateBelt(tile?.belt);
-        return placeFactoryTool(current, x, y, `belt-${next}`);
+        return placeFactoryTool(current, x, y, `belt-${next}` as const);
       }
       return placeFactoryTool(current, x, y, mode);
     });
