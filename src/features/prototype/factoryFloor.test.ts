@@ -24,17 +24,20 @@ describe('factoryFloor', () => {
     expect(state.tiles['2,3']).toBeUndefined();
   });
 
-  it('catcher converts an iwashi on its cell into value', () => {
+  it('catcher converts an iwashi into fishmeal value', () => {
     let state = createFactoryFloor(2);
-    state = placeFactoryTool(state, 1, 4, 'catcher');
+    for (const [x, y] of [[1, 4], [0, 4], [2, 4], [1, 3], [1, 5]] as const) {
+      state = placeFactoryTool(state, x, y, 'catcher');
+    }
     const forced: FactoryFloorState = {
       ...state,
       iwashi: [{ id: 88, x: 1, y: 4, energy: 0 }],
       waste: [],
     };
     const next = stepFactoryFloor(forced);
-    expect(next.captured).toBeGreaterThanOrEqual(0);
-    expect(next.cash).toBeGreaterThanOrEqual(0);
+    expect(next.captured).toBe(1);
+    expect(next.cash).toBeGreaterThanOrEqual(6);
+    expect(next.iwashi).toHaveLength(0);
   });
 
   it('same seed diverges when the player changes ecology tools', () => {
