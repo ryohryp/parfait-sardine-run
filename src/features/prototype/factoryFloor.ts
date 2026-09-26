@@ -303,11 +303,18 @@ export function stepFactoryFloor(state: FactoryFloorState): FactoryFloorState {
     const ny = item.y + dy;
 
     if (nx === MAKER.x && ny === MAKER.y && item.kind === 'raw') {
-      produced += 1;
       const outputKey = keyOf(4, 2);
-      if (tileAt(state, 4, 2)?.belt && !itemSnapshot.some((other) => keyOf(other.x, other.y) === outputKey)) {
-        movedItems.push({ id: nextId++, kind: 'parfait', x: 4, y: 2 });
+      const outputReady =
+        tileAt(state, 4, 2)?.belt &&
+        !itemSnapshot.some((other) => keyOf(other.x, other.y) === outputKey);
+
+      if (!outputReady) {
+        movedItems.push(item);
+        continue;
       }
+
+      produced += 1;
+      movedItems.push({ id: nextId++, kind: 'parfait', x: 4, y: 2 });
       const spot = spawnWastePosition(state.tick);
       waste.push({ id: nextId++, ...spot });
       continue;
@@ -384,6 +391,7 @@ export function stepFactoryFloor(state: FactoryFloorState): FactoryFloorState {
   }
 
   const babies: IwashiAgent[] = [];
+  const parentIds = new Set<number>();
   for (const fish of iwashi) {
     if (
       fish.energy >= 2 &&
@@ -395,6 +403,7 @@ export function stepFactoryFloor(state: FactoryFloorState): FactoryFloorState {
       );
       if (spot) {
         babies.push({ id: nextId++, x: spot.x, y: spot.y, energy: 0 });
+        parentIds.add(fish.id);
         events = pushEvent(events, {
           tick: state.tick,
           kind: 'birth',
@@ -405,9 +414,6 @@ export function stepFactoryFloor(state: FactoryFloorState): FactoryFloorState {
   }
 
   if (babies.length > 0) {
-    const parentIds = new Set(
-      iwashi.filter((fish) => fish.energy >= 2).map((fish) => fish.id),
-    );
     iwashi = iwashi.map((fish) =>
       parentIds.has(fish.id) ? { ...fish, energy: Math.max(0, fish.energy - 1.5) } : fish,
     );
