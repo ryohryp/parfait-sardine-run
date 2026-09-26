@@ -40,6 +40,48 @@ describe('factoryFloor', () => {
     expect(next.iwashi).toHaveLength(0);
   });
 
+  it('keeps raw input queued while the maker output is occupied', () => {
+    const state: FactoryFloorState = {
+      ...createFactoryFloor(7),
+      tick: 1,
+      items: [
+        { id: 101, kind: 'raw', x: 2, y: 2 },
+        { id: 102, kind: 'parfait', x: 4, y: 2 },
+      ],
+      iwashi: [],
+      waste: [],
+      produced: 3,
+      nextId: 103,
+    };
+
+    const next = stepFactoryFloor(state);
+
+    expect(next.produced).toBe(3);
+    expect(next.items).toContainEqual({ id: 101, kind: 'raw', x: 2, y: 2 });
+    expect(next.items).toContainEqual({ id: 102, kind: 'parfait', x: 5, y: 2 });
+    expect(next.waste).toHaveLength(0);
+  });
+
+  it('charges reproduction energy only to the fish that spawned', () => {
+    const state: FactoryFloorState = {
+      ...createFactoryFloor(1),
+      tick: 1,
+      iwashi: [
+        { id: 1, x: 1, y: 4, energy: 2 },
+        { id: 2, x: 6, y: 4, energy: 2 },
+      ],
+      waste: [],
+    };
+
+    const next = stepFactoryFloor(state);
+    const first = next.iwashi.find((fish) => fish.id === 1);
+    const second = next.iwashi.find((fish) => fish.id === 2);
+
+    expect(next.iwashi).toHaveLength(3);
+    expect(first?.energy).toBe(2);
+    expect(second?.energy).toBe(0.5);
+  });
+
   it('same seed diverges when the player changes ecology tools', () => {
     const exclude = runFactoryFloor(
       44,
