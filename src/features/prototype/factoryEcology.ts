@@ -145,6 +145,11 @@ export function simulateFactoryEcology(
     const consumed = Math.min(waste, iwashi * appetite);
     waste -= consumed;
     recycled += consumed;
+    if (strategy === 'coexist') {
+      // Living waste treatment is the structural upside of coexistence:
+      // each unit eaten avoids conventional disposal/cleanup cost.
+      cash += consumed * 1.3;
+    }
 
     let births =
       Math.max(0, consumed - iwashi * 0.04) *
