@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ParfaitSardineRunPhase1 } from './ParfaitSardineRunPhase1';
+import { BuildDeliverPrototype } from './BuildDeliverPrototype';
 import { RankingModal } from '../features/ranking/RankingModal';
 import { WordPressRankingAdapter } from '../features/ranking/WordPressRankingAdapter';
 import {
@@ -16,6 +16,9 @@ import {
 const LATEST_RUN_STORAGE_KEY = 'psr.latestRun.v1';
 
 const detectPhase = (root: HTMLElement): GamePhase => {
+  if (root.querySelector('.psrp-build')) return 'menu';
+  if (root.querySelector('.psrp-deliver')) return 'playing';
+  if (root.querySelector('.psrp-result')) return 'over';
   if (root.querySelector('.psr-title-screen')) return 'menu';
   if (root.querySelector('.psr-pause-screen')) return 'paused';
   if (root.querySelector('.psr-result-screen')) return 'over';
@@ -29,6 +32,18 @@ const parseNumber = (value: string | null | undefined): number => {
 };
 
 const readCompletedRun = (root: HTMLElement, activeRun: ActiveRun): RunSnapshot => {
+  const prototypeResult = root.querySelector<HTMLElement>('.psrp-result');
+  if (prototypeResult) {
+    const score = parseNumber(prototypeResult.dataset.score);
+    return completeRun(activeRun, {
+      outcome: 'clear',
+      score,
+      sardines: 0,
+      distanceMeters: 100,
+      bestScore: score,
+    });
+  }
+
   const resultScreen = root.querySelector<HTMLElement>('.psr-result-screen');
   const metrics = resultScreen?.querySelectorAll<HTMLElement>('.psr-result-grid > span b');
   const heading = resultScreen?.querySelector('h2')?.textContent ?? '';
@@ -86,7 +101,7 @@ export function AppShell() {
 
     update();
     const observer = new MutationObserver(update);
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, { childList: true, subtree: true, attributes: true });
     return () => observer.disconnect();
   }, []);
 
@@ -96,14 +111,14 @@ export function AppShell() {
 
   return (
     <>
-      <div ref={gameRootRef}><ParfaitSardineRunPhase1 /></div>
+      <div ref={gameRootRef}><BuildDeliverPrototype /></div>
       <button
         ref={rankingButtonRef}
         type="button"
         className="psr-ranking-launch"
         disabled={phase === 'playing'}
         aria-disabled={phase === 'playing'}
-        title={phase === 'playing' ? 'プレイ中はランキングを開けません' : 'ランキングを開く'}
+        title={phase === 'playing' ? '配達中はランキングを開けません' : 'ランキングを開く'}
         onClick={() => setRankingOpen(true)}
       >
         RANKING
