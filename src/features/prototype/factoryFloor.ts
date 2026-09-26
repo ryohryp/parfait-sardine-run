@@ -151,8 +151,10 @@ export function placeFactoryTool(
     next = {};
   } else if (tool.startsWith('belt-')) {
     next = { ...current, belt: tool.slice(5) as Direction };
-  } else {
+  } else if (tool === 'filter' || tool === 'catcher' || tool === 'bait') {
     next = { ...current, device: tool };
+  } else {
+    next = current;
   }
 
   const tiles = { ...state.tiles };
