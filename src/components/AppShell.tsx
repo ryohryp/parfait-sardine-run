@@ -1,5 +1,5 @@
-import { FactoryFloorPrototype } from './FactoryFloorPrototype';
+import { SideScrollerPrototype } from './SideScrollerPrototype';
 
 export function AppShell() {
-  return <FactoryFloorPrototype />;
+  return <SideScrollerPrototype />;
 }
