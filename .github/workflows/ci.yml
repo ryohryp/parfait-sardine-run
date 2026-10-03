@@ -41,6 +41,14 @@ jobs:
           cat build.log
           exit 1
 
+      - name: Upload preview build
+        if: steps.build.outputs.status == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview-dist
+          path: dist
+          retention-days: 7
+
       - name: Test
         id: test
         if: steps.build.outputs.status == '0'
