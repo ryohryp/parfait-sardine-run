@@ -340,7 +340,10 @@
   }
 
   .side-scroller__header {
-    align-items: start;
+    position: relative;
+    display: block;
+    min-height: 52px;
+    padding-right: 72px;
     margin-bottom: 9px;
   }
 
@@ -349,10 +352,15 @@
   }
 
   .side-scroller__header h1 {
-    font-size: 25px;
+    margin-top: 5px;
+    font-size: 20px;
+    white-space: nowrap;
   }
 
   .side-scroller__objective {
+    position: absolute;
+    top: 0;
+    right: 0;
     min-width: 72px;
   }
 
