@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { playBgm, playSfx, stopBgm } from '../game-core/js/audio.js';
 import './SideScrollerPrototype.css';
 
 type GameStatus = 'playing' | 'clear' | 'gameover';
@@ -244,6 +245,7 @@ export function SideScrollerPrototype() {
 
     window.addEventListener('keydown', onKeyDown, { passive: false });
     window.addEventListener('keyup', onKeyUp, { passive: false });
+    playBgm({ reset: true });
 
     let animationFrame = 0;
     let previousTime = performance.now();
@@ -693,12 +695,14 @@ export function SideScrollerPrototype() {
         player.coyoteTime = 0;
         player.jumpBuffer = 0;
         spawnDust(game, player.x + player.width / 2, player.y + player.height, -player.facing * 0.45);
+        playSfx('jump');
       }
 
       if (input.attackPressed && player.attackCooldown <= 0) {
         player.attackTimer = ATTACK_DURATION;
         player.attackCooldown = 0.3;
         attackedThisSwing.current.clear();
+        playSfx('powerup');
       }
       input.attackPressed = false;
 
@@ -784,6 +788,7 @@ export function SideScrollerPrototype() {
             game.shake = enemy.hp <= 0 ? 9 : 5;
             game.combo += 1;
             game.comboTimer = 1.35;
+            playSfx('hit');
 
             const hitX = enemy.x + enemy.width / 2;
             const hitY = enemy.y + enemy.height / 2;
@@ -804,6 +809,7 @@ export function SideScrollerPrototype() {
           game.shake = 11;
           game.combo = 0;
           game.comboTimer = 0;
+          playSfx('hit');
 
           spawnBurst(
             game,
@@ -829,6 +835,7 @@ export function SideScrollerPrototype() {
       if (player.x >= GOAL_X - 12) {
         game.status = 'clear';
         game.shake = 4;
+        playSfx('powerup');
         spawnBurst(game, GOAL_X + 28, 230, '#7af6ff', 18, 300, 5);
         spawnBurst(game, GOAL_X + 28, 230, '#ff79ce', 14, 260, 4);
       }
@@ -872,6 +879,7 @@ export function SideScrollerPrototype() {
       cancelAnimationFrame(animationFrame);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      stopBgm();
     };
   }, []);
 
