@@ -1,18 +1,18 @@
 .side-scroller {
   min-height: 100dvh;
   box-sizing: border-box;
-  padding: clamp(16px, 3vw, 34px);
+  padding: clamp(14px, 2.5vw, 28px);
   color: #f8f2ff;
   background:
-    radial-gradient(circle at 20% 10%, rgba(255, 72, 192, 0.2), transparent 30%),
-    radial-gradient(circle at 80% 0%, rgba(84, 227, 255, 0.18), transparent 28%),
-    #080712;
+    radial-gradient(circle at 18% 0%, rgba(255, 60, 188, 0.17), transparent 28%),
+    radial-gradient(circle at 82% 8%, rgba(79, 227, 255, 0.16), transparent 25%),
+    linear-gradient(180deg, #060611 0%, #0b0917 100%);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .side-scroller__header {
-  width: min(1120px, 100%);
-  margin: 0 auto 16px;
+  width: min(1180px, 100%);
+  margin: 0 auto 14px;
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -21,45 +21,51 @@
 
 .side-scroller__header small {
   color: #78eaff;
-  letter-spacing: 0.14em;
-  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  font-weight: 900;
+  text-shadow: 0 0 18px rgba(120, 234, 255, 0.45);
 }
 
 .side-scroller__header h1 {
-  margin: 5px 0 0;
-  font-size: clamp(24px, 4vw, 46px);
-  line-height: 1;
-  letter-spacing: -0.04em;
+  margin: 6px 0 0;
+  font-size: clamp(26px, 4vw, 48px);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-weight: 950;
 }
 
 .side-scroller__objective {
-  min-width: 112px;
+  min-width: 120px;
   text-align: right;
 }
 
 .side-scroller__objective span {
   display: block;
   color: #ff70ce;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.18em;
 }
 
 .side-scroller__objective strong {
-  font-size: 28px;
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 0 22px rgba(255, 112, 206, 0.32);
 }
 
 .side-scroller__frame {
   position: relative;
-  width: min(1120px, 100%);
+  width: min(1180px, 100%);
   margin: 0 auto;
   overflow: hidden;
-  border: 1px solid rgba(127, 231, 255, 0.48);
-  border-radius: 22px;
-  background: #100923;
+  border: 1px solid rgba(127, 231, 255, 0.46);
+  border-radius: 18px;
+  background: #080817;
   box-shadow:
-    0 24px 90px rgba(0, 0, 0, 0.48),
-    0 0 40px rgba(255, 63, 191, 0.09);
+    0 28px 90px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(255, 93, 197, 0.08),
+    inset 0 0 65px rgba(95, 225, 255, 0.035);
 }
 
 .side-scroller__frame canvas {
@@ -70,51 +76,139 @@
   image-rendering: auto;
 }
 
+.side-scroller__scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.14;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.035) 0,
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+
 .side-scroller__hud {
   position: absolute;
   top: 14px;
   left: 16px;
   right: 16px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   pointer-events: none;
 }
 
-.side-scroller__hp {
+.side-scroller__hud-left {
   display: flex;
-  gap: 4px;
-  padding: 8px 11px;
-  border-radius: 999px;
-  background: rgba(6, 7, 16, 0.66);
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.side-scroller__hp,
+.side-scroller__counter,
+.side-scroller__combo {
+  border: 1px solid rgba(125, 234, 255, 0.2);
+  background: rgba(5, 6, 16, 0.68);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px);
 }
 
-.side-scroller__hp span {
-  color: rgba(255, 255, 255, 0.16);
+.side-scroller__hp {
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px 9px;
+  border-radius: 10px;
+}
+
+.side-scroller__hud-label {
+  color: #8deeff;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+}
+
+.side-scroller__hp div {
+  display: flex;
+  gap: 5px;
+}
+
+.side-scroller__hp i {
+  color: rgba(255, 255, 255, 0.12);
+  font-style: normal;
+  font-size: 17px;
   text-shadow: none;
 }
 
-.side-scroller__hp span.is-on {
-  color: #ff63b9;
-  text-shadow: 0 0 12px #ff63b9;
+.side-scroller__hp i.is-on {
+  color: #ff5fbf;
+  text-shadow: 0 0 14px #ff5fbf;
+}
+
+.side-scroller__combo {
+  min-width: 58px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  text-align: center;
+  animation: combo-pop 140ms ease-out;
+}
+
+.side-scroller__combo b {
+  display: block;
+  color: #ffe979;
+  font-size: 24px;
+  line-height: 0.95;
+  text-shadow: 0 0 16px rgba(255, 233, 121, 0.55);
+}
+
+.side-scroller__combo span {
+  color: #ff75ce;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
 }
 
 .side-scroller__counter {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
   padding: 8px 11px;
-  border-radius: 999px;
-  background: rgba(6, 7, 16, 0.66);
+  border-radius: 10px;
+}
+
+.side-scroller__counter span {
   color: #82eaff;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  backdrop-filter: blur(10px);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
 }
 
 .side-scroller__counter b {
-  margin-left: 6px;
   color: #fff;
-  font-size: 16px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.side-scroller__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.side-scroller__progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #64e9ff, #ff69c9, #ffe778);
+  box-shadow: 0 0 16px rgba(255, 105, 201, 0.7);
+  transition: width 100ms linear;
 }
 
 .side-scroller__result {
@@ -124,42 +218,53 @@
   place-content: center;
   padding: 24px;
   text-align: center;
-  background: rgba(5, 4, 14, 0.76);
-  backdrop-filter: blur(8px);
+  background:
+    radial-gradient(circle at center, rgba(54, 30, 83, 0.4), transparent 45%),
+    rgba(4, 4, 13, 0.8);
+  backdrop-filter: blur(7px);
 }
 
 .side-scroller__result small {
   color: #78eaff;
-  font-weight: 900;
-  letter-spacing: 0.2em;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.22em;
 }
 
 .side-scroller__result h2 {
-  margin: 8px 0 4px;
-  font-size: clamp(32px, 7vw, 66px);
+  margin: 8px 0 6px;
+  font-size: clamp(38px, 7vw, 72px);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  text-shadow:
+    0 0 22px rgba(255, 93, 195, 0.23),
+    0 0 45px rgba(103, 232, 255, 0.12);
 }
 
 .side-scroller__result p {
-  margin: 0 auto 18px;
-  max-width: 480px;
+  margin: 0 auto 20px;
+  max-width: 500px;
   color: #d9d0e8;
 }
 
 .side-scroller__result button {
   justify-self: center;
-  border: 0;
-  border-radius: 999px;
+  min-width: 154px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 9px;
   padding: 13px 24px;
-  color: #0b0711;
-  background: linear-gradient(90deg, #78eaff, #ff75d1);
+  color: #080711;
+  background: linear-gradient(90deg, #79ecff, #ff75d1);
   font: inherit;
-  font-weight: 900;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 26px rgba(255, 105, 205, 0.25);
   cursor: pointer;
 }
 
 .side-scroller__controls {
-  width: min(1120px, 100%);
-  margin: 14px auto 0;
+  width: min(1180px, 100%);
+  margin: 12px auto 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -171,67 +276,135 @@
 .side-scroller__move,
 .side-scroller__actions {
   display: flex;
-  gap: 10px;
+  gap: 9px;
 }
 
 .side-scroller__controls button {
-  min-width: 74px;
-  min-height: 58px;
-  border: 1px solid rgba(120, 234, 255, 0.36);
-  border-radius: 18px;
+  min-width: 76px;
+  min-height: 56px;
+  border: 1px solid rgba(120, 234, 255, 0.34);
+  border-radius: 12px;
   color: #f8f5ff;
-  background: rgba(30, 24, 58, 0.88);
+  background:
+    linear-gradient(180deg, rgba(40, 34, 71, 0.92), rgba(19, 17, 36, 0.94));
   font: inherit;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  box-shadow: inset 0 0 20px rgba(112, 230, 255, 0.06);
+  font-weight: 950;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  box-shadow:
+    inset 0 0 20px rgba(112, 230, 255, 0.05),
+    0 8px 22px rgba(0, 0, 0, 0.24);
   cursor: pointer;
   touch-action: none;
 }
 
 .side-scroller__controls button:active {
-  transform: translateY(2px) scale(0.98);
-  background: rgba(65, 49, 102, 0.96);
+  transform: translateY(2px) scale(0.985);
+  background: rgba(68, 53, 108, 0.98);
+  box-shadow: inset 0 0 24px rgba(126, 239, 255, 0.16);
 }
 
 .side-scroller__actions button {
-  min-width: 104px;
+  min-width: 110px;
 }
 
 .side-scroller__actions .is-attack {
   border-color: rgba(255, 105, 204, 0.52);
-  background: rgba(86, 28, 81, 0.9);
+  background:
+    linear-gradient(180deg, rgba(97, 31, 89, 0.96), rgba(49, 20, 54, 0.96));
+  box-shadow:
+    inset 0 0 22px rgba(255, 96, 199, 0.08),
+    0 8px 22px rgba(0, 0, 0, 0.24);
 }
 
 .side-scroller__help {
-  width: min(1120px, 100%);
-  margin: 12px auto 0;
+  width: min(1180px, 100%);
+  margin: 10px auto 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
-  color: #918aa5;
-  font-size: 12px;
+  color: #817c91;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+@keyframes combo-pop {
+  from { transform: scale(1.16); }
+  to { transform: scale(1); }
 }
 
 @media (max-width: 680px) {
   .side-scroller {
-    padding: 12px;
+    padding: 10px;
   }
 
   .side-scroller__header {
     align-items: start;
+    margin-bottom: 9px;
   }
 
   .side-scroller__header small {
-    font-size: 9px;
+    font-size: 8px;
+  }
+
+  .side-scroller__header h1 {
+    font-size: 25px;
   }
 
   .side-scroller__objective {
-    min-width: 68px;
+    min-width: 72px;
+  }
+
+  .side-scroller__objective span {
+    font-size: 8px;
   }
 
   .side-scroller__objective strong {
     font-size: 20px;
+  }
+
+  .side-scroller__frame {
+    border-radius: 12px;
+  }
+
+  .side-scroller__hud {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  .side-scroller__hp {
+    padding: 6px 8px;
+  }
+
+  .side-scroller__hud-label {
+    display: none;
+  }
+
+  .side-scroller__hp i {
+    font-size: 14px;
+  }
+
+  .side-scroller__counter {
+    padding: 6px 8px;
+  }
+
+  .side-scroller__counter span {
+    display: none;
+  }
+
+  .side-scroller__counter b {
+    font-size: 16px;
+  }
+
+  .side-scroller__combo {
+    min-width: 42px;
+    padding: 5px 7px;
+  }
+
+  .side-scroller__combo b {
+    font-size: 18px;
   }
 
   .side-scroller__controls {
@@ -246,7 +419,7 @@
   }
 
   .side-scroller__actions button {
-    min-width: 82px;
+    min-width: 84px;
   }
 
   .side-scroller__help {
